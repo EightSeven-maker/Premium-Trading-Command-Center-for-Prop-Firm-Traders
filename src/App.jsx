@@ -3,7 +3,7 @@ import {
   BarChart3, Calendar, BookOpen, Target, FileText, TrendingUp, TrendingDown,
   DollarSign, Activity, Brain, Shield, Settings, Play, Square, Edit3,
   Calculator, Quote, Timer, Zap, AlertTriangle, CheckCircle, Building,
-  LayoutDashboard, Radio, Clock, Eye, X, Plus, ChevronRight, ChevronLeft,
+  LayoutDashboard, Radio, Clock, Eye, X, Plus, ChevronRight, ChevronLeft, ChevronDown,
   Sun, ArrowUpRight, ArrowDownRight, Search, Trash2, Bell, Check, Lock,
   Briefcase, Globe, Star, Coffee, Flame, Crosshair, Camera, Save,
   ExternalLink, RefreshCw, Gauge, Award, MessageSquare, Send, CreditCard,

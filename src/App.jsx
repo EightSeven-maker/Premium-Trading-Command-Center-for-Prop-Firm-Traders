@@ -615,48 +615,51 @@ const ARDAS_VERSE = "ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕ
 
 // ─── SIDEBAR ────────────────────────────────────────────────────────────────
 function Sidebar({ page, setPage, session }) {
-  // Main quick actions - order: Dashboard, Pre-Session, Active Session, Post Session
-  const quickActions = [
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef(null);
+
+  // Core panels - always visible (3 on fresh install)
+  const coreActions = [
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { id: "presession", icon: Sun, label: "Pre-Session" },
     { id: "trading-floor", icon: Zap, label: "Active Session" },
-    { id: "postsession", icon: Moon, label: "Post Session" },
   ];
 
-  const navSections = [
-    {
-      label: "OPERATIONS",
-      items: [
-        { id: "prop-firms", icon: Briefcase, label: "Prop Firm HQ" },
-        { id: "news", icon: Globe, label: "News & Calendar" },
-        { id: "journal", icon: BookOpen, label: "Journal" },
-      ]
-    },
-    {
-      label: "ANALYSIS",
-      items: [
-        { id: "analytics", icon: BarChart3, label: "Analytics" },
-        { id: "ai", icon: Brain, label: "AI Coach" },
-      ]
-    },
-    {
-      label: "SYSTEM",
-      items: [
-        { id: "settings", icon: Settings, label: "Settings" },
-      ]
-    }
+  // Utility panels - tucked in More menu
+  const utilityItems = [
+    { id: "postsession", icon: Moon, label: "Post Session" },
+    { id: "prop-firms", icon: Briefcase, label: "Prop Firm HQ" },
+    { id: "news", icon: Globe, label: "News & Calendar" },
+    { id: "journal", icon: BookOpen, label: "Journal" },
+    { id: "analytics", icon: BarChart3, label: "Analytics" },
+    { id: "ai", icon: Brain, label: "AI Coach" },
+    { id: "settings", icon: Settings, label: "Settings" },
   ];
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
+        setShowMoreMenu(false);
+      }
+    };
+    if (showMoreMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMoreMenu]);
 
   return (
     <div style={{
       width: 240, height: "calc(100vh - 60px)", position: "fixed", top: 60, left: 0,
       background: `linear-gradient(180deg, ${C.bgCard} 0%, rgba(3,7,18,0.95) 100%)`,
       backdropFilter: "blur(20px)", borderRight: `1px solid ${C.border}`,
-      display: "flex", flexDirection: "column", padding: "16px 0", overflowY: "auto"
+      display: "flex", flexDirection: "column", padding: "16px 0", overflowY: "auto",
+      zIndex: 100
     }}>
-      {/* Quick Actions - Always Visible */}
+      {/* Core Actions - Always Visible */}
       <div style={{ padding: "0 12px", marginBottom: 8 }}>
-        {quickActions.map(item => {
+        {coreActions.map(item => {
           const active = page === item.id;
           const isActiveSession = item.id === "trading-floor" && session.active;
           return (
@@ -686,34 +689,81 @@ function Sidebar({ page, setPage, session }) {
         })}
       </div>
 
-      <div style={{ height: 1, background: C.border, margin: "8px 20px" }} />
+      {/* More Menu - Utility Panels */}
+      <div style={{ padding: "0 12px", position: "relative" }} ref={moreMenuRef}>
+        <button 
+          onClick={() => setShowMoreMenu(!showMoreMenu)} 
+          style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
+            width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
+            background: showMoreMenu ? `linear-gradient(90deg, ${C.purple}20, transparent)` : "transparent",
+            color: showMoreMenu ? C.purpleLight : C.textMuted,
+            fontWeight: showMoreMenu ? 700 : 500, fontSize: 13,
+            borderLeft: showMoreMenu ? `3px solid ${C.purple}` : "3px solid transparent",
+            transition: "all 0.2s ease", textAlign: "left",
+            borderRadius: 8, marginBottom: showMoreMenu ? 8 : 0
+          }}
+        >
+          <Sparkles size={18} color={showMoreMenu ? C.purple : C.textDim} />
+          More
+          <div style={{ marginLeft: "auto", transform: showMoreMenu ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }}>
+            <ChevronDown size={14} color={C.textDim} />
+          </div>
+        </button>
 
-      {/* Other Sections */}
-      {navSections.map((sec, si) => (
-        <div key={sec.label} style={{ marginBottom: 16 }}>
+        {/* Dropdown Menu */}
+        {showMoreMenu && (
           <div style={{
-            fontSize: 10, fontWeight: 800, color: C.textDim, padding: "0 20px 8px",
-            letterSpacing: "0.1em"
-          }}>{sec.label}</div>
-          {sec.items.map(item => {
-            const active = page === item.id;
-            return (
-              <button key={item.id} onClick={() => setPage(item.id)} style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "11px 20px",
-                width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
-                background: active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
-                color: active ? C.accentLight : C.textMuted,
-                fontWeight: active ? 700 : 500, fontSize: 13,
-                borderLeft: active ? `3px solid ${C.accent}` : "3px solid transparent",
-                transition: "all 0.2s ease", textAlign: "left"
-              }}>
-                <item.icon size={18} color={active ? C.accent : C.textDim} />
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-      ))}
+            position: "absolute", left: 12, right: 12, top: "100%", marginTop: 4,
+            background: C.bgCard, border: `1px solid ${C.border}`,
+            borderRadius: 12, padding: 8, boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+            zIndex: 200
+          }}>
+            {utilityItems.map(item => {
+              const active = page === item.id;
+              return (
+                <button key={item.id} onClick={() => { setPage(item.id); setShowMoreMenu(false); }} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "10px 12px",
+                  width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
+                  background: active ? `${C.accent}15` : "transparent",
+                  color: active ? C.accentLight : C.textMuted,
+                  fontWeight: active ? 600 : 400, fontSize: 12,
+                  borderRadius: 8, marginBottom: 2,
+                  transition: "all 0.15s ease", textAlign: "left"
+                }}
+                onMouseEnter={e => e.target.style.background = active ? `${C.accent}25` : C.bgHover}
+                onMouseLeave={e => e.target.style.background = active ? `${C.accent}15` : "transparent"}
+                >
+                  <item.icon size={16} color={active ? C.accent : C.textDim} />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Mobile: Show all items in sections */}
+      <div className="mobile-nav" style={{ display: "none" }}>
+        <div style={{ height: 1, background: C.border, margin: "8px 20px" }} />
+        {utilityItems.map(item => {
+          const active = page === item.id;
+          return (
+            <button key={item.id} onClick={() => setPage(item.id)} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "11px 20px",
+              width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
+              background: active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
+              color: active ? C.accentLight : C.textMuted,
+              fontWeight: active ? 700 : 500, fontSize: 13,
+              borderLeft: active ? `3px solid ${C.accent}` : "3px solid transparent",
+              transition: "all 0.2s ease", textAlign: "left"
+            }}>
+              <item.icon size={18} color={active ? C.accent : C.textDim} />
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1687,6 +1737,80 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
 function NewsPage({ showToast }) {
   const [newsBlocked, setNewsBlocked] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [countdown, setCountdown] = useState({});
+  const [squawkNews, setSquawkNews] = useState([]);
+  const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
+
+  // Market Squawk headlines
+  const marketNews = [
+    { headline: "S&P 500 futures up 0.5% as investors await Fed decision", source: "CNBC", sentiment: "bullish", time: "2m ago" },
+    { headline: "Oil prices surge 2% on Middle East tensions", source: "Reuters", sentiment: "volatile", time: "5m ago" },
+    { headline: "Treasury yields fall as inflation data cools", source: "MarketWatch", sentiment: "bullish", time: "8m ago" },
+    { headline: "Bitcoin breaks $95,000 resistance level", source: "CNBC", sentiment: "bullish", time: "12m ago" },
+    { headline: "Euro strengthens after ECB rate decision", source: "Reuters", sentiment: "neutral", time: "15m ago" },
+    { headline: "Gold hits new all-time high above $3,200", source: "MarketWatch", sentiment: "bullish", time: "18m ago" },
+    { headline: "Tech stocks lead market rally", source: "CNBC", sentiment: "bullish", time: "22m ago" },
+    { headline: "Volatility index drops to 3-month low", source: "Reuters", sentiment: "bullish", time: "25m ago" },
+    { headline: "Dollar weakens on trade deficit data", source: "MarketWatch", sentiment: "bearish", time: "30m ago" },
+    { headline: "Natural gas futures jump on cold weather forecast", source: "Reuters", sentiment: "volatile", time: "35m ago" },
+  ];
+
+  // Economic calendar with countdown
+  const economicEvents = [
+    { time: "08:30", currency: "USD", event: "Core CPI", impact: "High", previous: "0.3%", forecast: "0.2%", actual: null },
+    { time: "10:00", currency: "USD", event: "ISM Manufacturing PMI", impact: "High", previous: "46.8", forecast: "48.5", actual: null },
+    { time: "14:00", currency: "USD", event: "FOMC Meeting Minutes", impact: "Medium", previous: "—", forecast: "—", actual: null },
+    { time: "15:00", currency: "EUR", event: "ECB President Speech", impact: "Medium", previous: "—", forecast: "—", actual: null },
+    { time: "15:30", currency: "USD", event: "Crude Oil Inventories", impact: "Low", previous: "-2.5M", forecast: "-1.8M", actual: null },
+  ];
+
+  // Auto-refresh squawk news every 45 seconds
+  useEffect(() => {
+    setSquawkNews(marketNews);
+    const interval = setInterval(() => {
+      setCurrentNewsIndex(prev => (prev + 1) % marketNews.length);
+    }, 45000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Countdown timer for economic events
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+      const newCountdown = {};
+      
+      economicEvents.forEach((event, i) => {
+        const [hours, minutes] = event.time.split(":").map(Number);
+        const eventTime = new Date();
+        eventTime.setHours(hours, minutes, 0, 0);
+        
+        // If event time has passed today, skip
+        if (eventTime <= now) {
+          newCountdown[i] = null;
+          return;
+        }
+        
+        const diff = eventTime - now;
+        const hoursLeft = Math.floor(diff / (1000 * 60 * 60));
+        const minsLeft = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const secsLeft = Math.floor((diff % (1000 * 60)) / 1000);
+        
+        if (hoursLeft > 0) {
+          newCountdown[i] = `${hoursLeft}h ${minsLeft}m`;
+        } else if (minsLeft > 0) {
+          newCountdown[i] = `${minsLeft}m ${secsLeft}s`;
+        } else {
+          newCountdown[i] = `${secsLeft}s`;
+        }
+      });
+      
+      setCountdown(newCountdown);
+    };
+    
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Request notification permission
   const enableNotifications = async () => {
@@ -1703,24 +1827,68 @@ function NewsPage({ showToast }) {
     }
   };
 
-  const newsEvents = [
-    { time: "08:30", currency: "USD", event: "Core CPI", impact: "High", previous: "0.3%", forecast: "0.2%" },
-    { time: "10:00", currency: "USD", event: "ISM Manufacturing PMI", impact: "High", previous: "46.8", forecast: "48.5" },
-    { time: "14:00", currency: "USD", event: "FOMC Meeting Minutes", impact: "Medium", previous: "—", forecast: "—" },
-    { time: "15:00", currency: "EUR", event: "ECB President Speech", impact: "Medium", previous: "—", forecast: "—" },
-  ];
-
   const getImpactColor = (impact) => {
     if (impact === "High") return C.red;
     if (impact === "Medium") return C.yellow;
     return C.green;
   };
 
+  const getSentimentColor = (sentiment) => {
+    if (sentiment === "bullish") return C.green;
+    if (sentiment === "bearish") return C.red;
+    return C.yellow;
+  };
+
+  const getSentimentBg = (sentiment) => {
+    if (sentiment === "bullish") return `${C.green}15`;
+    if (sentiment === "bearish") return `${C.red}15`;
+    return `${C.yellow}15`;
+  };
+
   return (
     <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
+      {/* Market Squawk Banner */}
+      <div style={{
+        ...S.glassCard, marginBottom: 20, padding: "12px 20px",
+        background: `linear-gradient(90deg, ${C.bgCard}, ${C.accent}10, ${C.bgCard})`,
+        border: `1px solid ${C.border}`,
+        overflow: "hidden", position: "relative"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "6px 12px", borderRadius: 8,
+            background: `${C.accent}20`, border: `1px solid ${C.accent}40`
+          }}>
+            <Radio size={14} color={C.accent} style={{ animation: "livePulse 1.5s infinite" }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.accentLight }}>SQUAWK</span>
+          </div>
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12,
+              animation: "scrollLeft 20s linear infinite"
+            }}>
+              <span style={{ fontSize: 13, color: C.text, whiteSpace: "nowrap", fontWeight: 500 }}>
+                {squawkNews[currentNewsIndex]?.headline}
+              </span>
+              <span style={{ 
+                fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                background: getSentimentBg(squawkNews[currentNewsIndex]?.sentiment),
+                color: getSentimentColor(squawkNews[currentNewsIndex]?.sentiment)
+              }}>
+                {squawkNews[currentNewsIndex]?.source}
+              </span>
+              <span style={{ fontSize: 11, color: C.textDim, whiteSpace: "nowrap" }}>
+                {squawkNews[currentNewsIndex]?.time}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800 }}>News Calendar</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800 }}>Economic Calendar</h1>
           <p style={{ fontSize: 13, color: C.textMuted }}>High-impact events that affect your trades</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -1756,51 +1924,90 @@ function NewsPage({ showToast }) {
         </button>
       </div>
 
-      {/* Weekly Overview */}
-      <div style={{ ...S.glassCard, marginBottom: 24 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>This Week</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
-          {["Mon", "Tue", "Wed", "Thu", "Fri"].map((day, i) => (
-            <div key={day} style={{
-              padding: 16, borderRadius: 12, textAlign: "center",
-              background: i === 2 ? `${C.red}15` : "rgba(0,0,0,0.2)",
-              border: `1px solid ${i === 2 ? C.red : C.border}`
+      {/* Events List with Countdown */}
+      <div style={S.glassCard}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Today's Events</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {economicEvents.map((event, i) => (
+            <div key={i} style={{
+              display: "flex", alignItems: "center", gap: 16, padding: 14, borderRadius: 12,
+              background: "rgba(0,0,0,0.2)", border: `1px solid ${C.border}`,
+              flexWrap: "wrap"
             }}>
-              <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>{day}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: i === 2 ? C.red : C.text }}>
-                {i === 2 ? 3 : i === 3 ? 2 : 0}
+              {/* Countdown Badge */}
+              <div style={{
+                padding: "8px 12px", borderRadius: 10, textAlign: "center", minWidth: 80,
+                background: countdown[i] ? `${C.accent}15` : "rgba(0,0,0,0.3)",
+                border: `1px solid ${countdown[i] ? C.accent + "40" : C.border}`
+              }}>
+                <div style={{ fontSize: countdown[i] ? 12 : 14, fontWeight: 700, color: countdown[i] ? C.accentLight : C.text }}>
+                  {countdown[i] || event.time}
+                </div>
+                {countdown[i] && (
+                  <div style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>until release</div>
+                )}
               </div>
-              <div style={{ fontSize: 10, color: C.textDim }}>high impact</div>
+              
+              {/* Event Details */}
+              <div style={{ flex: 1, minWidth: 150 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{event.event}</div>
+                <div style={{ fontSize: 12, color: C.textMuted }}>{event.currency}</div>
+              </div>
+              
+              {/* Impact Badge */}
+              <span style={S.badge(getImpactColor(event.impact))}>{event.impact}</span>
+              
+              {/* Data */}
+              <div style={{ display: "flex", gap: 16, textAlign: "center" }}>
+                <div>
+                  <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2 }}>PREVIOUS</div>
+                  <div style={{ fontSize: 12, fontWeight: 600 }}>{event.previous}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2 }}>FORECAST</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.accent }}>{event.forecast}</div>
+                </div>
+                {event.actual && (
+                  <div>
+                    <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2 }}>ACTUAL</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.green }}>{event.actual}</div>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Events List */}
-      <div style={S.glassCard}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Today's Events</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {newsEvents.map((event, i) => (
+      {/* Market News Feed */}
+      <div style={{ ...S.glassCard, marginTop: 24 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          <Radio size={18} color={C.accent} /> Market News
+          <span style={{ fontSize: 11, color: C.textDim, fontWeight: 400 }}>Auto-refreshes every 45s</span>
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {squawkNews.map((news, i) => (
             <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 16, padding: 14, borderRadius: 12,
-              background: "rgba(0,0,0,0.2)", border: `1px solid ${C.border}`
+              display: "flex", alignItems: "flex-start", gap: 12, padding: 12, borderRadius: 10,
+              background: getSentimentBg(news.sentiment),
+              border: `1px solid ${getSentimentColor(news.sentiment)}30`
             }}>
               <div style={{
-                width: 56, textAlign: "center",
-                padding: "8px 0", borderRadius: 10,
-                background: `${getImpactColor(event.impact)}15`,
-                border: `1px solid ${getImpactColor(event.impact)}30`
-              }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{event.time}</div>
-              </div>
+                width: 8, height: 8, borderRadius: "50%", marginTop: 6,
+                background: getSentimentColor(news.sentiment)
+              }} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{event.event}</div>
-                <div style={{ fontSize: 12, color: C.textMuted }}>{event.currency}</div>
-              </div>
-              <span style={S.badge(getImpactColor(event.impact))}>{event.impact}</span>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 11, color: C.textDim }}>Previous: {event.previous}</div>
-                <div style={{ fontSize: 11, color: C.textDim }}>Forecast: {event.forecast}</div>
+                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{news.headline}</div>
+                <div style={{ display: "flex", gap: 12, fontSize: 11, color: C.textDim }}>
+                  <span style={{ fontWeight: 600 }}>{news.source}</span>
+                  <span>{news.time}</span>
+                  <span style={{ 
+                    color: getSentimentColor(news.sentiment),
+                    textTransform: "capitalize"
+                  }}>
+                    {news.sentiment}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -2634,12 +2841,53 @@ export default function App() {
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideDown { from { transform: translateX(-50%) translateY(-100%); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        @keyframes scrollLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         * { scrollbar-width: thin; scrollbar-color: ${C.border} transparent; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 10px; }
         body { margin: 0; }
         select option { background: ${C.bgCard}; }
         input[type="number"]::-webkit-inner-spin-button { opacity: 0.5; }
+        
+        /* High-DPI Optimization */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+          * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        }
+        
+        /* Small Screen / Tablet */
+        @media (max-width: 1024px) {
+          main { margin-left: 0 !important; }
+          [data-sidebar] { transform: translateX(-100%); transition: transform 0.3s ease; }
+          [data-sidebar].open { transform: translateX(0); }
+        }
+        
+        /* Mobile */
+        @media (max-width: 768px) {
+          main { margin-left: 0 !important; margin-top: 50px !important; padding: 16px; }
+          .mobile-nav { display: block !important; }
+          h1 { font-size: 20px !important; }
+          .glass-card { padding: 16px !important; border-radius: 12px !important; }
+          .btn-lg { padding: 12px 20px !important; font-size: 14px !important; }
+          input, select, textarea { font-size: 16px !important; /* Prevents zoom on iOS */ }
+          .grid-2 { grid-template-columns: 1fr !important; }
+          .stat-card { padding: 12px !important; }
+        }
+        
+        /* Very Small Mobile */
+        @media (max-width: 480px) {
+          main { padding: 12px !important; }
+          h1 { font-size: 18px !important; }
+          h2 { font-size: 16px !important; }
+          h3 { font-size: 14px !important; }
+          .badge { font-size: 10px !important; padding: 3px 8px !important; }
+          .btn { padding: 10px 16px !important; font-size: 13px !important; }
+        }
+        
+        /* Touch-friendly targets for mobile */
+        @media (pointer: coarse) {
+          button, a, [role="button"] { min-height: 44px; min-width: 44px; }
+          input, select, textarea { min-height: 44px; }
+        }
       `}</style>
     </div>
   );

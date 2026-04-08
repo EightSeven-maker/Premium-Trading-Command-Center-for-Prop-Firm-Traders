@@ -7,7 +7,7 @@ import {
   Sun, ArrowUpRight, ArrowDownRight, Search, Trash2, Bell, Check, Lock,
   Briefcase, Globe, Star, Coffee, Flame, Crosshair, Camera, Save,
   ExternalLink, RefreshCw, Gauge, Award, MessageSquare, Send, CreditCard,
-  Download, Upload, Sparkles, PieChart, TrendingUp as TrendingIcon, Filter, EyeOff
+  Download, Upload, Sparkles, PieChart, TrendingUp as TrendingIcon, Filter, EyeOff, Moon
 } from "lucide-react";
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -572,13 +572,25 @@ function TopBar({ session, showToast }) {
   );
 }
 
+// ─── GURBANI VERSES ─────────────────────────────────────────────────────────
+const GURBANI_VERSES = [
+  "੧੦ ਜਿਤੁ ਜਲੁ ਥੀਵੈ ਮੈਲੈ ਤਿਤੁ ਝੂਕੈ ਜਗੁ || ਜਿਉ ਕੁਕੁ ਕਾਂਗਰੋ ਦੁਹੈ ਤਿਉ ਜਾਇ ਲਾਗਾ ਵਾਧੈ ਭਗੈ ||੧||",
+  "ਹੁਕਮਿ ਰਜਾਈ ਚਲਾਇਆ ਮੇਰਾ ਆਪਿ ਅਵਲਾ ਆਪੇ ਅੰਤਿ ਆਪੇ ਆਪੇ ਜੀਵੈ ||",
+  "ਮੈਂ ਕੁਛ ਕਰਨ ਦੀ ਤਾਕਤ ਨਹੀਂ ਰੱਖਦਾ, ਜਿਵੇਂ ਤੁਹਾਡੀ ਰਜ਼ਾ ਹੋਵੇ ਤਿਵੇਂ ਹੀ ਤੁਸੀਂ ਮੁਆਫ ਕਰੋ ||੧||",
+  "ਸਭ ਸਿਸ ਮੈਲੇ ਹਰਿ ਕੈ ਨਾਮ ਤੇ ਪਵਿਤ੍ਰ ਹੋਇ ||",
+  "ਜੇ ਹੋਵੈ ਪਰਾਈ ਕਿਸੈ ਤੁਮਾਰੀ ਜਾਣੈ ਮੇਰੀ ਖ਼ਾਬ || ਨਾਨਕ ਪਰਧਾਨੈ ਹੋਈਐ ਸਭ ਤੇ ਮਸਤਕ ਕਾਬ ||",
+];
+
+const ARDAS_VERSE = "ਅਸੀਂ ਜੋ ਕੁਝ ਕਰਨ ਦੇ ਸਮਰੱਥ ਹਾਂ ਉਹ ਤੁਹਾਡੀ ਮਿਹਰ ਨਾਲ ਹੀ ਹੈ, ਜਿਵੇਂ ਤੁਹਾਡੀ ਰਜ਼ਾ ਹੋਵੇ ਤਿਵੇਂ ਹੀ ਹੋ ਜਾਵੇ ||";
+
 // ─── SIDEBAR ────────────────────────────────────────────────────────────────
 function Sidebar({ page, setPage, session }) {
-  // Main quick actions - order: Dashboard, Pre-Session, Active Session
+  // Main quick actions - order: Dashboard, Pre-Session, Active Session, Post Session
   const quickActions = [
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { id: "presession", icon: Sun, label: "Pre-Session" },
     { id: "trading-floor", icon: Zap, label: "Active Session" },
+    { id: "postsession", icon: Moon, label: "Post Session" },
   ];
 
   const navSections = [
@@ -928,19 +940,7 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
 
           {/* Row 2: Entry Model, Trade Setup */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-            <div>
-              <label style={S.label}>Entry Model (multi)</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                {["Unicorn", "FVG", "IFVG", "OB", "BRKR", "CISD", "Turtle Soup", "RTH Gap Fill"].map(m => (
-                  <button key={m} onClick={() => toggleMultiSelect(entryModel, setEntryModel, m)} style={{
-                    padding: "5px 8px", borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: "pointer",
-                    background: entryModel.includes(m) ? `${C.accent}25` : "rgba(0,0,0,0.3)",
-                    color: entryModel.includes(m) ? C.accentLight : C.textDim,
-                    border: `1px solid ${entryModel.includes(m) ? C.accent : C.border}`
-                  }}>{m}</button>
-                ))}
-              </div>
-            </div>
+            <MultiSelectDropdown label="Entry Model (multi)" options={["Unicorn", "FVG", "IFVG", "OB", "BRKR", "CISD", "Turtle Soup", "RTH Gap Fill"]} selected={entryModel} onChange={setEntryModel} placeholder="Select Entry Model..." />
             <div>
               <label style={S.label}>Trade Setup</label>
               <select value={setupGrade} onChange={e => setSetupGrade(e.target.value)} style={S.input}>
@@ -950,34 +950,34 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
             </div>
           </div>
 
-          {/* Section: ICT Analysis - All Multi-Select */}
+          {/* Section: ICT Analysis - All Multi-Select Dropdowns */}
           <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
             <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               ICT Analysis
             </h4>
 
-            <ChipSelect label="HTF Orderflow" options={HTF_ORDERFLOW} selected={htfOrderflow} onToggle={(v) => setHtfOrderflow(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
-            <ChipSelect label="MMXM" options={MMXM_OPTIONS} selected={mmxm} onToggle={(v) => setMmxm(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
-            <ChipSelect label="Midnight Open" options={MIDNIGHT_OPEN} selected={midnightOpen} onToggle={(v) => setMidnightOpen(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
-            <ChipSelect label="Liquidity" options={LIQUIDITY_OPTIONS} selected={liquidity} onToggle={(v) => toggleMultiSelect(liquidity, setLiquidity, v)} />
-            <ChipSelect label="SMR (SMT)" options={["NO", "Yes (Sentiment Momentum Trade)"]} selected={smr} onToggle={(v) => setSmr(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
-            <ChipSelect label="Trade Entry Time" options={SMR_TIME} selected={tradeEntryTime} onToggle={(v) => setTradeEntryTime(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
-            <ChipSelect label="SMR Time" options={SMR_TIME} selected={smrTime} onToggle={(v) => toggleMultiSelect(smrTime, setSmrTime, v)} />
-            <ChipSelect label="TOI (Time of Interest)" options={TOI_TIME} selected={toi} onToggle={(v) => toggleMultiSelect(toi, setToi, v)} />
+            <MultiSelectDropdown label="HTF Orderflow" options={HTF_ORDERFLOW} selected={htfOrderflow} onChange={setHtfOrderflow} placeholder="Select HTF Orderflow..." />
+            <MultiSelectDropdown label="MMXM" options={MMXM_OPTIONS} selected={mmxm} onChange={setMmxm} placeholder="Select MMXM..." />
+            <MultiSelectDropdown label="Midnight Open" options={MIDNIGHT_OPEN} selected={midnightOpen} onChange={setMidnightOpen} placeholder="Select Midnight Open..." />
+            <MultiSelectDropdown label="Liquidity" options={LIQUIDITY_OPTIONS} selected={liquidity} onChange={setLiquidity} placeholder="Select Liquidity..." />
+            <MultiSelectDropdown label="SMR (SMT)" options={["NO", "Yes (Sentiment Momentum Trade)"]} selected={smr} onChange={setSmr} placeholder="Select SMR..." />
+            <MultiSelectDropdown label="Trade Entry Time" options={SMR_TIME} selected={tradeEntryTime} onChange={setTradeEntryTime} placeholder="Select Entry Time..." />
+            <MultiSelectDropdown label="SMR Time" options={SMR_TIME} selected={smrTime} onChange={setSmrTime} placeholder="Select SMR Time..." />
+            <MultiSelectDropdown label="TOI (Time of Interest)" options={TOI_TIME} selected={toi} onChange={setToi} placeholder="Select TOI..." />
           </div>
 
-          {/* Section: Session Info - All Multi-Select */}
+          {/* Section: Session Info - All Multi-Select Dropdowns */}
           <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
             <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Session Info
             </h4>
 
-            <ChipSelect label="News Day" options={NEWS_DAY} selected={newsDay} onToggle={(v) => setNewsDay(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
+            <MultiSelectDropdown label="News Day" options={NEWS_DAY} selected={newsDay} onChange={setNewsDay} placeholder="Select News Day..." />
             <div style={{ marginBottom: 14 }}>
               <label style={S.label}>POI</label>
               <input type="text" value={poi} onChange={e => setPoi(e.target.value)} style={S.input} placeholder="Point of Interest" />
             </div>
-            <ChipSelect label="Trade Took (contracts)" options={TRADE_TOOK} selected={tradeTook} onToggle={(v) => toggleMultiSelect(tradeTook, setTradeTook, v)} />
+            <MultiSelectDropdown label="Trade Took (contracts)" options={TRADE_TOOK} selected={tradeTook} onChange={setTradeTook} placeholder="Select Trade Took..." />
             <div style={{ marginBottom: 14 }}>
               <label style={S.label}>Learnings</label>
               <textarea value={learnings} onChange={e => setLearnings(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="What did you learn from this trade?" />
@@ -1041,6 +1041,204 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
             </button>
           </>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MULTI-SELECT DROPDOWN ─────────────────────────────────────────────────
+function MultiSelectDropdown({ label, options, selected, onChange, placeholder }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggle = (opt) => {
+    if (selected.includes(opt)) {
+      onChange(selected.filter(v => v !== opt));
+    } else {
+      onChange([...selected, opt]);
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label style={S.label}>{label}</label>
+      <div ref={ref} style={{ position: "relative" }}>
+        <div onClick={() => setIsOpen(!isOpen)} style={{
+          ...S.input, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between",
+          minHeight: 42
+        }}>
+          <span style={{ color: selected.length ? C.text : C.textDim }}>
+            {selected.length > 0 ? selected.join(", ") : placeholder || "Select..."}
+          </span>
+          <ChevronDown size={14} color={C.textDim} style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "0.2s" }} />
+        </div>
+        {isOpen && (
+          <div style={{
+            position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100,
+            background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12,
+            maxHeight: 200, overflowY: "auto", marginTop: 4,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.4)"
+          }}>
+            {options.map(opt => (
+              <div key={opt} onClick={() => toggle(opt)} style={{
+                padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
+                background: selected.includes(opt) ? C.bgHover : "transparent",
+                color: selected.includes(opt) ? C.accentLight : C.text,
+                transition: "all 0.15s"
+              }}
+              onMouseEnter={e => e.target.style.background = C.bgHover}
+              onMouseLeave={e => e.target.style.background = selected.includes(opt) ? C.bgHover : "transparent"}
+              >
+                <div style={{
+                  width: 16, height: 16, borderRadius: 4, border: `2px solid ${selected.includes(opt) ? C.accent : C.border}`,
+                  background: selected.includes(opt) ? C.accent : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center"
+                }}>
+                  {selected.includes(opt) && <Check size={10} color={C.white} />}
+                </div>
+                <span style={{ fontSize: 13 }}>{opt}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {selected.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
+          {selected.map(s => (
+            <span key={s} style={{
+              padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 600,
+              background: `${C.accent}20`, color: C.accentLight, border: `1px solid ${C.accent}40`
+            }}>
+              {s}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── POST SESSION PAGE ────────────────────────────────────────────────────
+function PostSessionPage({ setPage, showToast, trades, onAddTrade }) {
+  const [sessionQuality, setSessionQuality] = useState([]);
+  const [emotions, setEmotions] = useState([]);
+  const [mentalState, setMentalState] = useState([]);
+  const [energyLevel, setEnergyLevel] = useState([]);
+  const [distractions, setDistractions] = useState([]);
+  const [postTradeActions, setPostTradeActions] = useState([]);
+  const [postArdas, setPostArdas] = useState([]);
+  const [sessionSummary, setSessionSummary] = useState("");
+  const [nextSessionFocus, setNextSessionFocus] = useState("");
+  const [gratitude, setGratitude] = useState("");
+
+  const submitPostSession = () => {
+    onAddTrade({
+      date: today(),
+      isPostSession: true,
+      sessionQuality,
+      emotions,
+      mentalState,
+      energyLevel,
+      distractions,
+      postTradeActions,
+      postArdas,
+      sessionSummary,
+      nextSessionFocus,
+      gratitude
+    });
+    setSessionQuality([]);
+    setEmotions([]);
+    setMentalState([]);
+    setEnergyLevel([]);
+    setDistractions([]);
+    setPostTradeActions([]);
+    setPostArdas([]);
+    setSessionSummary("");
+    setNextSessionFocus("");
+    setGratitude("");
+    showToast("Post session logged!", "success");
+  };
+
+  return (
+    <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 26, fontWeight: 800, display: "flex", alignItems: "center", gap: 12 }}>
+            <Moon size={28} color={C.purple} /> Post Session
+          </h1>
+          <p style={{ fontSize: 13, color: C.textMuted }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+        </div>
+      </div>
+
+      {/* Gurmukhi Ardas */}
+      <div style={{ ...S.glassCard, marginBottom: 24, textAlign: "center", background: `linear-gradient(135deg, ${C.bgCard}, ${C.purple}10)` }}>
+        <p style={{ fontFamily: "'Noto Sans Gurmukhi', sans-serif", fontSize: 18, color: C.text, lineHeight: 1.8, margin: 0 }}>
+          ਅਸੀਂ ਜੋ ਕੁਝ ਕਰਨ ਦੇ ਸਮਰੱਥ ਹਾਂ ਉਹ ਤੁਹਾਡੀ ਮਿਹਰ ਨਾਲ ਹੀ ਹੈ
+        </p>
+        <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, fontStyle: "italic" }}>
+          I have no power to do anything at all. As it pleases You, You forgive us.
+        </p>
+      </div>
+
+      <div style={{ maxWidth: 800, margin: "0 auto" }}>
+        <div style={S.glassCard}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
+            <Star size={20} color={C.purple} /> Session Reflection
+          </h3>
+
+          {/* Mental State */}
+          <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Mental State
+            </h4>
+            <MultiSelectDropdown label="Post Ardas" options={["Yes", "No", "Partial"]} selected={postArdas} onChange={setPostArdas} placeholder="Did you do Ardas?" />
+            <MultiSelectDropdown label="Session Quality" options={["Excellent", "Good", "Average", "Poor", "Terrible"]} selected={sessionQuality} onChange={setSessionQuality} placeholder="How was your session?" />
+            <MultiSelectDropdown label="Emotions During Session" options={["Calm", "FOMO", "Anxious", "Angry", "Revenge", "Greedy", "Confident", "Confused", "Tired", "Focused", "Frustrated", "Peaceful", "Excited"]} selected={emotions} onChange={setEmotions} placeholder="Select emotions..." />
+            <MultiSelectDropdown label="Mental State (1-10)" options={["10/10", "9/10", "8/10", "7/10", "6/10", "5/10", "4/10", "3/10", "2/10", "1/10"]} selected={mentalState} onChange={setMentalState} placeholder="Rate your mental state" />
+            <MultiSelectDropdown label="Energy Level" options={["Very High", "High", "Normal", "Low", "Very Low"]} selected={energyLevel} onChange={setEnergyLevel} placeholder="Select energy level..." />
+          </div>
+
+          {/* Session Details */}
+          <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Session Details
+            </h4>
+            <MultiSelectDropdown label="Distractions" options={["Phone", "Social Media", "Family", "News", "Other Charts", "Chat", "Food", "None"]} selected={distractions} onChange={setDistractions} placeholder="Select distractions..." />
+            <MultiSelectDropdown label="Post Trade Actions" options={["Added to Winner", "Partial Exit", "Moved SL", "Widened SL", "Tightened SL", "Trailed SL", "Ignored Plan", "Followed Plan", "Early Exit", "Held Full", "Scaled In", "Scaled Out", "No Action"]} selected={postTradeActions} onChange={setPostTradeActions} placeholder="Select actions..." />
+          </div>
+
+          {/* Reflection */}
+          <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Reflection
+            </h4>
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Session Summary</label>
+              <textarea value={sessionSummary} onChange={e => setSessionSummary(e.target.value)} style={{ ...S.input, minHeight: 80, resize: "vertical" }} placeholder="How did the session go? What worked? What didn't?" />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Next Session Focus</label>
+              <textarea value={nextSessionFocus} onChange={e => setNextSessionFocus(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="What will you focus on next time?" />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={S.label}>Gratitude</label>
+              <textarea value={gratitude} onChange={e => setGratitude(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="What are you grateful for today?" />
+            </div>
+          </div>
+
+          <button onClick={submitPostSession} style={{ ...S.btn("primary", "lg"), width: "100%", justifyContent: "center" }}>
+            <Save size={16} /> Submit Post Session
+          </button>
         </div>
       </div>
     </div>
@@ -1603,16 +1801,23 @@ function PreSessionPage({ onStartSession, setPage }) {
             <Sun size={40} color={C.gold} />
           </div>
           <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Begin With Ardas</h2>
+          
+          {/* Gurmukhi Ardas Verse */}
+          <div style={{
+            padding: 20, borderRadius: 14, background: `linear-gradient(135deg, ${C.gold}15, ${C.purple}10)`,
+            border: `1px solid ${C.goldBorder}`, marginBottom: 24
+          }}>
+            <p style={{ fontFamily: "'Noto Sans Gurmukhi', sans-serif", fontSize: 18, color: C.text, lineHeight: 2, margin: 0 }}>
+              ਅਸੀਂ ਜੋ ਕੁਝ ਕਰਨ ਦੇ ਸਮਰੱਥ ਹਾਂ ਉਹ ਤੁਹਾਡੀ ਮਿਹਰ ਨਾਲ ਹੀ ਹੈ
+            </p>
+            <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, fontStyle: "italic" }}>
+              "I have no power to do anything at all. As it pleases You, You forgive us."
+            </p>
+          </div>
+          
           <p style={{ color: C.textMuted, lineHeight: 1.8, marginBottom: 24 }}>
             Take a moment of stillness. Recite your Ardas, clear your mind, and surrender the outcome to Waheguru.
           </p>
-          <div style={{
-            padding: 20, borderRadius: 14, background: C.goldBg, border: `1px solid ${C.goldBorder}`,
-            marginBottom: 24, fontStyle: "italic", color: C.textMuted
-          }}>
-            "Dhan Guru Nanak, Dhan Guru Nanak..."<br />
-            Focus your mind. Release attachment to profit or loss.
-          </div>
           <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, cursor: "pointer", marginBottom: 24 }}>
             <input type="checkbox" checked={ardasDone} onChange={e => setArdasDone(e.target.checked)}
               style={{ width: 20, height: 20, accentColor: C.gold, cursor: "pointer" }} />
@@ -2304,6 +2509,7 @@ export default function App() {
       case "prop-firms": return <PropFirmsPage propAccounts={propAccounts} setPropAccounts={setPropAccounts} showToast={showToast} />;
       case "news": return <NewsPage showToast={showToast} />;
       case "presession": return <PreSessionPage onStartSession={onStartSession} setPage={setPage} />;
+      case "postsession": return <PostSessionPage setPage={setPage} showToast={showToast} trades={trades} onAddTrade={onAddTrade} />;
       case "journal": return <JournalPage trades={trades} onDeleteTrade={onDeleteTrade} onUpdateTrade={onUpdateTrade} showToast={showToast} />;
       case "analytics": return <AnalyticsPage trades={trades} />;
       case "ai": return <AICoachPage trades={trades} />;

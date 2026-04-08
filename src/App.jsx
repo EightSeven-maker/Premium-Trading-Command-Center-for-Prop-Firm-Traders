@@ -457,11 +457,80 @@ function ZenQuote() {
 
 // ─── TRUMP TWITTER FEED ────────────────────────────────────────────────────
 function TrumpTwitterFeed() {
-  // Static placeholder tweets - click link for real feed
-  const tweets = [
-    { id: 1, time: "Latest", text: "Click below to view Trump's latest tweets on X" },
-    { id: 2, time: "Market", text: "X/Twitter API requires paid subscription for live tweets" },
-  ];
+  const [tweets, setTweets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  // Fetch tweets from Nitter RSS feed
+  const fetchTweets = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Using rss2json to convert Nitter RSS to JSON
+      const rssUrl = encodeURIComponent('https://nitter.net/realdonaldtrump/rss');
+      const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch');
+      }
+      
+      const data = await response.json();
+      
+      if (data.status === 'ok' && data.items) {
+        const formattedTweets = data.items.slice(0, 5).map((item, index) => {
+          // Clean HTML from title
+          const cleanText = item.title
+            .replace(/^realdonaldtrump: /i, '')
+            .replace(/<[^>]*>/g, '')
+            .trim();
+          
+          // Parse date
+          const pubDate = new Date(item.pubDate);
+          const now = new Date();
+          const diffMs = now - pubDate;
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMs / 3600000);
+          const diffDays = Math.floor(diffMs / 86400000);
+          
+          let timeAgo;
+          if (diffMins < 60) timeAgo = `${diffMins}m ago`;
+          else if (diffHours < 24) timeAgo = `${diffHours}h ago`;
+          else if (diffDays < 7) timeAgo = `${diffDays}d ago`;
+          else timeAgo = pubDate.toLocaleDateString();
+          
+          return {
+            id: index,
+            text: cleanText,
+            time: timeAgo,
+            link: item.link
+          };
+        });
+        
+        setTweets(formattedTweets);
+        setLastUpdated(new Date());
+      } else {
+        throw new Error('No tweets found');
+      }
+    } catch (err) {
+      console.error('Error fetching tweets:', err);
+      setError('Unable to load tweets');
+      // Fallback tweets
+      setTweets([
+        { id: 1, text: "Click 'View on X' to see Trump's latest tweets", time: "—", link: "https://x.com/realDonaldTrump" },
+        { id: 2, text: "Nitter RSS temporarily unavailable", time: "—", link: "https://x.com/realDonaldTrump" },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch on mount and every 5 minutes
+  useEffect(() => {
+    fetchTweets();
+    const interval = setInterval(fetchTweets, 300000); // 5 minutes
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div style={S.glassCard}>
@@ -477,28 +546,75 @@ function TrumpTwitterFeed() {
           </div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700 }}>@realDonaldTrump</div>
-            <div style={{ fontSize: 11, color: C.textDim }}>Click for live feed</div>
+            <div style={{ fontSize: 11, color: C.textDim }}>
+              {loading ? 'Loading...' : `${tweets.length} tweets`}
+            </div>
           </div>
         </div>
+        <button 
+          onClick={fetchTweets}
+          disabled={loading}
+          style={{
+            padding: "6px 10px", borderRadius: 8, background: C.bgCardAlt,
+            border: `1px solid ${C.border}`, cursor: loading ? "wait" : "pointer",
+            display: "flex", alignItems: "center", gap: 6, opacity: loading ? 0.5 : 1,
+            transition: "opacity 0.2s"
+          }}
+          title="Refresh"
+        >
+          <RefreshCw size={12} color={C.textDim} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
+        </button>
       </div>
       
-      {/* Tweets List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {tweets.map((tweet) => (
-          <div key={tweet.id} style={{
-            padding: 10, borderRadius: 10,
-            background: "rgba(0,0,0,0.2)",
-            border: `1px solid ${C.border}`
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4, lineHeight: 1.4 }}>
-              {tweet.text}
-            </div>
-            <div style={{ fontSize: 10, color: C.accent }}>
-              {tweet.time}
-            </div>
+      {/* Loading State */}
+      {loading && tweets.length === 0 && (
+        <div style={{ textAlign: "center", padding: 20, color: C.textDim }}>
+          <div style={{ animation: "livePulse 1.5s infinite", marginBottom: 8 }}>
+            <Radio size={24} color={C.accent} />
           </div>
-        ))}
-      </div>
+          <p style={{ fontSize: 12 }}>Loading tweets...</p>
+        </div>
+      )}
+      
+      {/* Error State */}
+      {error && (
+        <div style={{ 
+          padding: 10, borderRadius: 10, background: `${C.yellow}15`, 
+          border: `1px solid ${C.yellow}30`, marginBottom: 12
+        }}>
+          <p style={{ fontSize: 11, color: C.yellow, textAlign: "center" }}>{error}</p>
+        </div>
+      )}
+      
+      {/* Tweets List */}
+      {!loading && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {tweets.map((tweet) => (
+            <a 
+              key={tweet.id} 
+              href={tweet.link || "https://x.com/realDonaldTrump"} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{
+                display: "block", padding: 10, borderRadius: 10,
+                background: "rgba(0,0,0,0.2)",
+                border: `1px solid ${C.border}`,
+                textDecoration: "none", color: "inherit",
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = C.accent}
+              onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+            >
+              <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4, lineHeight: 1.4, color: C.text }}>
+                {tweet.text}
+              </div>
+              <div style={{ fontSize: 10, color: C.accent }}>
+                {tweet.time}
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
       
       {/* Live Link */}
       <a 
@@ -513,8 +629,15 @@ function TrumpTwitterFeed() {
           color: "#1DA1F2", textDecoration: "none", fontSize: 12, fontWeight: 600
         }}
       >
-        <ExternalLink size={12} /> View Live Tweets on X
+        <ExternalLink size={12} /> View on X
       </a>
+      
+      {/* Last Updated */}
+      {lastUpdated && (
+        <div style={{ textAlign: "center", fontSize: 9, color: C.textDim, marginTop: 8 }}>
+          Updated: {lastUpdated.toLocaleTimeString()}
+        </div>
+      )}
     </div>
   );
 }

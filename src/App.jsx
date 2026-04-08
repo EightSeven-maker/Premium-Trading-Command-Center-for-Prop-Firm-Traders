@@ -455,6 +455,92 @@ function ZenQuote() {
   );
 }
 
+// ─── TRUMP TWITTER FEED ────────────────────────────────────────────────────
+function TrumpTwitterFeed() {
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  
+  // Trump's recent tweets - in production, this would fetch from Twitter API
+  // For now, showing placeholder with link to his actual profile
+  const tweets = [
+    { id: 1, time: "2h ago", text: "The FAKE NEWS MEDIA is the enemy of the people!" },
+    { id: 2, time: "4h ago", text: "Markets are doing very well. The best is yet to come!" },
+    { id: 3, time: "6h ago", text: "China trade deal is moving along nicely." },
+    { id: 4, time: "8h ago", text: "The Fed should lower rates. Zero inflation!" },
+    { id: 5, time: "10h ago", text: "Tariffs are working beautifully. Billions pouring in!" },
+  ];
+
+  return (
+    <div style={S.glassCard}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 8,
+            background: "linear-gradient(135deg, #1DA1F2, #0d8ed9)",
+            display: "flex", alignItems: "center", justifyContent: "center"
+          }}>
+            <span style={{ fontSize: 18, color: "white", fontWeight: "bold" }}>𝕏</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>@realDonaldTrump</div>
+            <div style={{ fontSize: 11, color: C.textDim }}>Latest tweets</div>
+          </div>
+        </div>
+        <button 
+          onClick={() => setLastUpdated(new Date())}
+          style={{
+            padding: "6px 10px", borderRadius: 8, background: C.bgCardAlt,
+            border: `1px solid ${C.border}`, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 6
+          }}
+          title="Refresh"
+        >
+          <RefreshCw size={12} color={C.textDim} />
+        </button>
+      </div>
+      
+      {/* Tweets List */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {tweets.map((tweet) => (
+          <div key={tweet.id} style={{
+            padding: 12, borderRadius: 10,
+            background: "rgba(0,0,0,0.2)",
+            border: `1px solid ${C.border}`
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6, lineHeight: 1.4 }}>
+              {tweet.text}
+            </div>
+            <div style={{ fontSize: 11, color: C.textDim }}>
+              {tweet.time}
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Live Link */}
+      <a 
+        href="https://x.com/realDonaldTrump" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          marginTop: 16, padding: "10px 16px", borderRadius: 10,
+          background: "rgba(29, 161, 242, 0.1)",
+          border: "1px solid rgba(29, 161, 242, 0.3)",
+          color: "#1DA1F2", textDecoration: "none", fontSize: 13, fontWeight: 600
+        }}
+      >
+        <ExternalLink size={14} /> View Live Feed on X
+      </a>
+      
+      {/* Last Updated */}
+      <div style={{ textAlign: "center", fontSize: 10, color: C.textDim, marginTop: 8 }}>
+        Updated {lastUpdated.toLocaleTimeString()}
+      </div>
+    </div>
+  );
+}
+
 // ─── DASHBOARD CALENDAR WIDGET ─────────────────────────────────────────────
 function DashboardCalendar() {
   const [countdown, setCountdown] = useState({});
@@ -1689,24 +1775,11 @@ function CommandCenterPage({ trades, session, propAccounts, setPage }) {
 
         {/* Right Column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Trump Twitter Feed */}
+          <TrumpTwitterFeed />
+          
           {/* Economic Calendar Widget */}
           <DashboardCalendar />
-          
-          {/* Quick Actions */}
-          <div style={S.glassCard}>
-            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>Quick Actions</h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button onClick={() => setPage("trading-floor")} style={{ ...S.btn("glass", "md"), justifyContent: "flex-start" }}>
-                <TrendingUp size={16} /> Open Charts
-              </button>
-              <button onClick={() => setPage("prop-firms")} style={{ ...S.btn("glass", "md"), justifyContent: "flex-start" }}>
-                <Briefcase size={16} /> Check Prop Accounts
-              </button>
-              <button onClick={() => setPage("news")} style={{ ...S.btn("glass", "md"), justifyContent: "flex-start" }}>
-                <Globe size={16} /> View News
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -2819,10 +2892,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [lastSessionData, setLastSessionData] = useState(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
-  const [newsAlert, setNewsAlert] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const timerRef = useRef(null);
-  const alertQueueRef = useRef([]);
 
   // Toast helper - defined first to avoid closure issues
   const showToast = (message, type = "info") => {
@@ -2830,52 +2900,7 @@ export default function App() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Simulated Trump News Alerts
-  const trumpAlerts = [
-    { source: "TRUTH Social", message: "Big tariff announcement coming tomorrow. Get ready!", link: "https://truthsocial.com" },
-    { source: "TRUMP", message: "Markets will be GREAT again! Fed should cut rates NOW.", link: "https://truthsocial.com" },
-    { source: "X - @realDonaldTrump", message: "China trade deal is dead. New tariffs incoming!", link: "https://x.com/realDonaldTrump" },
-    { source: "BREAKING - Trump", message: "Just spoke with Xi. Big announcement coming this week!", link: "https://truthsocial.com" },
-    { source: "TRUTH Social", message: "The Fed is our enemy. Interest rates should be ZERO!", link: "https://truthsocial.com" },
-    { source: "TRUMP", message: "Stock market hitting new highs! This is just the beginning!", link: "https://truthsocial.com" },
-    { source: "BREAKING", message: "Emergency Fed meeting announced for tomorrow morning!", link: "https://x.com/realDonaldTrump" },
-    { source: "TRUTH Social", message: "Oil prices about to surge. Get ready for energy trades!", link: "https://truthsocial.com" },
-    { source: "X - @realDonaldTrump", message: "Bitcoin to the moon! Crypto is winning!", link: "https://x.com/realDonaldTrump" },
-    { source: "BREAKING - Trump", message: "Jobs report tomorrow - be careful with positions!", link: "https://truthsocial.com" }
-  ];
-
-  // Show news alert - cycles through all alerts before repeating
-  useEffect(() => {
-    // Initialize queue with shuffled alerts
-    alertQueueRef.current = [...trumpAlerts].sort(() => Math.random() - 0.5);
-    let queueIndex = 0;
-    
-    const showNextAlert = () => {
-      // Get next alert from queue
-      if (queueIndex >= alertQueueRef.current.length) {
-        // Reshuffle when we've shown all alerts
-        alertQueueRef.current = [...trumpAlerts].sort(() => Math.random() - 0.5);
-        queueIndex = 0;
-      }
-      
-      const alert = alertQueueRef.current[queueIndex];
-      queueIndex++;
-      
-      setNewsAlert(alert);
-      showToast("URGENT: Trump Alert Received!", "warning");
-      
-      // Schedule next alert (random 2-5 minutes)
-      const nextDelay = 120000 + Math.random() * 180000; // 2-5 minutes
-      timerRef.current = setTimeout(showNextAlert, nextDelay);
-    };
-
-    // Start showing alerts after 30 seconds
-    timerRef.current = setTimeout(showNextAlert, 30000);
-    
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
+  // Trump tweets are now displayed on Dashboard - no popup alerts
 
   // Load from localStorage
   useEffect(() => {
@@ -2957,9 +2982,6 @@ export default function App() {
           {renderPage()}
         </ErrorBoundary>
       </main>
-      
-      {/* Trump News Alert Popup */}
-      <NewsAlert alert={newsAlert} onDismiss={() => setNewsAlert(null)} />
       
       {/* Session End Button */}
       {session.active && (

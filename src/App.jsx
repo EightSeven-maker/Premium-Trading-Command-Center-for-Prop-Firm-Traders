@@ -16,25 +16,22 @@ import {
 } from "recharts";
 
 // ─── THEME & CONSTANTS ──────────────────────────────────────────────────────
-// Original V4 Theme: Dark Purple/Indigo
+// V3 NEON GLASS DESIGN SYSTEM (Restored)
 const C = {
   bg: "#030712",
-  bgCard: "rgba(17, 24, 39, 0.8)",
-  bgCardAlt: "rgba(31, 41, 55, 0.6)",
+  bgCard: "rgba(17, 24, 39, 0.7)",
+  bgCardAlt: "rgba(31, 41, 55, 0.5)",
+  bgHover: "rgba(99, 102, 241, 0.1)",
+  bgGlass: "rgba(17, 24, 39, 0.5)",
   border: "rgba(255, 255, 255, 0.08)",
   borderLight: "rgba(255, 255, 255, 0.15)",
+  borderGlow: "rgba(99, 102, 241, 0.4)",
   // Primary Indigo/Purple
   accent: "#6366f1",
   accentLight: "#818cf8",
   accentGlow: "rgba(99, 102, 241, 0.25)",
   purple: "#a855f7",
-  purpleGlow: "rgba(139, 92, 246, 0.2)",
-  // Gold (kept for special accents)
-  gold: "#fbbf24",
-  goldLight: "#fcd34d",
-  goldBg: "rgba(251, 191, 36, 0.08)",
-  goldBorder: "rgba(251, 191, 36, 0.2)",
-  goldGlow: "rgba(251, 191, 36, 0.25)",
+  purpleGlow: "rgba(168, 85, 247, 0.2)",
   // Trading Colors
   green: "#10b981",
   greenLight: "#34d399",
@@ -93,7 +90,7 @@ const TRADING_RULES = [
   "Ardas before every session — mind must be clear"
 ];
 
-// ─── STYLES ─────────────────────────────────────────────────────────────────
+// ─── STYLES (V3 GLASS DESIGN) ───────────────────────────────────────────────
 const S = {
   glassCard: {
     background: C.bgCard,
@@ -113,21 +110,22 @@ const S = {
     fontSize: 14,
     outline: "none",
     width: "100%",
-    fontFamily: "Inter, sans-serif"
+    fontFamily: "Inter, sans-serif",
+    transition: "all 0.2s ease"
   },
   btn: (variant = "primary", size = "md") => {
     const sizes = {
       xs: { padding: "4px 10px", fontSize: 11 },
-      sm: { padding: "6px 14px", fontSize: 12 },
-      md: { padding: "10px 20px", fontSize: 13 },
-      lg: { padding: "14px 28px", fontSize: 15 }
+      sm: { padding: "8px 14px", fontSize: 12 },
+      md: { padding: "12px 20px", fontSize: 14 },
+      lg: { padding: "16px 28px", fontSize: 16 }
     };
     const variants = {
-      primary: { background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, border: "none", boxShadow: `0 4px 20px ${C.accentGlow}`, color: C.white },
-      success: { background: `linear-gradient(135deg, ${C.green}, #059669)`, border: "none", color: C.white },
-      danger: { background: `linear-gradient(135deg, ${C.red}, #dc2626)`, border: "none", color: C.white },
-      warning: { background: `linear-gradient(135deg, ${C.yellow}, #d97706)`, border: "none", color: C.white },
-      ghost: { background: "transparent", border: `1px solid ${C.border}`, color: C.text },
+      primary: { background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, boxShadow: `0 4px 20px ${C.accentGlow}`, border: "none" },
+      secondary: { background: C.bgCardAlt, border: `1px solid ${C.border}`, boxShadow: "none" },
+      success: { background: `linear-gradient(135deg, ${C.green}, #059669)`, border: "none" },
+      danger: { background: `linear-gradient(135deg, ${C.red}, #dc2626)`, border: "none" },
+      ghost: { background: "transparent", border: `1px solid ${C.border}` },
       glass: { background: C.bgCardAlt, border: `1px solid ${C.border}`, color: C.text }
     };
     return {
@@ -139,6 +137,7 @@ const S = {
       cursor: "pointer",
       fontWeight: 600,
       fontFamily: "Inter, sans-serif",
+      color: C.white,
       transition: "all 0.2s ease",
       ...sizes[size],
       ...variants[variant]
@@ -154,7 +153,7 @@ const S = {
     background: `${color}15`,
     color: color,
     border: `1px solid ${color}30`,
-    boxShadow: glow ? `0 0 12px ${color}40` : "none"
+    boxShadow: glow ? `0 0 20px ${color}30` : "none"
   }),
   label: {
     fontSize: 11,
@@ -167,7 +166,7 @@ const S = {
   },
   grid: (cols, gap = 20) => ({ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap }),
   between: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  page: { padding: 24 }
+  page: { padding: 32, maxWidth: 1400, margin: "0 auto" }
 };
 
 // ─── UTILITIES ───────────────────────────────────────────────────────────────

@@ -16,25 +16,25 @@ import {
 } from "recharts";
 
 // ─── THEME & CONSTANTS ──────────────────────────────────────────────────────
-// Premium Fintech Theme: Navy + Gold
+// Original V4 Theme: Dark Purple/Indigo
 const C = {
   bg: "#030712",
-  bgCard: "rgba(15, 23, 42, 0.85)",
-  bgCardAlt: "rgba(30, 58, 90, 0.4)",
-  border: "rgba(251, 191, 36, 0.12)",
-  borderLight: "rgba(251, 191, 36, 0.25)",
-  // Premium Gold - Brand Color
+  bgCard: "rgba(17, 24, 39, 0.8)",
+  bgCardAlt: "rgba(31, 41, 55, 0.6)",
+  border: "rgba(255, 255, 255, 0.08)",
+  borderLight: "rgba(255, 255, 255, 0.15)",
+  // Primary Indigo/Purple
+  accent: "#6366f1",
+  accentLight: "#818cf8",
+  accentGlow: "rgba(99, 102, 241, 0.25)",
+  purple: "#a855f7",
+  purpleGlow: "rgba(139, 92, 246, 0.2)",
+  // Gold (kept for special accents)
   gold: "#fbbf24",
   goldLight: "#fcd34d",
   goldBg: "rgba(251, 191, 36, 0.08)",
   goldBorder: "rgba(251, 191, 36, 0.2)",
   goldGlow: "rgba(251, 191, 36, 0.25)",
-  // Primary Navy
-  accent: "#1e3a8a",
-  accentLight: "#3b82f6",
-  accentGlow: "rgba(59, 130, 246, 0.2)",
-  purple: "#7c3aed",
-  purpleGlow: "rgba(124, 58, 237, 0.2)",
   // Trading Colors
   green: "#10b981",
   greenLight: "#34d399",
@@ -121,10 +121,10 @@ const S = {
       lg: { padding: "14px 28px", fontSize: 15 }
     };
     const variants = {
-      primary: { background: `linear-gradient(135deg, ${C.gold}, ${C.yellow})`, border: "none", boxShadow: `0 4px 20px ${C.goldGlow}`, color: C.bg },
+      primary: { background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, border: "none", boxShadow: `0 4px 20px ${C.accentGlow}`, color: C.white },
       success: { background: `linear-gradient(135deg, ${C.green}, #059669)`, border: "none", color: C.white },
       danger: { background: `linear-gradient(135deg, ${C.red}, #dc2626)`, border: "none", color: C.white },
-      warning: { background: `linear-gradient(135deg, ${C.yellow}, #d97706)`, border: "none", color: C.bg },
+      warning: { background: `linear-gradient(135deg, ${C.yellow}, #d97706)`, border: "none", color: C.white },
       ghost: { background: "transparent", border: `1px solid ${C.border}`, color: C.text },
       glass: { background: C.bgCardAlt, border: `1px solid ${C.border}`, color: C.text }
     };
@@ -500,13 +500,18 @@ function TopBar({ session, showToast }) {
       padding: "0 24px", position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
       backdropFilter: "blur(20px)"
     }}>
-      {/* Logo */}
+      {/* Logo - Original Style */}
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <Logo size={40} />
-        <TextLogo />
+        <div style={{
+          width: 40, height: 40, borderRadius: 12,
+          background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontWeight: 900, fontSize: 16, color: C.white,
+          boxShadow: `0 4px 16px ${C.accentGlow}`
+        }}>87</div>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: C.gold }}>87Capital</div>
-          <div style={{ fontSize: 9, color: C.textDim, fontWeight: 600, letterSpacing: "0.1em" }}>TRADING OS V4</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>EightSeven HQ</div>
+          <div style={{ fontSize: 9, color: C.accentLight, fontWeight: 600, letterSpacing: "0.1em" }}>TRADING OS V4</div>
         </div>
       </div>
 
@@ -541,13 +546,13 @@ function TopBar({ session, showToast }) {
         }}>
           <div style={{
             width: 28, height: 28, borderRadius: 8,
-            background: `linear-gradient(135deg, ${C.gold}, ${C.yellow})`,
+            background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 11, fontWeight: 800, color: C.bg
+            fontSize: 11, fontWeight: 800, color: C.white
           }}>KS</div>
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Karan</div>
-            <div style={{ fontSize: 9, color: C.goldLight }}>30 Trades To Freedom</div>
+            <div style={{ fontSize: 9, color: C.accentLight }}>30 Trades To Freedom</div>
           </div>
         </div>
       </div>
@@ -608,13 +613,13 @@ function Sidebar({ page, setPage, session }) {
               <button key={item.id} onClick={() => setPage(item.id)} style={{
                 display: "flex", alignItems: "center", gap: 12, padding: "11px 20px",
                 width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
-                background: active ? `linear-gradient(90deg, ${C.gold}15, transparent)` : "transparent",
-                color: active ? C.goldLight : C.textMuted,
+                background: active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
+                color: active ? C.accentLight : C.textMuted,
                 fontWeight: active ? 700 : 500, fontSize: 13,
-                borderLeft: active ? `3px solid ${C.gold}` : "3px solid transparent",
+                borderLeft: active ? `3px solid ${C.accent}` : "3px solid transparent",
                 transition: "all 0.2s ease", textAlign: "left"
               }}>
-                <item.icon size={18} color={active ? C.gold : C.textDim} />
+                <item.icon size={18} color={active ? C.accent : C.textDim} />
                 {item.label}
                 {item.id === "trading-floor" && session.active && (
                   <div style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: C.green }} />
@@ -768,6 +773,116 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast }) {
   );
 }
 
+// ─── LIVE MARKET DATA ──────────────────────────────────────────────────────
+function LiveMarketTicker() {
+  const [prices, setPrices] = useState({
+    MNQ: { price: 18450.50, change: +25.75 },
+    NQ: { price: 18200.25, change: +15.50 },
+    ES: { price: 5120.75, change: -5.25 },
+    RTY: { price: 2050.00, change: +8.50 },
+    CL: { price: 78.45, change: -0.85 },
+    GC: { price: 2345.80, change: +12.30 }
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPrices(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(ticker => {
+          const tick = updated[ticker];
+          const change = (Math.random() - 0.5) * 2;
+          updated[ticker] = {
+            price: tick.price + change,
+            change: tick.change + change
+          };
+        });
+        return updated;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 8 }}>
+      {Object.entries(prices).map(([ticker, data]) => (
+        <div key={ticker} style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
+          background: C.bgCardAlt, borderRadius: 12, border: `1px solid ${C.border}`, minWidth: 120
+        }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{ticker}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{data.price.toFixed(2)}</div>
+          </div>
+          <div style={{
+            fontSize: 12, fontWeight: 600,
+            color: data.change >= 0 ? C.green : C.red
+          }}>
+            {data.change >= 0 ? "+" : ""}{data.change.toFixed(2)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── TRUMP NEWS ALERT ──────────────────────────────────────────────────────
+function NewsAlert({ alert, onDismiss }) {
+  if (!alert) return null;
+  
+  return (
+    <div style={{
+      position: "fixed", top: 80, left: "50%", transform: "translateX(-50%)",
+      zIndex: 5000, animation: "slideDown 0.4s ease-out", maxWidth: 500, width: "90vw"
+    }}>
+      <div style={{
+        background: `linear-gradient(135deg, ${C.red}, #991b1b)`,
+        border: `2px solid ${C.red}`,
+        borderRadius: 16, padding: 20, boxShadow: `0 8px 32px ${C.red}60`
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)",
+            display: "flex", alignItems: "center", justifyContent: "center"
+          }}>
+            <AlertTriangle size={24} color={C.white} />
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              URGENT - TRUMP ALERT
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.white }}>{alert.source}</div>
+          </div>
+        </div>
+        <p style={{ fontSize: 14, color: C.white, lineHeight: 1.6, marginBottom: 16 }}>
+          {alert.message}
+        </p>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button 
+            onClick={onDismiss}
+            style={{
+              flex: 1, padding: "10px 20px", borderRadius: 10, border: "none",
+              background: "rgba(255,255,255,0.2)", color: C.white, fontWeight: 600, cursor: "pointer"
+            }}
+          >
+            Read & Dismiss
+          </button>
+          <a 
+            href={alert.link} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{
+              flex: 1, padding: "10px 20px", borderRadius: 10, border: "none",
+              background: C.white, color: C.red, fontWeight: 600, textAlign: "center", textDecoration: "none"
+            }}
+          >
+            View on X
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── COMMAND CENTER PAGE ────────────────────────────────────────────────────
 function CommandCenterPage({ trades, session, propAccounts, setPage }) {
   const stats = {
@@ -789,6 +904,15 @@ function CommandCenterPage({ trades, session, propAccounts, setPage }) {
 
   return (
     <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
+      {/* Live Market Ticker */}
+      <div style={{ ...S.glassCard, marginBottom: 24, padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.green, animation: "livePulse 1.5s infinite" }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>Live Futures</span>
+        </div>
+        <LiveMarketTicker />
+      </div>
+
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
         <div>
@@ -1821,6 +1945,31 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [lastSessionData, setLastSessionData] = useState(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
+  const [newsAlert, setNewsAlert] = useState(null);
+
+  // Simulated Trump News Alerts
+  const trumpAlerts = [
+    { source: "TRUTH Social", message: "Big tariff announcement coming tomorrow. Get ready!", link: "https://truthsocial.com" },
+    { source: "TRUMP", message: "Markets will be GREAT again! Fed should cut rates NOW.", link: "https://truthsocial.com" },
+    { source: "X - @realDonaldTrump", message: "China trade deal is dead. New tariffs incoming!", link: "https://x.com/realDonaldTrump" },
+    { source: "BREAKING - Trump", message: "Just spoke with Xi. Big announcement coming this week!", link: "https://truthsocial.com" },
+    { source: "TRUTH Social", message: "The Fed is our enemy. Interest rates should be ZERO!", link: "https://truthsocial.com" }
+  ];
+
+  // Show random news alert every 2-5 minutes (simulated)
+  useEffect(() => {
+    const showAlert = () => {
+      if (!newsAlert) {
+        const randomAlert = trumpAlerts[Math.floor(Math.random() * trumpAlerts.length)];
+        setNewsAlert(randomAlert);
+        showToast("URGENT: Trump Alert Received!", "warning");
+      }
+    };
+
+    // Show first alert after 30 seconds for demo
+    const timer = setTimeout(showAlert, 30000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Toast helper
   const showToast = (message, type = "info") => {
@@ -1892,13 +2041,16 @@ export default function App() {
   return (
     <div style={{
       background: C.bg, color: C.text, fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif", minHeight: "100vh",
-      backgroundImage: `radial-gradient(circle at 0% 0%, ${C.goldGlow} 0%, transparent 50%), radial-gradient(circle at 100% 100%, ${C.purpleGlow} 0%, transparent 50%)`
+      backgroundImage: `radial-gradient(circle at 0% 0%, ${C.accentGlow} 0%, transparent 50%), radial-gradient(circle at 100% 100%, ${C.purpleGlow} 0%, transparent 50%)`
     }}>
       <TopBar session={session} />
       <Sidebar page={page} setPage={setPage} session={session} />
       <main style={{ marginLeft: 240, marginTop: 60, minHeight: "calc(100vh - 60px)" }}>
         {renderPage()}
       </main>
+      
+      {/* Trump News Alert Popup */}
+      <NewsAlert alert={newsAlert} onDismiss={() => setNewsAlert(null)} />
       
       {/* Session End Button */}
       {session.active && (
@@ -1930,13 +2082,13 @@ export default function App() {
         @keyframes firePulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.3); } }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideDown { from { transform: translateX(-50%) translateY(-100%); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
         * { scrollbar-width: thin; scrollbar-color: ${C.border} transparent; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 10px; }
         body { margin: 0; }
         select option { background: ${C.bgCard}; }
         input[type="number"]::-webkit-inner-spin-button { opacity: 0.5; }
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700;800&display=swap');
       `}</style>
     </div>
   );

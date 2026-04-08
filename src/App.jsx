@@ -581,7 +581,7 @@ const GURBANI_VERSES = [
   "ਜੇ ਹੋਵੈ ਪਰਾਈ ਕਿਸੈ ਤੁਮਾਰੀ ਜਾਣੈ ਮੇਰੀ ਖ਼ਾਬ || ਨਾਨਕ ਪਰਧਾਨੈ ਹੋਈਐ ਸਭ ਤੇ ਮਸਤਕ ਕਾਬ ||",
 ];
 
-const ARDAS_VERSE = "ਅਸੀਂ ਜੋ ਕੁਝ ਕਰਨ ਦੇ ਸਮਰੱਥ ਹਾਂ ਉਹ ਤੁਹਾਡੀ ਮਿਹਰ ਨਾਲ ਹੀ ਹੈ, ਜਿਵੇਂ ਤੁਹਾਡੀ ਰਜ਼ਾ ਹੋਵੇ ਤਿਵੇਂ ਹੀ ਹੋ ਜਾਵੇ ||";
+const ARDAS_VERSE = "ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕਰਿ ਹਮ ਸਾਕਹ ਜਿਉ ਭਾਵੈ ਤਿਵੈ ਬਖਸਿ ॥੧॥ ਰਹਾਉ ॥";
 
 // ─── SIDEBAR ────────────────────────────────────────────────────────────────
 function Sidebar({ page, setPage, session }) {
@@ -698,14 +698,14 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
   const [setupGrade, setSetupGrade] = useState("");
   
   // ICT Fields
-  const [htfOrderflow, setHtfOrderflow] = useState("");
+  const [htfOrderflow, setHtfOrderflow] = useState([]);
   const [liquidity, setLiquidity] = useState([]);
-  const [mmxm, setMmxm] = useState("");
-  const [midnightOpen, setMidnightOpen] = useState("");
-  const [smr, setSmr] = useState("NO");
+  const [mmxm, setMmxm] = useState([]);
+  const [midnightOpen, setMidnightOpen] = useState([]);
+  const [smr, setSmr] = useState([]);
   const [smrTime, setSmrTime] = useState([]);
   const [toi, setToi] = useState([]);
-  const [tradeEntryTime, setTradeEntryTime] = useState("");
+  const [tradeEntryTime, setTradeEntryTime] = useState([]);
   
   // Meta fields
   const [newsDay, setNewsDay] = useState([]);
@@ -1183,10 +1183,10 @@ function PostSessionPage({ setPage, showToast, trades, onAddTrade }) {
       {/* Gurmukhi Ardas */}
       <div style={{ ...S.glassCard, marginBottom: 24, textAlign: "center", background: `linear-gradient(135deg, ${C.bgCard}, ${C.purple}10)` }}>
         <p style={{ fontFamily: "'Noto Sans Gurmukhi', sans-serif", fontSize: 18, color: C.text, lineHeight: 1.8, margin: 0 }}>
-          ਅਸੀਂ ਜੋ ਕੁਝ ਕਰਨ ਦੇ ਸਮਰੱਥ ਹਾਂ ਉਹ ਤੁਹਾਡੀ ਮਿਹਰ ਨਾਲ ਹੀ ਹੈ
+          ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕਰਿ ਹਮ ਸਾਕਹ ਜਿਉ ਭਾਵੈ ਤਿਵੈ ਬਖਸਿ ॥੧॥ ਰਹਾਉ ॥
         </p>
         <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, fontStyle: "italic" }}>
-          I have no power to do anything at all. As it pleases You, You forgive us.
+          I have no power to do anything at all. As it pleases You, You forgive us. ||1||Pause||
         </p>
       </div>
 
@@ -1791,27 +1791,27 @@ function PreSessionPage({ onStartSession, setPage }) {
 
       {/* Step 0: Ardas */}
       {step === 0 && (
-        <div style={{ ...S.glassCard, maxWidth: 580, margin: "0 auto", textAlign: "center", boxShadow: `0 0 60px ${C.goldBg}`, border: `1px solid ${C.goldBorder}` }}>
+        <div style={{ ...S.glassCard, maxWidth: 580, margin: "0 auto", textAlign: "center", boxShadow: `0 0 60px ${C.accentGlow}`, border: `1px solid ${C.border}` }}>
           <div style={{
             width: 80, height: 80, borderRadius: "50%",
-            background: `linear-gradient(135deg, ${C.gold}20, ${C.yellow}10)`,
+            background: `linear-gradient(135deg, ${C.purple}30, ${C.accent}20)`,
             display: "flex", alignItems: "center", justifyContent: "center",
             margin: "0 auto 24px", animation: "float 3s ease-in-out infinite"
           }}>
-            <Sun size={40} color={C.gold} />
+            <Sun size={40} color={C.purple} />
           </div>
           <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Begin With Ardas</h2>
           
           {/* Gurmukhi Ardas Verse */}
           <div style={{
-            padding: 20, borderRadius: 14, background: `linear-gradient(135deg, ${C.gold}15, ${C.purple}10)`,
-            border: `1px solid ${C.goldBorder}`, marginBottom: 24
+            padding: 20, borderRadius: 14, background: `linear-gradient(135deg, ${C.purple}15, ${C.accent}10)`,
+            border: `1px solid ${C.border}`, marginBottom: 24
           }}>
             <p style={{ fontFamily: "'Noto Sans Gurmukhi', sans-serif", fontSize: 18, color: C.text, lineHeight: 2, margin: 0 }}>
-              ਅਸੀਂ ਜੋ ਕੁਝ ਕਰਨ ਦੇ ਸਮਰੱਥ ਹਾਂ ਉਹ ਤੁਹਾਡੀ ਮਿਹਰ ਨਾਲ ਹੀ ਹੈ
+              ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕਰਿ ਹਮ ਸਾਕਹ ਜਿਉ ਭਾਵੈ ਤਿਵੈ ਬਖਸਿ ॥੧॥ ਰਹਾਉ ॥
             </p>
             <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, fontStyle: "italic" }}>
-              "I have no power to do anything at all. As it pleases You, You forgive us."
+              I have no power to do anything at all. As it pleases You, You forgive us. ||1||Pause||
             </p>
           </div>
           
@@ -1820,7 +1820,7 @@ function PreSessionPage({ onStartSession, setPage }) {
           </p>
           <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, cursor: "pointer", marginBottom: 24 }}>
             <input type="checkbox" checked={ardasDone} onChange={e => setArdasDone(e.target.checked)}
-              style={{ width: 20, height: 20, accentColor: C.gold, cursor: "pointer" }} />
+              style={{ width: 20, height: 20, accentColor: C.accent, cursor: "pointer" }} />
             <span style={{ fontWeight: 600 }}>I have completed my Ardas</span>
           </label>
           <button disabled={!ardasDone} onClick={() => setStep(1)} style={{
@@ -1835,7 +1835,7 @@ function PreSessionPage({ onStartSession, setPage }) {
       {step === 1 && (
         <div style={{ ...S.glassCard, maxWidth: 680, margin: "0 auto" }}>
           <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
-            <Eye size={22} color={C.gold} /> Market Analysis
+            <Eye size={22} color={C.accent} /> Market Analysis
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
             <Select label="Daily Bias" value={analysis.bias} onChange={v => setAnalysis({ ...analysis, bias: v })} options={["Bullish", "Bearish", "Neutral"]} />
@@ -1861,7 +1861,7 @@ function PreSessionPage({ onStartSession, setPage }) {
       {step === 2 && (
         <div style={{ ...S.glassCard, maxWidth: 680, margin: "0 auto" }}>
           <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
-            <Shield size={22} color={C.gold} /> Rule Commitment
+            <Shield size={22} color={C.accent} /> Rule Commitment
           </h2>
           <p style={{ color: C.textDim, marginBottom: 24 }}>Check each rule to confirm.</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>

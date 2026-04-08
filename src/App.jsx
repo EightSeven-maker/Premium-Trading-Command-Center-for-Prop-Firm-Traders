@@ -68,6 +68,26 @@ const QUOTES = [
 
 const PROP_FIRMS = ["TopStepTrader", "ApexTrader", "ApexFutures", "MyFundedFX", "FTMO", "Blue Guardian", "Lux Trading", "The Funded Trader"];
 
+// ─── NOTION JOURNAL FIELD OPTIONS ──────────────────────────────────────────
+const HTF_ORDERFLOW = ["Bullish", "Bearish", "Neutral", "Bar Code"];
+const MMXM_OPTIONS = ["MMBM", "MMSM"];
+const MIDNIGHT_OPEN = ["Above (Premium)", "Below (Discount)"];
+const NEWS_DAY = ["YES", "NO", "FOMC", "NFP", "CPI", "PMI", "Pre FOMC", "Trump", "PPI"];
+const PRE_ARDAS = ["Yes", "No"];
+const POST_ARDAS = ["Yes", "No", "Partial"];
+const SMR_TIME = ["08:29", "08:30", "08:50", "08:55", "08:59", "09:00", "09:01", "09:20", "09:30", "09:45", "09:55", "10:00", "10:01", "10:45", "10:58", "11:00", "11:45", "12:00", "12:15", "13:30", "13:45", "13:50", "14:00", "14:10", "14:45", "14:50", "15:00"];
+const TOI_TIME = ["08:30 Open", "08:50 - 9:10AM", "08:55 - 09:10", "09:20 - 9:40", "09:30 Open", "09:45-10:15AM", "10:00 - 10:30", "10:45-11:15 AM", "11:00 - 11:30", "11:45 - 12:15", "13:30", "13:45-14:15", "13:50-14:10PM", "14:00 - 14:30", "14:45 - 15:10", "15:00 - 15:30", "AM Silver Bullet", "PM Silver Bullet", "NYPM Macro", "Lunch Macro", "None", "Not in macro"];
+const TRADE_TOOK = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10+", "1 BE", "1 Loss", "1 Win", "2 BE", "2 Loss", "2 Win", "3 BE", "3 Loss", "3 Win", "4 BE", "4 Loss", "5 Loss", "2 Profit BE", "1 PBE", "Gambling"];
+const LIQUIDITY_OPTIONS = ["LO LOW", "LO HIGH", "NYAM LOW", "NYAM HIGH", "NWOG", "PDH", "PDL", "PCH", "PCL", "PWH", "PWL", "Minor BSL", "Mid of Range", "50% of Range", "15min FVG", "5m FVG", "1st P FVG", "Asian Low", "Equal Highs", "ATH", "ATL", "Sellside", "Buyside", "Friday High", "Friday Low", "Oct 16 Liq"];
+
+// Post Session Options
+const EMOTIONS = ["Calm", "FOMO", "Anxious", "Angry", "Revenge", "Greedy", "Confident", "Confused", "Tired", "Focused", "Frustrated", "Peaceful", "Excited"];
+const POST_TRADE_ACTIONS = ["Added to Winner", "Partial Exit", "Moved SL", "Widened SL", "Tightened SL", "Trailed SL", "Ignored Plan", "Followed Plan", "Early Exit", "Held Full", "Scaled In", "Scaled Out", "No Action"];
+const SESSION_QUALITY = ["Excellent", "Good", "Average", "Poor", "Terrible"];
+const MENTAL_STATE = ["10/10", "9/10", "8/10", "7/10", "6/10", "5/10", "4/10", "3/10", "2/10", "1/10"];
+const ENERGY_LEVEL = ["Very High", "High", "Normal", "Low", "Very Low"];
+const DISTRACTIONS = ["Phone", "Social Media", "Family", "News", "Other Charts", "Chat", "Food", "None"];
+
 const TRADING_RULES = [
   "Only trade during Kill Zones (NY AM 9:30-11:00, NY PM 13:30-15:00)",
   "Must have HTF PD Array confluence before entry",
@@ -656,17 +676,6 @@ function Sidebar({ page, setPage, session }) {
   );
 }
 
-// ─── NOTION JOURNAL FIELD OPTIONS ──────────────────────────────────────────
-const HTF_ORDERFLOW = ["Bullish", "Bearish", "Neutral", "Bar Code"];
-const MMXM_OPTIONS = ["MMBM", "MMSM"];
-const MIDNIGHT_OPEN = ["Above (Premium)", "Below (Discount)"];
-const NEWS_DAY = ["YES", "NO", "FOMC", "NFP", "CPI", "PMI", "Pre FOMC", "Trump", "PPI"];
-const PRE_ARDAS = ["Yes", "No"];
-const SMR_TIME = ["08:29", "08:30", "08:50", "08:55", "08:59", "09:00", "09:01", "09:20", "09:30", "09:45", "09:55", "10:00", "10:01", "10:45", "10:58", "11:00", "11:45", "12:00", "12:15", "13:30", "13:45", "13:50", "14:00", "14:10", "14:45", "14:50", "15:00"];
-const TOI_TIME = ["08:30 Open", "08:50 - 9:10AM", "08:55 - 09:10", "09:20 - 9:40", "09:30 Open", "09:45-10:15AM", "10:00 - 10:30", "10:45-11:15 AM", "11:00 - 11:30", "11:45 - 12:15", "13:30", "13:45-14:15", "13:50-14:10PM", "14:00 - 14:30", "14:45 - 15:10", "15:00 - 15:30", "AM Silver Bullet", "PM Silver Bullet", "NYPM Macro", "Lunch Macro", "None", "Not in macro"];
-const TRADE_TOOK = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10+", "1 BE", "1 Loss", "1 Win", "2 BE", "2 Loss", "2 Win", "3 BE", "3 Loss", "3 Win", "4 BE", "4 Loss", "5 Loss", "2 Profit BE", "1 PBE", "Gambling"];
-const LIQUIDITY_OPTIONS = ["LO LOW", "LO HIGH", "NYAM LOW", "NYAM HIGH", "NWOG", "PDH", "PDL", "PCH", "PCL", "PWH", "PWL", "Minor BSL", "Mid of Range", "50% of Range", "15min FVG", "5m FVG", "1st P FVG", "Asian Low", "Equal Highs", "ATH", "ATL", "Sellside", "Buyside", "Friday High", "Friday Low", "Oct 16 Liq"];
-
 // ─── ACTIVE SESSION PAGE ────────────────────────────────────────────────────
 function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
   // Core fields
@@ -687,12 +696,23 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
   const [tradeEntryTime, setTradeEntryTime] = useState("");
   
   // Meta fields
-  const [newsDay, setNewsDay] = useState("NO");
-  const [preArdas, setPreArdas] = useState("Yes");
+  const [newsDay, setNewsDay] = useState([]);
   const [poi, setPoi] = useState("");
   const [learnings, setLearnings] = useState("");
   const [tradeTook, setTradeTook] = useState([]);
   const [notes, setNotes] = useState("");
+
+  // Post Session fields
+  const [postArdas, setPostArdas] = useState([]);
+  const [emotions, setEmotions] = useState([]);
+  const [mentalState, setMentalState] = useState([]);
+  const [energyLevel, setEnergyLevel] = useState([]);
+  const [sessionQuality, setSessionQuality] = useState([]);
+  const [distractions, setDistractions] = useState([]);
+  const [postTradeActions, setPostTradeActions] = useState([]);
+  const [sessionSummary, setSessionSummary] = useState("");
+  const [nextSessionFocus, setNextSessionFocus] = useState("");
+  const [activeTab, setActiveTab] = useState("log"); // "log" or "post"
 
   const toggleMultiSelect = (arr, setArr, value) => {
     setArr(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
@@ -710,24 +730,30 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
       ticker: symbol, 
       pnl: pnlVal, 
       contracts,
-      entryModel, // array
+      entryModel,
       setupGrade,
-      // ICT
       htfOrderflow,
-      liquidity, // array
+      liquidity,
       mmxm,
       midnightOpen,
       smr,
-      smrTime, // array
-      toi, // array
+      smrTime,
+      toi,
       tradeEntryTime,
-      // Meta
       newsDay,
-      preArdas,
       poi,
       learnings,
-      tradeTook, // array
-      notes
+      tradeTook,
+      notes,
+      postArdas,
+      emotions,
+      mentalState,
+      energyLevel,
+      sessionQuality,
+      distractions,
+      postTradeActions,
+      sessionSummary,
+      nextSessionFocus
     });
     
     // Reset form
@@ -735,21 +761,78 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
     setContracts(1);
     setEntryModel([]);
     setSetupGrade("");
-    setHtfOrderflow("");
+    setHtfOrderflow([]);
     setLiquidity([]);
-    setMmxm("");
-    setMidnightOpen("");
-    setSmr("NO");
+    setMmxm([]);
+    setMidnightOpen([]);
+    setSmr([]);
     setSmrTime([]);
     setToi([]);
-    setTradeEntryTime("");
-    setNewsDay("NO");
-    setPreArdas("Yes");
+    setTradeEntryTime([]);
+    setNewsDay([]);
     setPoi("");
     setLearnings("");
     setTradeTook([]);
     setNotes("");
+    // Reset post session
+    setPostArdas([]);
+    setEmotions([]);
+    setMentalState([]);
+    setEnergyLevel([]);
+    setSessionQuality([]);
+    setDistractions([]);
+    setPostTradeActions([]);
+    setSessionSummary("");
+    setNextSessionFocus("");
     showToast("Trade logged!", "success");
+  };
+
+  // Submit Post Session
+  const submitPostSession = () => {
+    onAddTrade({
+      date: today(),
+      isPostSession: true,
+      postArdas,
+      emotions,
+      mentalState,
+      energyLevel,
+      sessionQuality,
+      distractions,
+      postTradeActions,
+      sessionSummary,
+      nextSessionFocus,
+      // Also save trade data if any
+      ticker: symbol,
+      pnl: parseFloat(pnl) || 0,
+      contracts,
+      entryModel,
+      setupGrade,
+      htfOrderflow,
+      liquidity,
+      mmxm,
+      midnightOpen,
+      smr,
+      smrTime,
+      toi,
+      tradeEntryTime,
+      newsDay,
+      poi,
+      learnings,
+      tradeTook,
+      notes
+    });
+    // Reset post session fields
+    setPostArdas([]);
+    setEmotions([]);
+    setMentalState([]);
+    setEnergyLevel([]);
+    setSessionQuality([]);
+    setDistractions([]);
+    setPostTradeActions([]);
+    setSessionSummary("");
+    setNextSessionFocus("");
+    setActiveTab("log");
+    showToast("Post session logged!", "success");
   };
 
   // Multi-select chip component
@@ -798,10 +881,28 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
       {/* Main Form */}
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
         <div style={S.glassCard}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-            <Calculator size={20} color={C.accent} /> Trade Entry
-          </h3>
+          {/* Tabs */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            <button onClick={() => setActiveTab("log")} style={{
+              padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13,
+              background: activeTab === "log" ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : "rgba(0,0,0,0.3)",
+              color: C.white,
+              border: `1px solid ${activeTab === "log" ? C.accent : C.border}`
+            }}>
+              <Calculator size={16} style={{ marginRight: 6 }} /> Log Trade
+            </button>
+            <button onClick={() => setActiveTab("post")} style={{
+              padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13,
+              background: activeTab === "post" ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : "rgba(0,0,0,0.3)",
+              color: C.white,
+              border: `1px solid ${activeTab === "post" ? C.accent : C.border}`
+            }}>
+              <Star size={16} style={{ marginRight: 6 }} /> Post Session
+            </button>
+          </div>
 
+          {activeTab === "log" && (
+            <>
           {/* Row 1: Ticker, P&L, Contracts */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
@@ -849,124 +950,38 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
             </div>
           </div>
 
-          {/* Section: ICT Analysis */}
+          {/* Section: ICT Analysis - All Multi-Select */}
           <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
             <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               ICT Analysis
             </h4>
 
-            {/* Row: HTF Orderflow, MMXM, Midnight Open */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
-              <div>
-                <label style={S.label}>HTF Orderflow</label>
-                <select value={htfOrderflow} onChange={e => setHtfOrderflow(e.target.value)} style={S.input}>
-                  <option value="">Select...</option>
-                  {HTF_ORDERFLOW.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={S.label}>MMXM</label>
-                <select value={mmxm} onChange={e => setMmxm(e.target.value)} style={S.input}>
-                  <option value="">Select...</option>
-                  {MMXM_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={S.label}>Midnight Open</label>
-                <select value={midnightOpen} onChange={e => setMidnightOpen(e.target.value)} style={S.input}>
-                  <option value="">Select...</option>
-                  {MIDNIGHT_OPEN.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {/* Liquidity (multi-select) */}
-            <ChipSelect 
-              label="Liquidity" 
-              options={LIQUIDITY_OPTIONS} 
-              selected={liquidity} 
-              onToggle={(v) => toggleMultiSelect(liquidity, setLiquidity, v)} 
-            />
-
-            {/* Row: SMR, Trade Entry Time */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-              <div>
-                <label style={S.label}>SMR (SMT)</label>
-                <select value={smr} onChange={e => setSmr(e.target.value)} style={S.input}>
-                  <option value="NO">NO</option>
-                  <option value="Yes (Sentiment Momentum Trade)">Yes (Sentiment Momentum Trade)</option>
-                </select>
-              </div>
-              <div>
-                <label style={S.label}>Trade Entry Time</label>
-                <select value={tradeEntryTime} onChange={e => setTradeEntryTime(e.target.value)} style={S.input}>
-                  <option value="">Select time...</option>
-                  {SMR_TIME.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {/* SMR Time (multi-select) */}
-            <ChipSelect 
-              label="SMR Time" 
-              options={SMR_TIME} 
-              selected={smrTime} 
-              onToggle={(v) => toggleMultiSelect(smrTime, setSmrTime, v)} 
-            />
-
-            {/* TOI (multi-select) */}
-            <ChipSelect 
-              label="TOI (Time of Interest)" 
-              options={TOI_TIME} 
-              selected={toi} 
-              onToggle={(v) => toggleMultiSelect(toi, setToi, v)} 
-            />
+            <ChipSelect label="HTF Orderflow" options={HTF_ORDERFLOW} selected={htfOrderflow} onToggle={(v) => setHtfOrderflow(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
+            <ChipSelect label="MMXM" options={MMXM_OPTIONS} selected={mmxm} onToggle={(v) => setMmxm(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
+            <ChipSelect label="Midnight Open" options={MIDNIGHT_OPEN} selected={midnightOpen} onToggle={(v) => setMidnightOpen(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
+            <ChipSelect label="Liquidity" options={LIQUIDITY_OPTIONS} selected={liquidity} onToggle={(v) => toggleMultiSelect(liquidity, setLiquidity, v)} />
+            <ChipSelect label="SMR (SMT)" options={["NO", "Yes (Sentiment Momentum Trade)"]} selected={smr} onToggle={(v) => setSmr(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
+            <ChipSelect label="Trade Entry Time" options={SMR_TIME} selected={tradeEntryTime} onToggle={(v) => setTradeEntryTime(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
+            <ChipSelect label="SMR Time" options={SMR_TIME} selected={smrTime} onToggle={(v) => toggleMultiSelect(smrTime, setSmrTime, v)} />
+            <ChipSelect label="TOI (Time of Interest)" options={TOI_TIME} selected={toi} onToggle={(v) => toggleMultiSelect(toi, setToi, v)} />
           </div>
 
-          {/* Section: Session Meta */}
+          {/* Section: Session Info - All Multi-Select */}
           <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
             <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Session Info
             </h4>
 
-            {/* Row: News Day, Pre Ardas, Trade Took */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
-              <div>
-                <label style={S.label}>News Day</label>
-                <select value={newsDay} onChange={e => setNewsDay(e.target.value)} style={S.input}>
-                  <option value="NO">NO</option>
-                  <option value="YES">YES</option>
-                  {NEWS_DAY.filter(n => n !== "YES" && n !== "NO").map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={S.label}>Pre Ardas</label>
-                <select value={preArdas} onChange={e => setPreArdas(e.target.value)} style={S.input}>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div>
-                <label style={S.label}>POI</label>
-                <input type="text" value={poi} onChange={e => setPoi(e.target.value)} style={S.input} placeholder="Point of Interest" />
-              </div>
+            <ChipSelect label="News Day" options={NEWS_DAY} selected={newsDay} onToggle={(v) => setNewsDay(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])} />
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>POI</label>
+              <input type="text" value={poi} onChange={e => setPoi(e.target.value)} style={S.input} placeholder="Point of Interest" />
             </div>
-
-            {/* Trade Took (multi-select) */}
-            <ChipSelect 
-              label="Trade Took (contracts)" 
-              options={TRADE_TOOK} 
-              selected={tradeTook} 
-              onToggle={(v) => toggleMultiSelect(tradeTook, setTradeTook, v)} 
-            />
-
-            {/* Learnings */}
+            <ChipSelect label="Trade Took (contracts)" options={TRADE_TOOK} selected={tradeTook} onToggle={(v) => toggleMultiSelect(tradeTook, setTradeTook, v)} />
             <div style={{ marginBottom: 14 }}>
               <label style={S.label}>Learnings</label>
               <textarea value={learnings} onChange={e => setLearnings(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="What did you learn from this trade?" />
             </div>
-
-            {/* Notes */}
             <div style={{ marginBottom: 16 }}>
               <label style={S.label}>Notes</label>
               <textarea value={notes} onChange={e => setNotes(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="Any additional observations?" />
@@ -976,6 +991,56 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
           <button onClick={submitTrade} style={{ ...S.btn("primary", "lg"), width: "100%", justifyContent: "center" }}>
             <Save size={16} /> Log Trade
           </button>
+          </>
+          )}
+
+          {activeTab === "post" && (
+            <>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+              <Star size={20} color={C.purple} /> Post Session Reflection
+            </h3>
+
+            {/* Section: Post Ardas & Mental State */}
+            <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Mental State
+              </h4>
+              <ChipSelect label="Post Ardas" options={POST_ARDAS} selected={postArdas} onToggle={(v) => toggleMultiSelect(postArdas, setPostArdas, v)} />
+              <ChipSelect label="Emotions During Session" options={EMOTIONS} selected={emotions} onToggle={(v) => toggleMultiSelect(emotions, setEmotions, v)} />
+              <ChipSelect label="Mental State (1-10)" options={MENTAL_STATE} selected={mentalState} onToggle={(v) => toggleMultiSelect(mentalState, setMentalState, v)} />
+              <ChipSelect label="Energy Level" options={ENERGY_LEVEL} selected={energyLevel} onToggle={(v) => toggleMultiSelect(energyLevel, setEnergyLevel, v)} />
+              <ChipSelect label="Session Quality" options={SESSION_QUALITY} selected={sessionQuality} onToggle={(v) => toggleMultiSelect(sessionQuality, setSessionQuality, v)} />
+            </div>
+
+            {/* Section: Session Details */}
+            <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Session Details
+              </h4>
+              <ChipSelect label="Distractions" options={DISTRACTIONS} selected={distractions} onToggle={(v) => toggleMultiSelect(distractions, setDistractions, v)} />
+              <ChipSelect label="Post Trade Actions" options={POST_TRADE_ACTIONS} selected={postTradeActions} onToggle={(v) => toggleMultiSelect(postTradeActions, setPostTradeActions, v)} />
+            </div>
+
+            {/* Section: Reflection */}
+            <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Reflection
+              </h4>
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.label}>Session Summary</label>
+                <textarea value={sessionSummary} onChange={e => setSessionSummary(e.target.value)} style={{ ...S.input, minHeight: 80, resize: "vertical" }} placeholder="How did the session go? What worked? What didn't?" />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={S.label}>Next Session Focus</label>
+                <textarea value={nextSessionFocus} onChange={e => setNextSessionFocus(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="What will you focus on next time?" />
+              </div>
+            </div>
+
+            <button onClick={submitPostSession} style={{ ...S.btn("primary", "lg"), width: "100%", justifyContent: "center" }}>
+              <Save size={16} /> Submit Post Session
+            </button>
+          </>
+          )}
         </div>
       </div>
     </div>

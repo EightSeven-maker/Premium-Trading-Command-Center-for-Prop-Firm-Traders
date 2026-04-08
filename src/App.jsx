@@ -565,13 +565,9 @@ function Sidebar({ page, setPage, session }) {
   // Main quick actions - always visible
   const quickActions = [
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { id: "trading-floor", icon: Zap, label: "Active Session" },
     { id: "presession", icon: Sun, label: "Pre-Session" },
   ];
-
-  // Active session - only when trading
-  const activeSession = session.active ? [
-    { id: "trading-floor", icon: Zap, label: "Active Session", badge: "LIVE" }
-  ] : [];
 
   const navSections = [
     {
@@ -608,55 +604,33 @@ function Sidebar({ page, setPage, session }) {
       <div style={{ padding: "0 12px", marginBottom: 8 }}>
         {quickActions.map(item => {
           const active = page === item.id;
+          const isActiveSession = item.id === "trading-floor" && session.active;
           return (
             <button key={item.id} onClick={() => setPage(item.id)} style={{
               display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
               width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
-              background: active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
-              color: active ? C.accentLight : C.textMuted,
-              fontWeight: active ? 700 : 500, fontSize: 13,
-              borderLeft: active ? `3px solid ${C.accent}` : "3px solid transparent",
+              background: isActiveSession ? `linear-gradient(90deg, ${C.green}20, transparent)` : 
+                           active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
+              color: isActiveSession ? C.green : active ? C.accentLight : C.textMuted,
+              fontWeight: isActiveSession || active ? 700 : 500, fontSize: 13,
+              borderLeft: isActiveSession ? `3px solid ${C.green}` : active ? `3px solid ${C.accent}` : "3px solid transparent",
               transition: "all 0.2s ease", textAlign: "left",
               borderRadius: 8, marginBottom: 4
             }}>
-              <item.icon size={18} color={active ? C.accent : C.textDim} />
+              <item.icon size={18} color={isActiveSession ? C.green : active ? C.accent : C.textDim} />
               {item.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Active Session - Only When Trading */}
-      {activeSession.length > 0 && (
-        <div style={{ padding: "0 12px", marginBottom: 8 }}>
-          {activeSession.map(item => {
-            const active = page === item.id;
-            return (
-              <button key={item.id} onClick={() => setPage(item.id)} style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
-                width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
-                background: `linear-gradient(90deg, ${C.green}20, transparent)`,
-                color: C.greenLight,
-                fontWeight: 700, fontSize: 13,
-                borderLeft: `3px solid ${C.green}`,
-                transition: "all 0.2s ease", textAlign: "left",
-                borderRadius: 8, marginBottom: 4
-              }}>
-                <item.icon size={18} color={C.green} />
-                {item.label}
-                <div style={{
-                  marginLeft: "auto", display: "flex", alignItems: "center", gap: 6
-                }}>
+              {isActiveSession && (
+                <div style={{ marginLeft: "auto" }}>
                   <div style={{ 
                     width: 8, height: 8, borderRadius: "50%", background: C.green,
                     animation: "livePulse 1.5s infinite"
                   }} />
                 </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+              )}
+            </button>
+          );
+        })}
+      </div>
 
       <div style={{ height: 1, background: C.border, margin: "8px 20px" }} />
 
@@ -690,23 +664,26 @@ function Sidebar({ page, setPage, session }) {
   );
 }
 
-// ─── TRADING FLOOR PAGE ────────────────────────────────────────────────────
-function TradingFloorPage({ session, onAddTrade, setPage, showToast }) {
+// ─── ACTIVE SESSION PAGE ────────────────────────────────────────────────────
+function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
   const [symbol, setSymbol] = useState("MNQ");
   const [direction, setDirection] = useState("Long");
   const [contracts, setContracts] = useState(1);
   const [pnl, setPnl] = useState("");
+  const [entryModel, setEntryModel] = useState("");
+  const [mistake, setMistake] = useState("");
+  const [notes, setNotes] = useState("");
+  const [showMore, setShowMore] = useState(false);
 
   const submitTrade = () => {
     const pnlVal = parseFloat(pnl);
     
-    // P&L Validation
     if (pnl === "" || isNaN(pnlVal)) {
       showToast("Please enter a valid P&L amount", "error");
       return;
     }
     if (pnlVal === 0) {
-      showToast("P&L cannot be zero. Enter positive for profit, negative for loss.", "warning");
+      showToast("P&L cannot be zero", "warning");
       return;
     }
     if (contracts <= 0) {
@@ -715,116 +692,208 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast }) {
     }
     
     onAddTrade({
-      date: today(), ticker: symbol, direction, contracts, pnl: pnlVal, grade: "", mistake: "", notes: "", entryModel: ""
+      date: today(), ticker: symbol, direction, contracts, pnl: pnlVal, 
+      entryModel, mistake, notes, grade: ""
     });
     setPnl("");
-    showToast("Trade logged successfully!", "success");
+    setEntryModel("");
+    setMistake("");
+    setNotes("");
+    showToast("Trade logged!", "success");
+  };
+
+  // Get today's trades
+  const todayTrades = trades.filter(t => t.date === today());
+  const sessionStats = {
+    total: todayTrades.reduce((s, t) => s + t.pnl, 0),
+    wins: todayTrades.filter(t => t.pnl > 0).length,
+    losses: todayTrades.filter(t => t.pnl < 0).length,
+    wr: todayTrades.length ? ((todayTrades.filter(t => t.pnl > 0).length / todayTrades.length) * 100).toFixed(0) : 0
   };
 
   return (
-    <div style={{ display: "flex", gap: 20, height: "calc(100vh - 100px)" }}>
-      {/* Chart */}
-      <div style={{ flex: 3, ...S.glassCard, padding: 0, overflow: "hidden" }}>
-        {/* Chart Header */}
-        <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "12px 16px", borderBottom: `1px solid ${C.border}`
-        }}>
-          <select value={symbol} onChange={e => setSymbol(e.target.value)} style={{
-            ...S.input, width: 120, cursor: "pointer", appearance: "none",
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-            backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", paddingRight: 30
-          }}>
-            {TICKERS.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <div style={{ display: "flex", gap: 6 }}>
-            {["1", "5", "15", "30", "60", "240", "D"].map(tf => (
-              <button key={tf} style={{
-                padding: "6px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer",
-                background: "rgba(0,0,0,0.3)", color: C.textMuted, border: `1px solid ${C.border}`
-              }}>{tf}</button>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button style={S.btn("ghost", "sm")}><Camera size={14} /> Screenshot</button>
-            <button style={S.btn("ghost", "sm")}><ExternalLink size={14} /> Open in TV</button>
-          </div>
+    <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 26, fontWeight: 800, display: "flex", alignItems: "center", gap: 12 }}>
+            Active Session
+            {session.active && (
+              <span style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 20, background: `${C.green}20`, border: `1px solid ${C.greenBorder}` }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.green, animation: "livePulse 1.5s infinite" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.green }}>LIVE</span>
+              </span>
+            )}
+          </h1>
+          <p style={{ fontSize: 13, color: C.textMuted }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         </div>
-        <TradingViewWidget symbol={`${symbol}1!`} />
+        {!session.active && (
+          <button onClick={() => setPage("presession")} style={S.btn("primary")}>
+            <Play size={16} /> Start Session
+          </button>
+        )}
       </div>
 
-      {/* Right Panel */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Order Entry - Quick Log */}
-        <div style={S.glassCard}>
-          <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-            <Calculator size={18} color={C.gold} /> Quick Log
-          </h4>
+      {/* Live Market Ticker */}
+      <div style={{ ...S.glassCard, marginBottom: 24 }}>
+        <LiveMarketTicker />
+      </div>
 
-          {/* Direction Toggle */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+      {/* Main Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+        {/* Left: Quick Log */}
+        <div style={S.glassCard}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
+            <Calculator size={20} color={C.accent} /> Quick Log
+          </h3>
+
+          {/* Ticker */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={S.label}>Symbol</label>
+            <select value={symbol} onChange={e => setSymbol(e.target.value)} style={{
+              ...S.input, cursor: "pointer", appearance: "none",
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+              backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 36
+            }}>
+              {TICKERS.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+
+          {/* Direction */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
             <button onClick={() => setDirection("Long")} style={{
-              padding: "14px", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 13,
+              padding: "16px", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14,
               background: direction === "Long" ? `linear-gradient(135deg, ${C.green}, #059669)` : "rgba(0,0,0,0.3)",
               color: direction === "Long" ? C.white : C.textMuted,
-              border: `1px solid ${direction === "Long" ? C.green : C.border}`,
-              boxShadow: direction === "Long" ? `0 4px 16px ${C.greenGlow}` : "none"
+              border: `1px solid ${direction === "Long" ? C.green : C.border}`
             }}>
-              <ArrowUpRight size={16} /> LONG
+              <ArrowUpRight size={18} style={{ marginRight: 8 }} /> LONG
             </button>
             <button onClick={() => setDirection("Short")} style={{
-              padding: "14px", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 13,
+              padding: "16px", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14,
               background: direction === "Short" ? `linear-gradient(135deg, ${C.red}, #dc2626)` : "rgba(0,0,0,0.3)",
               color: direction === "Short" ? C.white : C.textMuted,
-              border: `1px solid ${direction === "Short" ? C.red : C.border}`,
-              boxShadow: direction === "Short" ? `0 4px 16px ${C.redGlow}` : "none"
+              border: `1px solid ${direction === "Short" ? C.red : C.border}`
             }}>
-              <ArrowDownRight size={16} /> SHORT
+              <ArrowDownRight size={18} style={{ marginRight: 8 }} /> SHORT
             </button>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={S.label}>Contracts</label>
-            <input type="number" value={contracts} onChange={e => setContracts(Number(e.target.value))} style={S.input} min="1" />
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={S.label}>P&L ($)</label>
-            <input type="number" value={pnl} onChange={e => setPnl(e.target.value)} style={{
-              ...S.input,
-              color: pnl && !isNaN(parseFloat(pnl)) ? (parseFloat(pnl) >= 0 ? C.green : C.red) : C.text,
-              fontWeight: 600
-            }} placeholder="+/- amount (e.g. 150 or -75)" />
-            <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>
-              Tip: Enter positive for profit, negative for loss
+          {/* Contracts & P&L */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={S.label}>Contracts</label>
+              <input type="number" value={contracts} onChange={e => setContracts(Number(e.target.value))} style={S.input} min="1" />
+            </div>
+            <div>
+              <label style={S.label}>P&L ($)</label>
+              <input type="number" value={pnl} onChange={e => setPnl(e.target.value)} style={{
+                ...S.input, fontWeight: 700,
+                color: pnl && !isNaN(parseFloat(pnl)) ? (parseFloat(pnl) >= 0 ? C.green : C.red) : C.text
+              }} placeholder="+150 or -75" />
             </div>
           </div>
+
+          {/* Toggle More Fields */}
+          <button onClick={() => setShowMore(!showMore)} style={{
+            ...S.btn("ghost", "sm"), width: "100%", marginBottom: showMore ? 16 : 0,
+            justifyContent: "center"
+          }}>
+            <Plus size={14} /> {showMore ? "Less Options" : "More Options"}
+          </button>
+
+          {/* More Fields */}
+          {showMore && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 12 }}>
+                <label style={S.label}>Entry Model</label>
+                <select value={entryModel} onChange={e => setEntryModel(e.target.value)} style={S.input}>
+                  <option value="">Select...</option>
+                  {ENTRY_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={S.label}>Mistake (if any)</label>
+                <select value={mistake} onChange={e => setMistake(e.target.value)} style={S.input}>
+                  <option value="">None</option>
+                  {MISTAKES.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={S.label}>Notes</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="Trade notes..." />
+              </div>
+            </div>
+          )}
 
           <button onClick={submitTrade} style={{ ...S.btn("primary", "lg"), width: "100%", justifyContent: "center" }}>
             <Save size={16} /> Log Trade
           </button>
         </div>
 
-        {/* Session Info */}
-        {session.active && (
-          <div style={S.glassCard}>
-            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Session Info</h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 12, color: C.textMuted }}>Bias</span>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{session.analysis?.bias || "—"}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 12, color: C.textMuted }}>HTF</span>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{session.analysis?.htf || "—"}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 12, color: C.textMuted }}>Trades</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: session.trades >= 2 ? C.red : C.green }}>{session.trades}/2</span>
+        {/* Right: Stats & Today's Trades */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Session Stats */}
+          {session.active && (
+            <div style={S.glassCard}>
+              <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>Session Stats</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                <div style={{ textAlign: "center", padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10 }}>
+                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Trades</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: C.text }}>{session.trades}/2</div>
+                </div>
+                <div style={{ textAlign: "center", padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10 }}>
+                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>P&L</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: pnlColor(sessionStats.total) }}>{fmt(sessionStats.total)}</div>
+                </div>
+                <div style={{ textAlign: "center", padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10 }}>
+                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Win Rate</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: Number(sessionStats.wr) >= 50 ? C.green : C.red }}>{sessionStats.wr}%</div>
+                </div>
+                <div style={{ textAlign: "center", padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10 }}>
+                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Bias</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>{session.analysis?.bias || "—"}</div>
+                </div>
               </div>
             </div>
+          )}
+
+          {/* Today's Trades */}
+          <div style={S.glassCard}>
+            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>Today's Trades</h4>
+            {todayTrades.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 40, color: C.textDim }}>
+                <TrendingUp size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
+                <p>No trades logged today</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {todayTrades.slice().reverse().map((t, i) => (
+                  <div key={i} style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "12px 14px", borderRadius: 10, background: "rgba(0,0,0,0.2)",
+                    border: `1px solid ${C.border}`
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: 8,
+                        background: pnlBg(t.pnl),
+                        display: "flex", alignItems: "center", justifyContent: "center"
+                      }}>
+                        {t.direction === "Long" ? <ArrowUpRight size={16} color={C.green} /> : <ArrowDownRight size={16} color={C.red} />}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>{t.ticker}</div>
+                        <div style={{ fontSize: 11, color: C.textDim }}>{t.direction}</div>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: pnlColor(t.pnl) }}>{fmt(t.pnl)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -2082,7 +2151,7 @@ export default function App() {
 
   const renderPage = () => {
     switch (page) {
-      case "trading-floor": return <TradingFloorPage session={session} onAddTrade={onAddTrade} setPage={setPage} showToast={showToast} />;
+      case "trading-floor": return <TradingFloorPage session={session} onAddTrade={onAddTrade} setPage={setPage} showToast={showToast} trades={trades} />;
       case "dashboard": return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} />;
       case "prop-firms": return <PropFirmsPage propAccounts={propAccounts} setPropAccounts={setPropAccounts} showToast={showToast} />;
       case "news": return <NewsPage showToast={showToast} />;

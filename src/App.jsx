@@ -562,21 +562,24 @@ function TopBar({ session, showToast }) {
 
 // ─── SIDEBAR ────────────────────────────────────────────────────────────────
 function Sidebar({ page, setPage, session }) {
+  // Main quick actions - always visible
+  const quickActions = [
+    { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { id: "presession", icon: Sun, label: "Pre-Session" },
+  ];
+
+  // Active session - only when trading
+  const activeSession = session.active ? [
+    { id: "trading-floor", icon: Zap, label: "Active Session", badge: "LIVE" }
+  ] : [];
+
   const navSections = [
-    {
-      label: "THE FLOOR",
-      items: [
-        { id: "trading-floor", icon: Zap, label: "Trading Floor" },
-        { id: "dashboard", icon: LayoutDashboard, label: "Command Center" },
-      ]
-    },
     {
       label: "OPERATIONS",
       items: [
         { id: "prop-firms", icon: Briefcase, label: "Prop Firm HQ" },
         { id: "news", icon: Globe, label: "News & Calendar" },
         { id: "journal", icon: BookOpen, label: "Journal" },
-        { id: "presession", icon: Sun, label: "Pre-Session" },
       ]
     },
     {
@@ -601,8 +604,65 @@ function Sidebar({ page, setPage, session }) {
       backdropFilter: "blur(20px)", borderRight: `1px solid ${C.border}`,
       display: "flex", flexDirection: "column", padding: "16px 0", overflowY: "auto"
     }}>
+      {/* Quick Actions - Always Visible */}
+      <div style={{ padding: "0 12px", marginBottom: 8 }}>
+        {quickActions.map(item => {
+          const active = page === item.id;
+          return (
+            <button key={item.id} onClick={() => setPage(item.id)} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
+              width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
+              background: active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
+              color: active ? C.accentLight : C.textMuted,
+              fontWeight: active ? 700 : 500, fontSize: 13,
+              borderLeft: active ? `3px solid ${C.accent}` : "3px solid transparent",
+              transition: "all 0.2s ease", textAlign: "left",
+              borderRadius: 8, marginBottom: 4
+            }}>
+              <item.icon size={18} color={active ? C.accent : C.textDim} />
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active Session - Only When Trading */}
+      {activeSession.length > 0 && (
+        <div style={{ padding: "0 12px", marginBottom: 8 }}>
+          {activeSession.map(item => {
+            const active = page === item.id;
+            return (
+              <button key={item.id} onClick={() => setPage(item.id)} style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
+                width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
+                background: `linear-gradient(90deg, ${C.green}20, transparent)`,
+                color: C.greenLight,
+                fontWeight: 700, fontSize: 13,
+                borderLeft: `3px solid ${C.green}`,
+                transition: "all 0.2s ease", textAlign: "left",
+                borderRadius: 8, marginBottom: 4
+              }}>
+                <item.icon size={18} color={C.green} />
+                {item.label}
+                <div style={{
+                  marginLeft: "auto", display: "flex", alignItems: "center", gap: 6
+                }}>
+                  <div style={{ 
+                    width: 8, height: 8, borderRadius: "50%", background: C.green,
+                    animation: "livePulse 1.5s infinite"
+                  }} />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ height: 1, background: C.border, margin: "8px 20px" }} />
+
+      {/* Other Sections */}
       {navSections.map((sec, si) => (
-        <div key={sec.label} style={{ marginBottom: 20 }}>
+        <div key={sec.label} style={{ marginBottom: 16 }}>
           <div style={{
             fontSize: 10, fontWeight: 800, color: C.textDim, padding: "0 20px 8px",
             letterSpacing: "0.1em"
@@ -621,9 +681,6 @@ function Sidebar({ page, setPage, session }) {
               }}>
                 <item.icon size={18} color={active ? C.accent : C.textDim} />
                 {item.label}
-                {item.id === "trading-floor" && session.active && (
-                  <div style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: C.green }} />
-                )}
               </button>
             );
           })}

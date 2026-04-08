@@ -744,18 +744,6 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
   const [tradeTook, setTradeTook] = useState([]);
   const [notes, setNotes] = useState("");
 
-  // Post Session fields
-  const [postArdas, setPostArdas] = useState([]);
-  const [emotions, setEmotions] = useState([]);
-  const [mentalState, setMentalState] = useState([]);
-  const [energyLevel, setEnergyLevel] = useState([]);
-  const [sessionQuality, setSessionQuality] = useState([]);
-  const [distractions, setDistractions] = useState([]);
-  const [postTradeActions, setPostTradeActions] = useState([]);
-  const [sessionSummary, setSessionSummary] = useState("");
-  const [nextSessionFocus, setNextSessionFocus] = useState("");
-  const [activeTab, setActiveTab] = useState("log"); // "log" or "post"
-
   const toggleMultiSelect = (arr, setArr, value) => {
     setArr(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
   };
@@ -923,28 +911,6 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
       {/* Main Form */}
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
         <div style={S.glassCard}>
-          {/* Tabs */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-            <button onClick={() => setActiveTab("log")} style={{
-              padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13,
-              background: activeTab === "log" ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : "rgba(0,0,0,0.3)",
-              color: C.white,
-              border: `1px solid ${activeTab === "log" ? C.accent : C.border}`
-            }}>
-              <Calculator size={16} style={{ marginRight: 6 }} /> Log Trade
-            </button>
-            <button onClick={() => setActiveTab("post")} style={{
-              padding: "10px 20px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13,
-              background: activeTab === "post" ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : "rgba(0,0,0,0.3)",
-              color: C.white,
-              border: `1px solid ${activeTab === "post" ? C.accent : C.border}`
-            }}>
-              <Star size={16} style={{ marginRight: 6 }} /> Post Session
-            </button>
-          </div>
-
-          {activeTab === "log" && (
-            <>
           {/* Row 1: Ticker, P&L, Contracts */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
@@ -1021,56 +987,6 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
           <button onClick={submitTrade} style={{ ...S.btn("primary", "lg"), width: "100%", justifyContent: "center" }}>
             <Save size={16} /> Log Trade
           </button>
-          </>
-          )}
-
-          {activeTab === "post" && (
-            <>
-            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
-              <Star size={20} color={C.purple} /> Post Session Reflection
-            </h3>
-
-            {/* Section: Post Ardas & Mental State */}
-            <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-              <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Mental State
-              </h4>
-              <ChipSelect label="Post Ardas" options={POST_ARDAS} selected={postArdas} onToggle={(v) => toggleMultiSelect(postArdas, setPostArdas, v)} />
-              <ChipSelect label="Emotions During Session" options={EMOTIONS} selected={emotions} onToggle={(v) => toggleMultiSelect(emotions, setEmotions, v)} />
-              <ChipSelect label="Mental State (1-10)" options={MENTAL_STATE} selected={mentalState} onToggle={(v) => toggleMultiSelect(mentalState, setMentalState, v)} />
-              <ChipSelect label="Energy Level" options={ENERGY_LEVEL} selected={energyLevel} onToggle={(v) => toggleMultiSelect(energyLevel, setEnergyLevel, v)} />
-              <ChipSelect label="Session Quality" options={SESSION_QUALITY} selected={sessionQuality} onToggle={(v) => toggleMultiSelect(sessionQuality, setSessionQuality, v)} />
-            </div>
-
-            {/* Section: Session Details */}
-            <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-              <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Session Details
-              </h4>
-              <ChipSelect label="Distractions" options={DISTRACTIONS} selected={distractions} onToggle={(v) => toggleMultiSelect(distractions, setDistractions, v)} />
-              <ChipSelect label="Post Trade Actions" options={POST_TRADE_ACTIONS} selected={postTradeActions} onToggle={(v) => toggleMultiSelect(postTradeActions, setPostTradeActions, v)} />
-            </div>
-
-            {/* Section: Reflection */}
-            <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-              <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Reflection
-              </h4>
-              <div style={{ marginBottom: 14 }}>
-                <label style={S.label}>Session Summary</label>
-                <textarea value={sessionSummary} onChange={e => setSessionSummary(e.target.value)} style={{ ...S.input, minHeight: 80, resize: "vertical" }} placeholder="How did the session go? What worked? What didn't?" />
-              </div>
-              <div style={{ marginBottom: 16 }}>
-                <label style={S.label}>Next Session Focus</label>
-                <textarea value={nextSessionFocus} onChange={e => setNextSessionFocus(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="What will you focus on next time?" />
-              </div>
-            </div>
-
-            <button onClick={submitPostSession} style={{ ...S.btn("primary", "lg"), width: "100%", justifyContent: "center" }}>
-              <Save size={16} /> Submit Post Session
-            </button>
-          </>
-          )}
         </div>
       </div>
     </div>
@@ -1159,118 +1075,225 @@ function MultiSelectDropdown({ label, options, selected, onChange, placeholder }
 
 // ─── POST SESSION PAGE ────────────────────────────────────────────────────
 function PostSessionPage({ setPage, showToast, trades, onAddTrade }) {
-  const [sessionQuality, setSessionQuality] = useState([]);
+  const [step, setStep] = useState(0);
+  
+  // Step 1: Ardas
+  const [ardasDone, setArdasDone] = useState(false);
+  
+  // Step 2: Session Reflection
+  const [sessionQuality, setSessionQuality] = useState("");
+  const [mentalState, setMentalState] = useState("");
+  const [energyLevel, setEnergyLevel] = useState("");
   const [emotions, setEmotions] = useState([]);
-  const [mentalState, setMentalState] = useState([]);
-  const [energyLevel, setEnergyLevel] = useState([]);
   const [distractions, setDistractions] = useState([]);
-  const [postTradeActions, setPostTradeActions] = useState([]);
-  const [postArdas, setPostArdas] = useState([]);
-  const [sessionSummary, setSessionSummary] = useState("");
-  const [nextSessionFocus, setNextSessionFocus] = useState("");
+  
+  // Step 3: Trade Actions
+  const [followedPlan, setFollowedPlan] = useState(false);
+  const [tradeMistakes, setTradeMistakes] = useState([]);
+  const [whatWentWell, setWhatWentWell] = useState("");
+  
+  // Step 4: Gratitude
   const [gratitude, setGratitude] = useState("");
+  const [nextSessionFocus, setNextSessionFocus] = useState("");
+
+  const emotionOptions = ["Calm", "Focused", "Confident", "FOMO", "Anxious", "Angry", "Greedy", "Tired", "Peaceful", "Frustrated"];
+  const mistakeOptions = ["Overtraded", "Revenge Trading", "Ignored Stop Loss", "Added to Loser", "Early Exit", "Late Entry", "No Trade Management", "Ignored Signals"];
+  const distractionOptions = ["Phone", "Social Media", "Family", "News", "Other Charts", "Chat", "Food", "None"];
+
+  const toggleItem = (arr, setArr, item) => {
+    if (arr.includes(item)) {
+      setArr(arr.filter(i => i !== item));
+    } else {
+      setArr([...arr, item]);
+    }
+  };
 
   const submitPostSession = () => {
     onAddTrade({
       date: today(),
       isPostSession: true,
+      ardasDone,
       sessionQuality,
-      emotions,
       mentalState,
       energyLevel,
+      emotions,
       distractions,
-      postTradeActions,
-      postArdas,
-      sessionSummary,
-      nextSessionFocus,
-      gratitude
+      followedPlan,
+      tradeMistakes,
+      whatWentWell,
+      gratitude,
+      nextSessionFocus
     });
-    setSessionQuality([]);
-    setEmotions([]);
-    setMentalState([]);
-    setEnergyLevel([]);
-    setDistractions([]);
-    setPostTradeActions([]);
-    setPostArdas([]);
-    setSessionSummary("");
-    setNextSessionFocus("");
-    setGratitude("");
     showToast("Post session logged!", "success");
+    setPage("dashboard");
   };
 
   return (
     <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, display: "flex", alignItems: "center", gap: 12 }}>
-            <Moon size={28} color={C.purple} /> Post Session
-          </h1>
-          <p style={{ fontSize: 13, color: C.textMuted }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-        </div>
+      {/* Progress Steps */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 32 }}>
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} style={{
+            width: step === i ? 40 : 12, height: 12, borderRadius: 6,
+            background: step >= i ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : "rgba(255,255,255,0.1)",
+            boxShadow: step === i ? `0 0 20px ${C.accentGlow}` : "none",
+            transition: "all 0.3s ease"
+          }} />
+        ))}
       </div>
 
-      {/* Gurmukhi Ardas */}
-      <div style={{ ...S.glassCard, marginBottom: 24, textAlign: "center", background: `linear-gradient(135deg, ${C.bgCard}, ${C.purple}10)` }}>
-        <p style={{ fontFamily: "'Noto Sans Gurmukhi', sans-serif", fontSize: 18, color: C.text, lineHeight: 1.8, margin: 0 }}>
-          ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕਰਿ ਹਮ ਸਾਕਹ ਜਿਉ ਭਾਵੈ ਤਿਵੈ ਬਖਸਿ ॥੧॥ ਰਹਾਉ ॥
-        </p>
-        <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, fontStyle: "italic" }}>
-          I have no power to do anything at all. As it pleases You, You forgive us. ||1||Pause||
-        </p>
-      </div>
-
-      <div style={{ maxWidth: 800, margin: "0 auto" }}>
-        <div style={S.glassCard}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-            <Star size={20} color={C.purple} /> Session Reflection
-          </h3>
-
-          {/* Mental State */}
-          <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Mental State
-            </h4>
-            <MultiSelectDropdown label="Post Ardas" options={["Yes", "No", "Partial"]} selected={postArdas} onChange={setPostArdas} placeholder="Did you do Ardas?" />
-            <MultiSelectDropdown label="Session Quality" options={["Excellent", "Good", "Average", "Poor", "Terrible"]} selected={sessionQuality} onChange={setSessionQuality} placeholder="How was your session?" />
-            <MultiSelectDropdown label="Emotions During Session" options={["Calm", "FOMO", "Anxious", "Angry", "Revenge", "Greedy", "Confident", "Confused", "Tired", "Focused", "Frustrated", "Peaceful", "Excited"]} selected={emotions} onChange={setEmotions} placeholder="Select emotions..." />
-            <MultiSelectDropdown label="Mental State (1-10)" options={["10/10", "9/10", "8/10", "7/10", "6/10", "5/10", "4/10", "3/10", "2/10", "1/10"]} selected={mentalState} onChange={setMentalState} placeholder="Rate your mental state" />
-            <MultiSelectDropdown label="Energy Level" options={["Very High", "High", "Normal", "Low", "Very Low"]} selected={energyLevel} onChange={setEnergyLevel} placeholder="Select energy level..." />
+      {/* Step 0: Ardas */}
+      {step === 0 && (
+        <div style={{ ...S.glassCard, maxWidth: 580, margin: "0 auto", textAlign: "center", boxShadow: `0 0 60px ${C.accentGlow}`, border: `1px solid ${C.border}` }}>
+          <div style={{
+            width: 80, height: 80, borderRadius: "50%",
+            background: `linear-gradient(135deg, ${C.purple}30, ${C.accent}20)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 24px", animation: "float 3s ease-in-out infinite"
+          }}>
+            <Moon size={40} color={C.purple} />
           </div>
-
-          {/* Session Details */}
-          <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Session Details
-            </h4>
-            <MultiSelectDropdown label="Distractions" options={["Phone", "Social Media", "Family", "News", "Other Charts", "Chat", "Food", "None"]} selected={distractions} onChange={setDistractions} placeholder="Select distractions..." />
-            <MultiSelectDropdown label="Post Trade Actions" options={["Added to Winner", "Partial Exit", "Moved SL", "Widened SL", "Tightened SL", "Trailed SL", "Ignored Plan", "Followed Plan", "Early Exit", "Held Full", "Scaled In", "Scaled Out", "No Action"]} selected={postTradeActions} onChange={setPostTradeActions} placeholder="Select actions..." />
+          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>End With Gratitude</h2>
+          
+          {/* Gurmukhi Ardas */}
+          <div style={{
+            padding: 20, borderRadius: 14, background: `linear-gradient(135deg, ${C.purple}15, ${C.accent}10)`,
+            border: `1px solid ${C.border}`, marginBottom: 24
+          }}>
+            <p style={{ fontFamily: "'Noto Sans Gurmukhi', sans-serif", fontSize: 18, color: C.text, lineHeight: 2, margin: 0 }}>
+              ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕਰਿ ਹਮ ਸਾਕਹ ਜਿਉ ਭਾਵੈ ਤਿਵੈ ਬਖਸਿ ॥੧॥ ਰਹਾਉ ॥
+            </p>
+            <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, fontStyle: "italic" }}>
+              I have no power to do anything at all. As it pleases You, You forgive us. ||1||Pause||
+            </p>
           </div>
-
-          {/* Reflection */}
-          <div style={{ marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Reflection
-            </h4>
-            <div style={{ marginBottom: 14 }}>
-              <label style={S.label}>Session Summary</label>
-              <textarea value={sessionSummary} onChange={e => setSessionSummary(e.target.value)} style={{ ...S.input, minHeight: 80, resize: "vertical" }} placeholder="How did the session go? What worked? What didn't?" />
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={S.label}>Next Session Focus</label>
-              <textarea value={nextSessionFocus} onChange={e => setNextSessionFocus(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="What will you focus on next time?" />
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={S.label}>Gratitude</label>
-              <textarea value={gratitude} onChange={e => setGratitude(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="What are you grateful for today?" />
-            </div>
-          </div>
-
-          <button onClick={submitPostSession} style={{ ...S.btn("primary", "lg"), width: "100%", justifyContent: "center" }}>
-            <Save size={16} /> Submit Post Session
+          
+          <p style={{ color: C.textMuted, lineHeight: 1.8, marginBottom: 24 }}>
+            Take a moment to give thanks. Reflect on your session with gratitude.
+          </p>
+          <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, cursor: "pointer", marginBottom: 24 }}>
+            <input type="checkbox" checked={ardasDone} onChange={e => setArdasDone(e.target.checked)}
+              style={{ width: 20, height: 20, accentColor: C.accent, cursor: "pointer" }} />
+            <span style={{ fontWeight: 600 }}>I have completed my Ardas</span>
+          </label>
+          <button disabled={!ardasDone} onClick={() => setStep(1)} style={{
+            ...S.btn("primary", "lg"), width: "100%", opacity: ardasDone ? 1 : 0.4, cursor: ardasDone ? "pointer" : "not-allowed"
+          }}>
+            Continue <ChevronRight size={20} />
           </button>
         </div>
-      </div>
+      )}
+
+      {/* Step 1: Session Quality */}
+      {step === 1 && (
+        <div style={{ ...S.glassCard, maxWidth: 680, margin: "0 auto" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+            <Star size={22} color={C.accent} /> Session Assessment
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+            <Select label="Session Quality" value={sessionQuality} onChange={setSessionQuality} options={["Excellent", "Good", "Average", "Poor", "Terrible"]} />
+            <Select label="Mental State (1-10)" value={mentalState} onChange={setMentalState} options={["10", "9", "8", "7", "6", "5", "4", "3", "2", "1"]} />
+            <Select label="Energy Level" value={energyLevel} onChange={setEnergyLevel} options={["Very High", "High", "Normal", "Low", "Very Low"]} />
+          </div>
+          
+          {/* Emotions */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={S.label}>Emotions During Session</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {emotionOptions.map(opt => (
+                <button key={opt} onClick={() => toggleItem(emotions, setEmotions, opt)} style={{
+                  padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  background: emotions.includes(opt) ? `${C.accent}25` : "rgba(0,0,0,0.3)",
+                  color: emotions.includes(opt) ? C.accentLight : C.textDim,
+                  border: `1px solid ${emotions.includes(opt) ? C.accent : C.border}`
+                }}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 12 }}>
+            <button onClick={() => setStep(0)} style={S.btn("ghost")}><ChevronLeft size={16} /> Back</button>
+            <button onClick={() => setStep(2)} style={{ ...S.btn("primary"), flex: 1, justifyContent: "center" }}>
+              Continue <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Trade Actions */}
+      {step === 2 && (
+        <div style={{ ...S.glassCard, maxWidth: 680, margin: "0 auto" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+            <Shield size={22} color={C.accent} /> Trade Discipline
+          </h2>
+          
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "16px", borderRadius: 12, background: followedPlan ? `${C.green}10` : "rgba(0,0,0,0.3)", border: `1px solid ${followedPlan ? C.greenBorder : C.border}`, marginBottom: 20, cursor: "pointer" }}>
+            <input type="checkbox" checked={followedPlan} onChange={e => setFollowedPlan(e.target.checked)} style={{ width: 20, height: 20, accentColor: C.green, marginTop: 2 }} />
+            <div>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>I followed my trading plan</span>
+              <p style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>Did you stick to your rules and methodology?</p>
+            </div>
+          </label>
+
+          {/* Mistakes */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={S.label}>Trading Mistakes (if any)</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {mistakeOptions.map(opt => (
+                <button key={opt} onClick={() => toggleItem(tradeMistakes, setTradeMistakes, opt)} style={{
+                  padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  background: tradeMistakes.includes(opt) ? `${C.red}25` : "rgba(0,0,0,0.3)",
+                  color: tradeMistakes.includes(opt) ? C.redLight : C.textDim,
+                  border: `1px solid ${tradeMistakes.includes(opt) ? C.red : C.border}`
+                }}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* What Went Well */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={S.label}>What Went Well</label>
+            <textarea value={whatWentWell} onChange={e => setWhatWentWell(e.target.value)} style={{ ...S.input, minHeight: 80, resize: "vertical" }} placeholder="What did you do well today?" />
+          </div>
+
+          <div style={{ display: "flex", gap: 12 }}>
+            <button onClick={() => setStep(1)} style={S.btn("ghost")}><ChevronLeft size={16} /> Back</button>
+            <button onClick={() => setStep(3)} style={{ ...S.btn("primary"), flex: 1, justifyContent: "center" }}>
+              Continue <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Gratitude */}
+      {step === 3 && (
+        <div style={{ ...S.glassCard, maxWidth: 680, margin: "0 auto" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+            <Coffee size={22} color={C.accent} /> Gratitude & Focus
+          </h2>
+          
+          <div style={{ marginBottom: 20 }}>
+            <label style={S.label}>What are you grateful for today?</label>
+            <textarea value={gratitude} onChange={e => setGratitude(e.target.value)} style={{ ...S.input, minHeight: 80, resize: "vertical" }} placeholder="List three things you're grateful for..." />
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <label style={S.label}>Next Session Focus</label>
+            <textarea value={nextSessionFocus} onChange={e => setNextSessionFocus(e.target.value)} style={{ ...S.input, minHeight: 80, resize: "vertical" }} placeholder="What will you focus on next time?" />
+          </div>
+
+          <div style={{ display: "flex", gap: 12 }}>
+            <button onClick={() => setStep(2)} style={S.btn("ghost")}><ChevronLeft size={16} /> Back</button>
+            <button onClick={submitPostSession} style={{ ...S.btn("success", "lg"), flex: 1, justifyContent: "center" }}>
+              <Save size={18} /> Complete Session
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

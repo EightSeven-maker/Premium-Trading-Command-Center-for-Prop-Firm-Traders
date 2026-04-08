@@ -594,6 +594,60 @@ function TrumpTwitterFeed() {
   );
 }
 
+// ─── MARKET SQUAWK TICKER ──────────────────────────────────────────────────
+function MarketSquawkTicker() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  const newsItems = [
+    { headline: "S&P 500 futures up 0.5% as investors await Fed decision", source: "CNBC", sentiment: "bullish" },
+    { headline: "Oil prices surge 2% on Middle East tensions", source: "Reuters", sentiment: "volatile" },
+    { headline: "Treasury yields fall as inflation data cools", source: "MarketWatch", sentiment: "bullish" },
+    { headline: "Bitcoin breaks $95,000 resistance level", source: "CNBC", sentiment: "bullish" },
+    { headline: "Euro strengthens after ECB rate decision", source: "Reuters", sentiment: "neutral" },
+    { headline: "Gold hits new all-time high above $3,200", source: "MarketWatch", sentiment: "bullish" },
+    { headline: "Tech stocks lead market rally", source: "CNBC", sentiment: "bullish" },
+    { headline: "Volatility index drops to 3-month low", source: "Reuters", sentiment: "bullish" },
+    { headline: "Dollar weakens on trade deficit data", source: "MarketWatch", sentiment: "bearish" },
+    { headline: "Natural gas futures jump on cold weather forecast", source: "Reuters", sentiment: "volatile" },
+  ];
+
+  // Rotate news every 8 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % newsItems.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getSentimentColor = (sentiment) => {
+    if (sentiment === "bullish") return C.green;
+    if (sentiment === "bearish") return C.red;
+    return C.yellow;
+  };
+
+  const currentNews = newsItems[currentIndex];
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{
+        width: 8, height: 8, borderRadius: "50%",
+        background: getSentimentColor(currentNews.sentiment),
+        animation: "livePulse 1.5s infinite"
+      }} />
+      <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>
+        {currentNews.headline}
+      </span>
+      <span style={{ 
+        fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+        background: `${getSentimentColor(currentNews.sentiment)}20`,
+        color: getSentimentColor(currentNews.sentiment)
+      }}>
+        {currentNews.source}
+      </span>
+    </div>
+  );
+}
+
 // ─── DASHBOARD CALENDAR WIDGET ─────────────────────────────────────────────
 function DashboardCalendar() {
   const [countdown, setCountdown] = useState({});
@@ -1731,6 +1785,31 @@ function NewsAlert({ alert, onDismiss }) {
 
 // ─── COMMAND CENTER PAGE ────────────────────────────────────────────────────
 function CommandCenterPage({ trades, session, propAccounts, setPage }) {
+  const [livePrices, setLivePrices] = useState({
+    NQ: { price: 21550.25, change: +45.50 },
+    ES: { price: 5845.75, change: +12.25 },
+    YM: { price: 43850.00, change: -15.00 }
+  });
+
+  // Simulate live price updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLivePrices(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(ticker => {
+          const tick = updated[ticker];
+          const change = (Math.random() - 0.5) * 10;
+          updated[ticker] = {
+            price: tick.price + change,
+            change: tick.change + change
+          };
+        });
+        return updated;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   const stats = {
     total: trades.reduce((s, t) => s + t.pnl, 0),
     wins: trades.filter(t => t.pnl > 0).length,
@@ -1750,13 +1829,54 @@ function CommandCenterPage({ trades, session, propAccounts, setPage }) {
 
   return (
     <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
-      {/* Live Market Ticker */}
-      <div style={{ ...S.glassCard, marginBottom: 24, padding: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.green, animation: "livePulse 1.5s infinite" }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>Live Futures</span>
+      {/* NQ, ES, YM Live Prices */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+        {["NQ", "ES", "YM"].map(ticker => {
+          const data = livePrices[ticker];
+          const isPositive = data.change >= 0;
+          return (
+            <div key={ticker} style={{
+              flex: 1, padding: 16, borderRadius: 12,
+              background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}`,
+              display: "flex", justifyContent: "space-between", alignItems: "center"
+            }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{ticker}</div>
+                <div style={{ fontSize: 11, color: C.textDim }}>E-mini {ticker === "NQ" ? "Nasdaq" : ticker === "ES" ? "S&P 500" : "Dow Jones"}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{data.price.toFixed(2)}</div>
+                <div style={{ 
+                  fontSize: 12, fontWeight: 600, 
+                  color: isPositive ? C.green : C.red 
+                }}>
+                  {isPositive ? "+" : ""}{data.change.toFixed(2)}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Market Squawk Banner */}
+      <div style={{
+        ...S.glassCard, marginBottom: 24, padding: "12px 20px",
+        background: `linear-gradient(90deg, ${C.bgCard}, ${C.accent}10, ${C.bgCard})`,
+        border: `1px solid ${C.border}`
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "6px 12px", borderRadius: 8,
+            background: `${C.accent}20`, border: `1px solid ${C.accent}40`
+          }}>
+            <Radio size={14} color={C.accent} style={{ animation: "livePulse 1.5s infinite" }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.accentLight }}>SQUAWK</span>
+          </div>
+          <div style={{ flex: 1, overflow: "hidden" }}>
+            <MarketSquawkTicker />
+          </div>
         </div>
-        <LiveMarketTicker />
       </div>
 
       {/* Header */}
@@ -1828,11 +1948,11 @@ function CommandCenterPage({ trades, session, propAccounts, setPage }) {
 
         {/* Right Column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Trump Twitter Feed */}
-          <TrumpTwitterFeed />
-          
           {/* Economic Calendar Widget */}
           <DashboardCalendar />
+          
+          {/* Trump Twitter Feed - Below Calendar */}
+          <TrumpTwitterFeed />
         </div>
       </div>
     </div>
@@ -2001,6 +2121,7 @@ function NewsPage({ showToast }) {
   const [countdown, setCountdown] = useState({});
   const [squawkNews, setSquawkNews] = useState([]);
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
+  const [viewMode, setViewMode] = useState("list"); // "list" or "calendar"
 
   // Market Squawk headlines
   const marketNews = [
@@ -2014,6 +2135,15 @@ function NewsPage({ showToast }) {
     { headline: "Volatility index drops to 3-month low", source: "Reuters", sentiment: "bullish", time: "25m ago" },
     { headline: "Dollar weakens on trade deficit data", source: "MarketWatch", sentiment: "bearish", time: "30m ago" },
     { headline: "Natural gas futures jump on cold weather forecast", source: "Reuters", sentiment: "volatile", time: "35m ago" },
+  ];
+
+  // Weekly calendar events (high impact)
+  const weeklyEvents = [
+    { day: "Mon", date: 14, events: [{ time: "08:30", event: "Core CPI", currency: "USD", impact: "High" }] },
+    { day: "Tue", date: 15, events: [{ time: "09:00", event: "Retail Sales", currency: "USD", impact: "High" }] },
+    { day: "Wed", date: 16, events: [{ time: "14:00", event: "FOMC Decision", currency: "USD", impact: "High" }, { time: "14:30", event: "Fed Press Conference", currency: "USD", impact: "Medium" }] },
+    { day: "Thu", date: 17, events: [{ time: "08:30", event: "Jobless Claims", currency: "USD", impact: "Medium" }] },
+    { day: "Fri", date: 18, events: [{ time: "09:45", event: "Flash PMI", currency: "USD", impact: "Medium" }, { time: "10:00", event: "Consumer Sentiment", currency: "USD", impact: "Medium" }] },
   ];
 
   // Economic calendar with countdown
@@ -2045,7 +2175,6 @@ function NewsPage({ showToast }) {
         const eventTime = new Date();
         eventTime.setHours(hours, minutes, 0, 0);
         
-        // If event time has passed today, skip
         if (eventTime <= now) {
           newCountdown[i] = null;
           return;
@@ -2112,8 +2241,7 @@ function NewsPage({ showToast }) {
       <div style={{
         ...S.glassCard, marginBottom: 20, padding: "12px 20px",
         background: `linear-gradient(90deg, ${C.bgCard}, ${C.accent}10, ${C.bgCard})`,
-        border: `1px solid ${C.border}`,
-        overflow: "hidden", position: "relative"
+        border: `1px solid ${C.border}`
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{
@@ -2125,11 +2253,13 @@ function NewsPage({ showToast }) {
             <span style={{ fontSize: 11, fontWeight: 700, color: C.accentLight }}>SQUAWK</span>
           </div>
           <div style={{ flex: 1, overflow: "hidden" }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 12,
-              animation: "scrollLeft 20s linear infinite"
-            }}>
-              <span style={{ fontSize: 13, color: C.text, whiteSpace: "nowrap", fontWeight: 500 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: "50%",
+                background: getSentimentColor(squawkNews[currentNewsIndex]?.sentiment),
+                animation: "livePulse 1.5s infinite"
+              }} />
+              <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>
                 {squawkNews[currentNewsIndex]?.headline}
               </span>
               <span style={{ 
@@ -2139,42 +2269,49 @@ function NewsPage({ showToast }) {
               }}>
                 {squawkNews[currentNewsIndex]?.source}
               </span>
-              <span style={{ fontSize: 11, color: C.textDim, whiteSpace: "nowrap" }}>
-                {squawkNews[currentNewsIndex]?.time}
-              </span>
             </div>
           </div>
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800 }}>Economic Calendar</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800 }}>News & Calendar</h1>
           <p style={{ fontSize: 13, color: C.textMuted }}>High-impact events that affect your trades</p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 13, color: C.textMuted }}>Auto-block on High Impact</span>
-          <button onClick={() => setNewsBlocked(!newsBlocked)} style={{
-            width: 56, height: 30, borderRadius: 15, cursor: "pointer",
-            background: newsBlocked ? C.green : C.bgCard,
-            border: `1px solid ${newsBlocked ? C.green : C.border}`,
-            display: "flex", alignItems: "center", padding: 4,
-            transition: "all 0.2s"
-          }}>
-            <div style={{
-              width: 22, height: 22, borderRadius: "50%", background: C.white,
-              transition: "transform 0.2s",
-              transform: newsBlocked ? "translateX(26px)" : "translateX(0)"
-            }} />
+        
+        {/* View Toggle */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button 
+            onClick={() => setViewMode("list")}
+            style={{
+              padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 12,
+              background: viewMode === "list" ? C.accent : "transparent",
+              color: viewMode === "list" ? C.white : C.textMuted,
+              border: `1px solid ${viewMode === "list" ? C.accent : C.border}`
+            }}
+          >
+            List View
+          </button>
+          <button 
+            onClick={() => setViewMode("calendar")}
+            style={{
+              padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 12,
+              background: viewMode === "calendar" ? C.accent : "transparent",
+              color: viewMode === "calendar" ? C.white : C.textMuted,
+              border: `1px solid ${viewMode === "calendar" ? C.accent : C.border}`
+            }}
+          >
+            Calendar View
           </button>
         </div>
       </div>
 
       {/* Notification Toggle */}
-      <div style={{ ...S.glassCard, marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ ...S.glassCard, marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>News Alerts</h4>
-          <p style={{ fontSize: 12, color: C.textMuted, margin: 0 }}>Get notified 15 minutes before high-impact events</p>
+          <p style={{ fontSize: 12, color: C.textMuted, margin: 0 }}>Get notified before high-impact events</p>
         </div>
         <button onClick={enableNotifications} style={{
           ...S.btn(notificationsEnabled ? "success" : "ghost", "sm"),
@@ -2185,60 +2322,122 @@ function NewsPage({ showToast }) {
         </button>
       </div>
 
-      {/* Events List with Countdown */}
-      <div style={S.glassCard}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Today's Events</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {economicEvents.map((event, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 16, padding: 14, borderRadius: 12,
-              background: "rgba(0,0,0,0.2)", border: `1px solid ${C.border}`,
-              flexWrap: "wrap"
-            }}>
-              {/* Countdown Badge */}
-              <div style={{
-                padding: "8px 12px", borderRadius: 10, textAlign: "center", minWidth: 80,
-                background: countdown[i] ? `${C.accent}15` : "rgba(0,0,0,0.3)",
-                border: `1px solid ${countdown[i] ? C.accent + "40" : C.border}`
-              }}>
-                <div style={{ fontSize: countdown[i] ? 12 : 14, fontWeight: 700, color: countdown[i] ? C.accentLight : C.text }}>
-                  {countdown[i] || event.time}
-                </div>
-                {countdown[i] && (
-                  <div style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>until release</div>
-                )}
-              </div>
-              
-              {/* Event Details */}
-              <div style={{ flex: 1, minWidth: 150 }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{event.event}</div>
-                <div style={{ fontSize: 12, color: C.textMuted }}>{event.currency}</div>
-              </div>
-              
-              {/* Impact Badge */}
-              <span style={S.badge(getImpactColor(event.impact))}>{event.impact}</span>
-              
-              {/* Data */}
-              <div style={{ display: "flex", gap: 16, textAlign: "center" }}>
-                <div>
-                  <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2 }}>PREVIOUS</div>
-                  <div style={{ fontSize: 12, fontWeight: 600 }}>{event.previous}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2 }}>FORECAST</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: C.accent }}>{event.forecast}</div>
-                </div>
-                {event.actual && (
-                  <div>
-                    <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2 }}>ACTUAL</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.green }}>{event.actual}</div>
+      {/* List View */}
+      {viewMode === "list" && (
+        <>
+          {/* Events List with Countdown */}
+          <div style={S.glassCard}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Today's Events</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {economicEvents.map((event, i) => (
+                <div key={i} style={{
+                  display: "flex", alignItems: "center", gap: 16, padding: 14, borderRadius: 12,
+                  background: "rgba(0,0,0,0.2)", border: `1px solid ${C.border}`,
+                  flexWrap: "wrap"
+                }}>
+                  {/* Countdown Badge */}
+                  <div style={{
+                    padding: "8px 12px", borderRadius: 10, textAlign: "center", minWidth: 80,
+                    background: countdown[i] ? `${C.accent}15` : "rgba(0,0,0,0.3)",
+                    border: `1px solid ${countdown[i] ? C.accent + "40" : C.border}`
+                  }}>
+                    <div style={{ fontSize: countdown[i] ? 12 : 14, fontWeight: 700, color: countdown[i] ? C.accentLight : C.text }}>
+                      {countdown[i] || event.time}
+                    </div>
+                    {countdown[i] && (
+                      <div style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>until release</div>
+                    )}
                   </div>
-                )}
-              </div>
+                  
+                  {/* Event Details */}
+                  <div style={{ flex: 1, minWidth: 150 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{event.event}</div>
+                    <div style={{ fontSize: 12, color: C.textMuted }}>{event.currency}</div>
+                  </div>
+                  
+                  {/* Impact Badge */}
+                  <span style={S.badge(getImpactColor(event.impact))}>{event.impact}</span>
+                  
+                  {/* Data */}
+                  <div style={{ display: "flex", gap: 16, textAlign: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2 }}>PREVIOUS</div>
+                      <div style={{ fontSize: 12, fontWeight: 600 }}>{event.previous}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2 }}>FORECAST</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: C.accent }}>{event.forecast}</div>
+                    </div>
+                    {event.actual && (
+                      <div>
+                        <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2 }}>ACTUAL</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.green }}>{event.actual}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+        </>
+      )}
+
+      {/* Calendar View */}
+      {viewMode === "calendar" && (
+        <div style={S.glassCard}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>This Week</h3>
+          
+          {/* Weekly Calendar Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
+            {weeklyEvents.map((day, i) => {
+              const hasHighImpact = day.events.some(e => e.impact === "High");
+              const isToday = day.date === new Date().getDate();
+              
+              return (
+                <div key={i} style={{
+                  padding: 16, borderRadius: 12, textAlign: "center",
+                  background: isToday ? `${C.accent}15` : "rgba(0,0,0,0.2)",
+                  border: `1px solid ${isToday ? C.accent : hasHighImpact ? C.red : C.border}`
+                }}>
+                  <div style={{ fontSize: 11, color: C.textDim, marginBottom: 4, fontWeight: 600 }}>{day.day}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: isToday ? C.accent : C.text, marginBottom: 8 }}>{day.date}</div>
+                  
+                  {/* Events for this day */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {day.events.map((event, j) => (
+                      <div key={j} style={{
+                        padding: "6px 8px", borderRadius: 6,
+                        background: `${getImpactColor(event.impact)}15`,
+                        border: `1px solid ${getImpactColor(event.impact)}30`
+                      }}>
+                        <div style={{ fontSize: 10, color: getImpactColor(event.impact), fontWeight: 700 }}>{event.time}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, marginTop: 2 }}>{event.event}</div>
+                        <div style={{ fontSize: 9, color: C.textDim }}>{event.currency}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Legend */}
+          <div style={{ display: "flex", gap: 16, marginTop: 20, justifyContent: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.red }} />
+              <span style={{ fontSize: 11, color: C.textDim }}>High Impact</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.yellow }} />
+              <span style={{ fontSize: 11, color: C.textDim }}>Medium Impact</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.green }} />
+              <span style={{ fontSize: 11, color: C.textDim }}>Low Impact</span>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Market News Feed */}
       <div style={{ ...S.glassCard, marginTop: 24 }}>

@@ -455,6 +455,154 @@ function ZenQuote() {
   );
 }
 
+// ─── DASHBOARD CALENDAR WIDGET ─────────────────────────────────────────────
+function DashboardCalendar() {
+  const [countdown, setCountdown] = useState({});
+  const [currentNews, setCurrentNews] = useState(0);
+  
+  // Upcoming economic events
+  const events = [
+    { time: "08:30", currency: "USD", event: "Core CPI", impact: "High" },
+    { time: "10:00", currency: "USD", event: "ISM PMI", impact: "High" },
+    { time: "14:00", currency: "USD", event: "FOMC Minutes", impact: "Medium" },
+    { time: "15:30", currency: "USD", event: "Oil Inventories", impact: "Low" },
+  ];
+
+  // Mini news headlines
+  const newsItems = [
+    { headline: "S&P futures up 0.5%", sentiment: "bullish" },
+    { headline: "Oil surges 2% on tensions", sentiment: "volatile" },
+    { headline: "Gold hits $3,200", sentiment: "bullish" },
+    { headline: "Dollar weakens", sentiment: "bearish" },
+    { headline: "Tech stocks lead rally", sentiment: "bullish" },
+  ];
+
+  // Countdown timer
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const newCountdown = {};
+      
+      events.forEach((event, i) => {
+        const [h, m] = event.time.split(":").map(Number);
+        const eventTime = new Date();
+        eventTime.setHours(h, m, 0, 0);
+        
+        if (eventTime <= now) {
+          newCountdown[i] = null;
+          return;
+        }
+        
+        const diff = eventTime - now;
+        const hours = Math.floor(diff / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        
+        newCountdown[i] = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+      });
+      
+      setCountdown(newCountdown);
+    };
+    
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // News rotation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentNews(prev => (prev + 1) % newsItems.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getImpactColor = (impact) => {
+    if (impact === "High") return C.red;
+    if (impact === "Medium") return C.yellow;
+    return C.green;
+  };
+
+  const getSentimentColor = (sent) => {
+    if (sent === "bullish") return C.green;
+    if (sent === "bearish") return C.red;
+    return C.yellow;
+  };
+
+  return (
+    <div style={S.glassCard}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h4 style={{ fontSize: 14, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+          <Calendar size={16} color={C.accent} /> Economic Calendar
+        </h4>
+        <span style={{ fontSize: 11, color: C.textDim }}>Today</span>
+      </div>
+      
+      {/* Next Event Countdown */}
+      {events.slice(0, 1).map((event, i) => countdown[i] && (
+        <div key={i} style={{
+          padding: 12, borderRadius: 10, marginBottom: 12,
+          background: `${C.accent}15`, border: `1px solid ${C.accent}40`,
+          textAlign: "center"
+        }}>
+          <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>NEXT: {event.event}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: C.accentLight }}>{countdown[i]}</div>
+        </div>
+      ))}
+      
+      {/* Events List */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {events.map((event, i) => (
+          <div key={i} style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            padding: "8px 10px", borderRadius: 8,
+            background: "rgba(0,0,0,0.2)"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ 
+                fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
+                background: getImpactColor(event.impact) + "20",
+                color: getImpactColor(event.impact)
+              }}>
+                {event.impact}
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 600 }}>{event.event}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 11, color: C.textDim }}>{event.currency}</span>
+              <span style={{ 
+                fontSize: 11, fontWeight: 700,
+                color: countdown[i] ? C.accent : C.textDim
+              }}>
+                {countdown[i] || event.time}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Mini News Ticker */}
+      <div style={{
+        marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}`
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          <Radio size={12} color={C.green} style={{ animation: "livePulse 1.5s infinite" }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: C.textDim }}>MARKET NEWS</span>
+        </div>
+        <div style={{
+          fontSize: 12, color: C.text,
+          display: "flex", alignItems: "center", gap: 6
+        }}>
+          <div style={{
+            width: 6, height: 6, borderRadius: "50%",
+            background: getSentimentColor(newsItems[currentNews].sentiment)
+          }} />
+          {newsItems[currentNews].headline}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── WIN STREAK BADGE ───────────────────────────────────────────────────────
 function WinStreakBadge({ streak }) {
   if (streak < 2) return null;
@@ -614,69 +762,96 @@ const GURBANI_VERSES = [
 const ARDAS_VERSE = "ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕਰਿ ਹਮ ਸਾਕਹ ਜਿਉ ਭਾਵੈ ਤਿਵੈ ਬਖਸਿ ॥੧॥ ਰਹਾਉ ॥";
 
 // ─── SIDEBAR ────────────────────────────────────────────────────────────────
-function Sidebar({ page, setPage, session }) {
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const moreMenuRef = useRef(null);
-
-  // Core panels - always visible (3 on fresh install)
-  const coreActions = [
+function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
+  // Main quick actions
+  const quickActions = [
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { id: "presession", icon: Sun, label: "Pre-Session" },
     { id: "trading-floor", icon: Zap, label: "Active Session" },
-  ];
-
-  // Utility panels - tucked in More menu
-  const utilityItems = [
     { id: "postsession", icon: Moon, label: "Post Session" },
-    { id: "prop-firms", icon: Briefcase, label: "Prop Firm HQ" },
-    { id: "news", icon: Globe, label: "News & Calendar" },
-    { id: "journal", icon: BookOpen, label: "Journal" },
-    { id: "analytics", icon: BarChart3, label: "Analytics" },
-    { id: "ai", icon: Brain, label: "AI Coach" },
-    { id: "settings", icon: Settings, label: "Settings" },
   ];
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
-        setShowMoreMenu(false);
-      }
-    };
-    if (showMoreMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
+  const navSections = [
+    {
+      label: "OPERATIONS",
+      items: [
+        { id: "prop-firms", icon: Briefcase, label: "Prop Firm HQ" },
+        { id: "news", icon: Globe, label: "News & Calendar" },
+        { id: "journal", icon: BookOpen, label: "Journal" },
+      ]
+    },
+    {
+      label: "ANALYSIS",
+      items: [
+        { id: "analytics", icon: BarChart3, label: "Analytics" },
+        { id: "ai", icon: Brain, label: "AI Coach" },
+      ]
+    },
+    {
+      label: "SYSTEM",
+      items: [
+        { id: "settings", icon: Settings, label: "Settings" },
+      ]
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showMoreMenu]);
+  ];
 
   return (
     <div style={{
-      width: 240, height: "calc(100vh - 60px)", position: "fixed", top: 60, left: 0,
+      width: collapsed ? 60 : 240, height: "calc(100vh - 60px)", position: "fixed", top: 60, left: 0,
       background: `linear-gradient(180deg, ${C.bgCard} 0%, rgba(3,7,18,0.95) 100%)`,
       backdropFilter: "blur(20px)", borderRight: `1px solid ${C.border}`,
-      display: "flex", flexDirection: "column", padding: "16px 0", overflowY: "auto",
+      display: "flex", flexDirection: "column", padding: collapsed ? "16px 8px" : "16px 0", 
+      overflowY: "auto", transition: "width 0.3s ease, padding 0.3s ease",
       zIndex: 100
     }}>
-      {/* Core Actions - Always Visible */}
-      <div style={{ padding: "0 12px", marginBottom: 8 }}>
-        {coreActions.map(item => {
+      {/* Minimize Button */}
+      <button 
+        onClick={onToggleCollapse}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-end",
+          padding: "8px", marginBottom: 12, background: "transparent", border: "none", cursor: "pointer"
+        }}
+      >
+        <div style={{
+          width: 32, height: 32, borderRadius: 8,
+          background: C.bgCardAlt, border: `1px solid ${C.border}`,
+          display: "flex", alignItems: "center", justifyContent: "center"
+        }}>
+          {collapsed ? (
+            <ChevronRight size={16} color={C.textDim} />
+          ) : (
+            <ChevronLeft size={16} color={C.textDim} />
+          )}
+        </div>
+      </button>
+
+      {/* Quick Actions */}
+      <div style={{ padding: collapsed ? "0" : "0 12px", marginBottom: 8 }}>
+        {quickActions.map(item => {
           const active = page === item.id;
           const isActiveSession = item.id === "trading-floor" && session.active;
           return (
-            <button key={item.id} onClick={() => setPage(item.id)} style={{
-              display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
-              width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
-              background: isActiveSession ? `linear-gradient(90deg, ${C.green}20, transparent)` : 
-                           active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
-              color: isActiveSession ? C.green : active ? C.accentLight : C.textMuted,
-              fontWeight: isActiveSession || active ? 700 : 500, fontSize: 13,
-              borderLeft: isActiveSession ? `3px solid ${C.green}` : active ? `3px solid ${C.accent}` : "3px solid transparent",
-              transition: "all 0.2s ease", textAlign: "left",
-              borderRadius: 8, marginBottom: 4
-            }}>
+            <button 
+              key={item.id} 
+              onClick={() => setPage(item.id)} 
+              title={collapsed ? item.label : ""}
+              style={{
+                display: "flex", alignItems: "center", gap: collapsed ? 0 : 12, 
+                padding: collapsed ? "12px" : "12px 16px",
+                width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
+                justifyContent: collapsed ? "center" : "flex-start",
+                background: isActiveSession ? `linear-gradient(90deg, ${C.green}20, transparent)` : 
+                             active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
+                color: isActiveSession ? C.green : active ? C.accentLight : C.textMuted,
+                fontWeight: isActiveSession || active ? 700 : 500, fontSize: 13,
+                borderLeft: isActiveSession ? `3px solid ${C.green}` : active ? `3px solid ${C.accent}` : "3px solid transparent",
+                transition: "all 0.2s ease", textAlign: "left",
+                borderRadius: 8, marginBottom: 4
+              }}
+            >
               <item.icon size={18} color={isActiveSession ? C.green : active ? C.accent : C.textDim} />
-              {item.label}
-              {isActiveSession && (
+              {!collapsed && item.label}
+              {isActiveSession && !collapsed && (
                 <div style={{ marginLeft: "auto" }}>
                   <div style={{ 
                     width: 8, height: 8, borderRadius: "50%", background: C.green,
@@ -689,81 +864,38 @@ function Sidebar({ page, setPage, session }) {
         })}
       </div>
 
-      {/* More Menu - Utility Panels */}
-      <div style={{ padding: "0 12px", position: "relative" }} ref={moreMenuRef}>
-        <button 
-          onClick={() => setShowMoreMenu(!showMoreMenu)} 
-          style={{
-            display: "flex", alignItems: "center", gap: 12, padding: "12px 16px",
-            width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
-            background: showMoreMenu ? `linear-gradient(90deg, ${C.purple}20, transparent)` : "transparent",
-            color: showMoreMenu ? C.purpleLight : C.textMuted,
-            fontWeight: showMoreMenu ? 700 : 500, fontSize: 13,
-            borderLeft: showMoreMenu ? `3px solid ${C.purple}` : "3px solid transparent",
-            transition: "all 0.2s ease", textAlign: "left",
-            borderRadius: 8, marginBottom: showMoreMenu ? 8 : 0
-          }}
-        >
-          <Sparkles size={18} color={showMoreMenu ? C.purple : C.textDim} />
-          More
-          <div style={{ marginLeft: "auto", transform: showMoreMenu ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }}>
-            <ChevronDown size={14} color={C.textDim} />
-          </div>
-        </button>
+      {!collapsed && (
+        <>
+          <div style={{ height: 1, background: C.border, margin: "8px 20px" }} />
 
-        {/* Dropdown Menu */}
-        {showMoreMenu && (
-          <div style={{
-            position: "absolute", left: 12, right: 12, top: "100%", marginTop: 4,
-            background: C.bgCard, border: `1px solid ${C.border}`,
-            borderRadius: 12, padding: 8, boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-            zIndex: 200
-          }}>
-            {utilityItems.map(item => {
-              const active = page === item.id;
-              return (
-                <button key={item.id} onClick={() => { setPage(item.id); setShowMoreMenu(false); }} style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "10px 12px",
-                  width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
-                  background: active ? `${C.accent}15` : "transparent",
-                  color: active ? C.accentLight : C.textMuted,
-                  fontWeight: active ? 600 : 400, fontSize: 12,
-                  borderRadius: 8, marginBottom: 2,
-                  transition: "all 0.15s ease", textAlign: "left"
-                }}
-                onMouseEnter={e => e.target.style.background = active ? `${C.accent}25` : C.bgHover}
-                onMouseLeave={e => e.target.style.background = active ? `${C.accent}15` : "transparent"}
-                >
-                  <item.icon size={16} color={active ? C.accent : C.textDim} />
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Mobile: Show all items in sections */}
-      <div className="mobile-nav" style={{ display: "none" }}>
-        <div style={{ height: 1, background: C.border, margin: "8px 20px" }} />
-        {utilityItems.map(item => {
-          const active = page === item.id;
-          return (
-            <button key={item.id} onClick={() => setPage(item.id)} style={{
-              display: "flex", alignItems: "center", gap: 12, padding: "11px 20px",
-              width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
-              background: active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
-              color: active ? C.accentLight : C.textMuted,
-              fontWeight: active ? 700 : 500, fontSize: 13,
-              borderLeft: active ? `3px solid ${C.accent}` : "3px solid transparent",
-              transition: "all 0.2s ease", textAlign: "left"
-            }}>
-              <item.icon size={18} color={active ? C.accent : C.textDim} />
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
+          {/* Other Sections */}
+          {navSections.map((sec, si) => (
+            <div key={sec.label} style={{ marginBottom: 16 }}>
+              <div style={{
+                fontSize: 10, fontWeight: 800, color: C.textDim, padding: "0 20px 8px",
+                letterSpacing: "0.1em"
+              }}>{sec.label}</div>
+              {sec.items.map(item => {
+                const active = page === item.id;
+                return (
+                  <button key={item.id} onClick={() => setPage(item.id)} style={{
+                    display: "flex", alignItems: "center", gap: 12, padding: "11px 20px",
+                    width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
+                    background: active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
+                    color: active ? C.accentLight : C.textMuted,
+                    fontWeight: active ? 700 : 500, fontSize: 13,
+                    borderLeft: active ? `3px solid ${C.accent}` : "3px solid transparent",
+                    transition: "all 0.2s ease", textAlign: "left"
+                  }}>
+                    <item.icon size={18} color={active ? C.accent : C.textDim} />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }
@@ -1555,9 +1687,12 @@ function CommandCenterPage({ trades, session, propAccounts, setPage }) {
           )}
         </div>
 
-        {/* Quick Actions */}
+        {/* Right Column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <ZenQuote />
+          {/* Economic Calendar Widget */}
+          <DashboardCalendar />
+          
+          {/* Quick Actions */}
           <div style={S.glassCard}>
             <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>Quick Actions</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2685,7 +2820,9 @@ export default function App() {
   const [lastSessionData, setLastSessionData] = useState(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
   const [newsAlert, setNewsAlert] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const timerRef = useRef(null);
+  const alertQueueRef = useRef([]);
 
   // Toast helper - defined first to avoid closure issues
   const showToast = (message, type = "info") => {
@@ -2707,15 +2844,23 @@ export default function App() {
     { source: "BREAKING - Trump", message: "Jobs report tomorrow - be careful with positions!", link: "https://truthsocial.com" }
   ];
 
-  // Show random news alert every 2-5 minutes (simulated)
+  // Show news alert - cycles through all alerts before repeating
   useEffect(() => {
-    let alertIndex = 0;
+    // Initialize queue with shuffled alerts
+    alertQueueRef.current = [...trumpAlerts].sort(() => Math.random() - 0.5);
+    let queueIndex = 0;
     
     const showNextAlert = () => {
-      // Cycle through alerts in random order
-      const shuffled = [...trumpAlerts].sort(() => Math.random() - 0.5);
-      const alert = shuffled[alertIndex % shuffled.length];
-      alertIndex++;
+      // Get next alert from queue
+      if (queueIndex >= alertQueueRef.current.length) {
+        // Reshuffle when we've shown all alerts
+        alertQueueRef.current = [...trumpAlerts].sort(() => Math.random() - 0.5);
+        queueIndex = 0;
+      }
+      
+      const alert = alertQueueRef.current[queueIndex];
+      queueIndex++;
+      
       setNewsAlert(alert);
       showToast("URGENT: Trump Alert Received!", "warning");
       
@@ -2800,8 +2945,14 @@ export default function App() {
       backgroundImage: `radial-gradient(circle at 0% 0%, ${C.accentGlow} 0%, transparent 50%), radial-gradient(circle at 100% 100%, ${C.purpleGlow} 0%, transparent 50%)`
     }}>
       <TopBar session={session} />
-      <Sidebar page={page} setPage={setPage} session={session} />
-      <main style={{ marginLeft: 240, marginTop: 60, minHeight: "calc(100vh - 60px)" }}>
+      <Sidebar 
+        page={page} 
+        setPage={setPage} 
+        session={session} 
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+      <main style={{ marginLeft: sidebarCollapsed ? 60 : 240, marginTop: 60, minHeight: "calc(100vh - 60px)", transition: "margin-left 0.3s ease" }}>
         <ErrorBoundary>
           {renderPage()}
         </ErrorBoundary>

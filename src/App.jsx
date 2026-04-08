@@ -457,42 +457,11 @@ function ZenQuote() {
 
 // ─── TRUMP TWITTER FEED ────────────────────────────────────────────────────
 function TrumpTwitterFeed() {
-  const [tweets, setTweets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
-
-  // Fetch tweets from backend
-  const fetchTweets = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/trump-tweets');
-      if (!response.ok) {
-        throw new Error('Failed to fetch tweets');
-      }
-      const data = await response.json();
-      setTweets(data.tweets || []);
-      setLastUpdated(new Date());
-    } catch (err) {
-      console.error('Error fetching tweets:', err);
-      setError('Unable to load tweets');
-      // Fallback to placeholder tweets
-      setTweets([
-        { id: 1, timeAgo: "—", text: "Connect backend to load live tweets" },
-        { id: 2, timeAgo: "—", text: "Set TWITTER_BEARER_TOKEN in server/.env" },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch on mount and every 5 minutes
-  useEffect(() => {
-    fetchTweets();
-    const interval = setInterval(fetchTweets, 300000); // 5 minutes
-    return () => clearInterval(interval);
-  }, []);
+  // Static placeholder tweets - click link for real feed
+  const tweets = [
+    { id: 1, time: "Latest", text: "Click below to view Trump's latest tweets on X" },
+    { id: 2, time: "Market", text: "X/Twitter API requires paid subscription for live tweets" },
+  ];
 
   return (
     <div style={S.glassCard}>
@@ -508,65 +477,28 @@ function TrumpTwitterFeed() {
           </div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700 }}>@realDonaldTrump</div>
-            <div style={{ fontSize: 11, color: C.textDim }}>
-              {loading ? 'Loading...' : `${tweets.length} tweets`}
-            </div>
+            <div style={{ fontSize: 11, color: C.textDim }}>Click for live feed</div>
           </div>
         </div>
-        <button 
-          onClick={fetchTweets}
-          disabled={loading}
-          style={{
-            padding: "6px 10px", borderRadius: 8, background: C.bgCardAlt,
-            border: `1px solid ${C.border}`, cursor: loading ? "wait" : "pointer",
-            display: "flex", alignItems: "center", gap: 6, opacity: loading ? 0.5 : 1,
-            transition: "opacity 0.2s"
-          }}
-          title="Refresh"
-        >
-          <RefreshCw size={12} color={C.textDim} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
-        </button>
       </div>
       
-      {/* Loading State */}
-      {loading && tweets.length === 0 && (
-        <div style={{ textAlign: "center", padding: 20, color: C.textDim }}>
-          <div style={{ animation: "livePulse 1.5s infinite", marginBottom: 8 }}>
-            <Radio size={24} color={C.accent} />
-          </div>
-          <p style={{ fontSize: 12 }}>Loading tweets...</p>
-        </div>
-      )}
-      
-      {/* Error State */}
-      {error && (
-        <div style={{ 
-          padding: 12, borderRadius: 10, background: `${C.red}15`, 
-          border: `1px solid ${C.red}30`, marginBottom: 12
-        }}>
-          <p style={{ fontSize: 12, color: C.red, textAlign: "center" }}>{error}</p>
-        </div>
-      )}
-      
       {/* Tweets List */}
-      {!loading && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {tweets.map((tweet) => (
-            <div key={tweet.id} style={{
-              padding: 10, borderRadius: 10,
-              background: "rgba(0,0,0,0.2)",
-              border: `1px solid ${C.border}`
-            }}>
-              <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4, lineHeight: 1.4 }}>
-                {tweet.text}
-              </div>
-              <div style={{ fontSize: 10, color: C.accent }}>
-                {tweet.timeAgo}
-              </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {tweets.map((tweet) => (
+          <div key={tweet.id} style={{
+            padding: 10, borderRadius: 10,
+            background: "rgba(0,0,0,0.2)",
+            border: `1px solid ${C.border}`
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4, lineHeight: 1.4 }}>
+              {tweet.text}
             </div>
-          ))}
-        </div>
-      )}
+            <div style={{ fontSize: 10, color: C.accent }}>
+              {tweet.time}
+            </div>
+          </div>
+        ))}
+      </div>
       
       {/* Live Link */}
       <a 
@@ -581,15 +513,8 @@ function TrumpTwitterFeed() {
           color: "#1DA1F2", textDecoration: "none", fontSize: 12, fontWeight: 600
         }}
       >
-        <ExternalLink size={12} /> View Live Feed on X
+        <ExternalLink size={12} /> View Live Tweets on X
       </a>
-      
-      {/* Last Updated */}
-      {lastUpdated && (
-        <div style={{ textAlign: "center", fontSize: 9, color: C.textDim, marginTop: 8 }}>
-          Updated: {lastUpdated.toLocaleTimeString()}
-        </div>
-      )}
     </div>
   );
 }

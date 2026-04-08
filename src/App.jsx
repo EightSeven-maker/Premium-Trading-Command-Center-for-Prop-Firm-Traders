@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   BarChart3, Calendar, BookOpen, Target, FileText, TrendingUp, TrendingDown,
   DollarSign, Activity, Brain, Shield, Settings, Play, Square, Edit3,
@@ -14,6 +14,36 @@ import {
   ResponsiveContainer, PieChart as RePieChart, Pie, Cell, BarChart, Bar,
   Legend
 } from "recharts";
+
+// ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error("Error:", error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 40, textAlign: "center", color: "#ef4444" }}>
+          <h2>Something went wrong</h2>
+          <pre style={{ textAlign: "left", background: "rgba(0,0,0,0.3)", padding: 20, borderRadius: 12, marginTop: 20, fontSize: 12, overflow: "auto" }}>
+            {this.state.error?.toString()}
+          </pre>
+          <button onClick={() => window.location.reload()} style={{ marginTop: 20, padding: "12px 24px", background: "#6366f1", border: "none", borderRadius: 8, color: "white", cursor: "pointer" }}>
+            Reload Page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ─── THEME & CONSTANTS ──────────────────────────────────────────────────────
 // V3 NEON GLASS DESIGN SYSTEM (Restored)
@@ -2426,6 +2456,12 @@ export default function App() {
   const [showSessionSummary, setShowSessionSummary] = useState(false);
   const [newsAlert, setNewsAlert] = useState(null);
 
+  // Toast helper - defined first to avoid closure issues
+  const showToast = (message, type = "info") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   // Simulated Trump News Alerts
   const trumpAlerts = [
     { source: "TRUTH Social", message: "Big tariff announcement coming tomorrow. Get ready!", link: "https://truthsocial.com" },
@@ -2449,12 +2485,6 @@ export default function App() {
     const timer = setTimeout(showAlert, 30000);
     return () => clearTimeout(timer);
   }, []);
-
-  // Toast helper
-  const showToast = (message, type = "info") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
 
   // Load from localStorage
   useEffect(() => {
@@ -2526,7 +2556,9 @@ export default function App() {
       <TopBar session={session} />
       <Sidebar page={page} setPage={setPage} session={session} />
       <main style={{ marginLeft: 240, marginTop: 60, minHeight: "calc(100vh - 60px)" }}>
-        {renderPage()}
+        <ErrorBoundary>
+          {renderPage()}
+        </ErrorBoundary>
       </main>
       
       {/* Trump News Alert Popup */}

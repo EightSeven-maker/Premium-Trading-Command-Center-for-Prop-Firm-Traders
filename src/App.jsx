@@ -748,16 +748,10 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
         )}
       </div>
 
-      {/* Live Market Ticker */}
-      <div style={{ ...S.glassCard, marginBottom: 24 }}>
-        <LiveMarketTicker />
-      </div>
-
-      {/* Main Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        {/* Left: Trade Log Form */}
+      {/* Main Content - Log Trade Form */}
+      <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={S.glassCard}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
+          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
             <Calculator size={20} color={C.accent} /> Log Trade
           </h3>
 
@@ -907,70 +901,6 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
           <button onClick={submitTrade} style={{ ...S.btn("primary", "lg"), width: "100%", justifyContent: "center" }}>
             <Save size={16} /> Log Trade
           </button>
-        </div>
-
-        {/* Right: Stats & Today's Trades */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Session Stats */}
-          {session.active && (
-            <div style={S.glassCard}>
-              <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>Session Stats</h4>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-                <div style={{ textAlign: "center", padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10 }}>
-                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Trades</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: C.text }}>{session.trades}/2</div>
-                </div>
-                <div style={{ textAlign: "center", padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10 }}>
-                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>P&L</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: pnlColor(sessionStats.total) }}>{fmt(sessionStats.total)}</div>
-                </div>
-                <div style={{ textAlign: "center", padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10 }}>
-                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Win Rate</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: Number(sessionStats.wr) >= 50 ? C.green : C.red }}>{sessionStats.wr}%</div>
-                </div>
-                <div style={{ textAlign: "center", padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10 }}>
-                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Bias</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>{session.analysis?.bias || "—"}</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Today's Trades */}
-          <div style={S.glassCard}>
-            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>Today's Trades</h4>
-            {todayTrades.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 40, color: C.textDim }}>
-                <TrendingUp size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
-                <p>No trades logged today</p>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {todayTrades.slice().reverse().map((t, i) => (
-                  <div key={i} style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "12px 14px", borderRadius: 10, background: "rgba(0,0,0,0.2)",
-                    border: `1px solid ${C.border}`
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        background: pnlBg(t.pnl),
-                        display: "flex", alignItems: "center", justifyContent: "center"
-                      }}>
-                        {t.direction === "Long" ? <ArrowUpRight size={16} color={C.green} /> : <ArrowDownRight size={16} color={C.red} />}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 700 }}>{t.ticker}</div>
-                        <div style={{ fontSize: 11, color: C.textDim }}>{t.direction}</div>
-                      </div>
-                    </div>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: pnlColor(t.pnl) }}>{fmt(t.pnl)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

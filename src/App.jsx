@@ -73,8 +73,10 @@ const TICKERS = ["MNQ", "NQ", "MES", "ES", "CL", "GC", "RTY"];
 const TRADE_DIRECTION = ["Long", "Short"];
 const SETUP_GRADES = ["A+", "A", "B+", "B", "C", "F"];
 const ENTRY_MODELS = ["ICT Silver Bullet", "FVG", "OB", "Breaker Block", "Liquidity Sweep", "Order Flow", "Smart Money"];
-const MISTAKES = ["Overtrading", "Moved Stop", "FOMO Entry", "No Setup", "Early Exit", "Late Entry", "Wrong Size", "Revenge Trade", "Ignored Plan", "No Patience", "Ignored HTF"];
-const LIQUIDITY_TARGETS = ["PDH", "PDL", "PCH", "PCL", "PWH", "PWL", "NYAM High", "NYAM Low", "London High", "London Low", "EQ"];
+const TOI_MACRO = ["Bullish", "Bearish", "Neutral", "Chop", "Trending"];
+const SMT_DIVERGENCE = ["None", "Bullish", "Bearish"];
+const MISTAKES = ["Overtrading", "Moved Stop", "FOMO Entry", "No Setup", "Early Exit", "Late Entry", "Wrong Size", "Revenge Trade", "Ignored Plan", "No Patience", "Ignored HTF", "Chased"];
+const LIQUIDITY_TARGETS = ["PDH", "PDL", "PCH", "PCL", "PWH", "PWL", "NYAM LOW", "NYAM HIGH", "LONDON LOW", "LONDON HIGH", "EQ LEVEL"];
 const NEWS_IMPACT = ["Low", "Medium", "High"];
 const PROP_FIRMS = ["TopStepTrader", "ApexTrader", "ApexFutures", "MyFundedFX", "FTMO", "Blue Guardian", "Lux Trading", "The Funded Trader"];
 
@@ -562,11 +564,11 @@ function TopBar({ session, showToast }) {
 
 // ─── SIDEBAR ────────────────────────────────────────────────────────────────
 function Sidebar({ page, setPage, session }) {
-  // Main quick actions - always visible
+  // Main quick actions - order: Dashboard, Pre-Session, Active Session
   const quickActions = [
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { id: "trading-floor", icon: Zap, label: "Active Session" },
     { id: "presession", icon: Sun, label: "Pre-Session" },
+    { id: "trading-floor", icon: Zap, label: "Active Session" },
   ];
 
   const navSections = [
@@ -668,35 +670,48 @@ function Sidebar({ page, setPage, session }) {
 function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
   const [symbol, setSymbol] = useState("MNQ");
   const [direction, setDirection] = useState("Long");
-  const [contracts, setContracts] = useState(1);
-  const [pnl, setPnl] = useState("");
   const [entryModel, setEntryModel] = useState("");
+  const [setupGrade, setSetupGrade] = useState("");
+  const [entryPrice, setEntryPrice] = useState("");
+  const [exitPrice, setExitPrice] = useState("");
+  const [stopLoss, setStopLoss] = useState("");
+  const [pnl, setPnl] = useState("");
+  const [toiMacro, setToiMacro] = useState("");
+  const [contracts, setContracts] = useState(1);
+  const [smtDivergence, setSmtDivergence] = useState("None");
+  const [liqTargets, setLiqTargets] = useState([]);
   const [mistake, setMistake] = useState("");
   const [notes, setNotes] = useState("");
-  const [showMore, setShowMore] = useState(false);
+
+  const toggleLiqTarget = (target) => {
+    setLiqTargets(prev => 
+      prev.includes(target) ? prev.filter(t => t !== target) : [...prev, target]
+    );
+  };
 
   const submitTrade = () => {
     const pnlVal = parseFloat(pnl);
     
     if (pnl === "" || isNaN(pnlVal)) {
-      showToast("Please enter a valid P&L amount", "error");
-      return;
-    }
-    if (pnlVal === 0) {
-      showToast("P&L cannot be zero", "warning");
-      return;
-    }
-    if (contracts <= 0) {
-      showToast("Contracts must be at least 1", "error");
+      showToast("Please enter P&L amount", "error");
       return;
     }
     
     onAddTrade({
       date: today(), ticker: symbol, direction, contracts, pnl: pnlVal, 
-      entryModel, mistake, notes, grade: ""
+      entryModel, setupGrade, entryPrice, exitPrice, stopLoss,
+      toiMacro, smtDivergence, liqTargets, mistake, notes
     });
+    // Reset form
     setPnl("");
     setEntryModel("");
+    setSetupGrade("");
+    setEntryPrice("");
+    setExitPrice("");
+    setStopLoss("");
+    setToiMacro("");
+    setSmtDivergence("None");
+    setLiqTargets([]);
     setMistake("");
     setNotes("");
     showToast("Trade logged!", "success");
@@ -741,90 +756,154 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
 
       {/* Main Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        {/* Left: Quick Log */}
+        {/* Left: Trade Log Form */}
         <div style={S.glassCard}>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-            <Calculator size={20} color={C.accent} /> Quick Log
+            <Calculator size={20} color={C.accent} /> Log Trade
           </h3>
 
-          {/* Ticker */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={S.label}>Symbol</label>
-            <select value={symbol} onChange={e => setSymbol(e.target.value)} style={{
-              ...S.input, cursor: "pointer", appearance: "none",
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-              backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 36
-            }}>
-              {TICKERS.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-
-          {/* Direction */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-            <button onClick={() => setDirection("Long")} style={{
-              padding: "16px", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14,
-              background: direction === "Long" ? `linear-gradient(135deg, ${C.green}, #059669)` : "rgba(0,0,0,0.3)",
-              color: direction === "Long" ? C.white : C.textMuted,
-              border: `1px solid ${direction === "Long" ? C.green : C.border}`
-            }}>
-              <ArrowUpRight size={18} style={{ marginRight: 8 }} /> LONG
-            </button>
-            <button onClick={() => setDirection("Short")} style={{
-              padding: "16px", borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14,
-              background: direction === "Short" ? `linear-gradient(135deg, ${C.red}, #dc2626)` : "rgba(0,0,0,0.3)",
-              color: direction === "Short" ? C.white : C.textMuted,
-              border: `1px solid ${direction === "Short" ? C.red : C.border}`
-            }}>
-              <ArrowDownRight size={18} style={{ marginRight: 8 }} /> SHORT
-            </button>
-          </div>
-
-          {/* Contracts & P&L */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+          {/* Row 1: Ticker, Direction */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
-              <label style={S.label}>Contracts</label>
-              <input type="number" value={contracts} onChange={e => setContracts(Number(e.target.value))} style={S.input} min="1" />
+              <label style={S.label}>Ticker</label>
+              <select value={symbol} onChange={e => setSymbol(e.target.value)} style={{ ...S.input, cursor: "pointer", appearance: "none",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 36 }}>
+                {TICKERS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
+            <div>
+              <label style={S.label}>Direction</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <button onClick={() => setDirection("Long")} style={{
+                  padding: "10px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 12,
+                  background: direction === "Long" ? `linear-gradient(135deg, ${C.green}, #059669)` : "rgba(0,0,0,0.3)",
+                  color: direction === "Long" ? C.white : C.textMuted,
+                  border: `1px solid ${direction === "Long" ? C.green : C.border}`
+                }}>Long</button>
+                <button onClick={() => setDirection("Short")} style={{
+                  padding: "10px", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 12,
+                  background: direction === "Short" ? `linear-gradient(135deg, ${C.red}, #dc2626)` : "rgba(0,0,0,0.3)",
+                  color: direction === "Short" ? C.white : C.textMuted,
+                  border: `1px solid ${direction === "Short" ? C.red : C.border}`
+                }}>Short</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Entry Model, Setup Grade */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+            <div>
+              <label style={S.label}>Entry Model</label>
+              <select value={entryModel} onChange={e => setEntryModel(e.target.value)} style={S.input}>
+                <option value="">Select...</option>
+                {ENTRY_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={S.label}>Setup Grade</label>
+              <select value={setupGrade} onChange={e => setSetupGrade(e.target.value)} style={S.input}>
+                <option value="">Select...</option>
+                {SETUP_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Row 3: Entry Price, Exit Price, Stop Loss */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
+            <div>
+              <label style={S.label}>Entry Price</label>
+              <input type="number" value={entryPrice} onChange={e => setEntryPrice(e.target.value)} style={S.input} placeholder="0.00" step="0.25" />
+            </div>
+            <div>
+              <label style={S.label}>Exit Price</label>
+              <input type="number" value={exitPrice} onChange={e => setExitPrice(e.target.value)} style={S.input} placeholder="0.00" step="0.25" />
+            </div>
+            <div>
+              <label style={S.label}>Stop Loss</label>
+              <input type="number" value={stopLoss} onChange={e => setStopLoss(e.target.value)} style={S.input} placeholder="0.00" step="0.25" />
+            </div>
+          </div>
+
+          {/* Row 4: P&L, TOI/Macro */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
               <label style={S.label}>P&L ($)</label>
               <input type="number" value={pnl} onChange={e => setPnl(e.target.value)} style={{
                 ...S.input, fontWeight: 700,
                 color: pnl && !isNaN(parseFloat(pnl)) ? (parseFloat(pnl) >= 0 ? C.green : C.red) : C.text
-              }} placeholder="+150 or -75" />
+              }} placeholder="+/- amount" />
+            </div>
+            <div>
+              <label style={S.label}>TOI / Macro</label>
+              <select value={toiMacro} onChange={e => setToiMacro(e.target.value)} style={S.input}>
+                <option value="">Select...</option>
+                {TOI_MACRO.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
             </div>
           </div>
 
-          {/* Toggle More Fields */}
-          <button onClick={() => setShowMore(!showMore)} style={{
-            ...S.btn("ghost", "sm"), width: "100%", marginBottom: showMore ? 16 : 0,
-            justifyContent: "center"
-          }}>
-            <Plus size={14} /> {showMore ? "Less Options" : "More Options"}
-          </button>
-
-          {/* More Fields */}
-          {showMore && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ marginBottom: 12 }}>
-                <label style={S.label}>Entry Model</label>
-                <select value={entryModel} onChange={e => setEntryModel(e.target.value)} style={S.input}>
-                  <option value="">Select...</option>
-                  {ENTRY_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={S.label}>Mistake (if any)</label>
-                <select value={mistake} onChange={e => setMistake(e.target.value)} style={S.input}>
-                  <option value="">None</option>
-                  {MISTAKES.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={S.label}>Notes</label>
-                <textarea value={notes} onChange={e => setNotes(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="Trade notes..." />
-              </div>
+          {/* Row 5: Contracts, SMT Divergence */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+            <div>
+              <label style={S.label}>Contracts</label>
+              <input type="number" value={contracts} onChange={e => setContracts(Number(e.target.value))} style={S.input} min="1" />
             </div>
-          )}
+            <div>
+              <label style={S.label}>SMT Divergence</label>
+              <select value={smtDivergence} onChange={e => setSmtDivergence(e.target.value)} style={S.input}>
+                {SMT_DIVERGENCE.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Liquidity Targets */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={S.label}>Liquidity Targets</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {LIQUIDITY_TARGETS.map(target => (
+                <button key={target} onClick={() => toggleLiqTarget(target)} style={{
+                  padding: "6px 10px", borderRadius: 8, fontSize: 10, fontWeight: 600, cursor: "pointer",
+                  background: liqTargets.includes(target) ? `${C.accent}25` : "rgba(0,0,0,0.3)",
+                  color: liqTargets.includes(target) ? C.accentLight : C.textDim,
+                  border: `1px solid ${liqTargets.includes(target) ? C.accent : C.border}`,
+                  transition: "all 0.2s"
+                }}>
+                  {target}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Mistakes */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={S.label}>Mistakes (if any)</label>
+            <select value={mistake} onChange={e => setMistake(e.target.value)} style={S.input}>
+              <option value="">None</option>
+              {MISTAKES.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+
+          {/* Notes */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={S.label}>Trade Notes</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="What did you observe?" />
+          </div>
+
+          {/* Screenshot Upload */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={S.label}>Screenshot</label>
+            <label style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              padding: "16px", borderRadius: 12, border: `2px dashed ${C.border}`,
+              cursor: "pointer", color: C.textMuted, transition: "all 0.2s",
+              background: "rgba(0,0,0,0.2)"
+            }}>
+              <Camera size={20} />
+              <span style={{ fontSize: 13 }}>Click to upload chart screenshot</span>
+              <input type="file" accept="image/*" style={{ display: "none" }} />
+            </label>
+          </div>
 
           <button onClick={submitTrade} style={{ ...S.btn("primary", "lg"), width: "100%", justifyContent: "center" }}>
             <Save size={16} /> Log Trade

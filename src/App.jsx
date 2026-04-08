@@ -2478,6 +2478,7 @@ export default function App() {
   const [lastSessionData, setLastSessionData] = useState(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
   const [newsAlert, setNewsAlert] = useState(null);
+  const timerRef = useRef(null);
 
   // Toast helper - defined first to avoid closure issues
   const showToast = (message, type = "info") => {
@@ -2491,22 +2492,37 @@ export default function App() {
     { source: "TRUMP", message: "Markets will be GREAT again! Fed should cut rates NOW.", link: "https://truthsocial.com" },
     { source: "X - @realDonaldTrump", message: "China trade deal is dead. New tariffs incoming!", link: "https://x.com/realDonaldTrump" },
     { source: "BREAKING - Trump", message: "Just spoke with Xi. Big announcement coming this week!", link: "https://truthsocial.com" },
-    { source: "TRUTH Social", message: "The Fed is our enemy. Interest rates should be ZERO!", link: "https://truthsocial.com" }
+    { source: "TRUTH Social", message: "The Fed is our enemy. Interest rates should be ZERO!", link: "https://truthsocial.com" },
+    { source: "TRUMP", message: "Stock market hitting new highs! This is just the beginning!", link: "https://truthsocial.com" },
+    { source: "BREAKING", message: "Emergency Fed meeting announced for tomorrow morning!", link: "https://x.com/realDonaldTrump" },
+    { source: "TRUTH Social", message: "Oil prices about to surge. Get ready for energy trades!", link: "https://truthsocial.com" },
+    { source: "X - @realDonaldTrump", message: "Bitcoin to the moon! Crypto is winning!", link: "https://x.com/realDonaldTrump" },
+    { source: "BREAKING - Trump", message: "Jobs report tomorrow - be careful with positions!", link: "https://truthsocial.com" }
   ];
 
   // Show random news alert every 2-5 minutes (simulated)
   useEffect(() => {
-    const showAlert = () => {
-      if (!newsAlert) {
-        const randomAlert = trumpAlerts[Math.floor(Math.random() * trumpAlerts.length)];
-        setNewsAlert(randomAlert);
-        showToast("URGENT: Trump Alert Received!", "warning");
-      }
+    let alertIndex = 0;
+    
+    const showNextAlert = () => {
+      // Cycle through alerts in random order
+      const shuffled = [...trumpAlerts].sort(() => Math.random() - 0.5);
+      const alert = shuffled[alertIndex % shuffled.length];
+      alertIndex++;
+      setNewsAlert(alert);
+      showToast("URGENT: Trump Alert Received!", "warning");
+      
+      // Schedule next alert (random 2-5 minutes)
+      const nextDelay = 120000 + Math.random() * 180000; // 2-5 minutes
+      timerRef.current = setTimeout(showNextAlert, nextDelay);
     };
 
-    // Show first alert after 30 seconds for demo
-    const timer = setTimeout(showAlert, 30000);
-    return () => clearTimeout(timer);
+    // Start showing alerts after 30 seconds
+    timerRef.current = setTimeout(showNextAlert, 30000);
+    
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
 
   // Load from localStorage

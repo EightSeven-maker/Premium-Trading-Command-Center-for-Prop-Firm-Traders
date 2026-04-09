@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   BarChart3, Calendar, BookOpen, Target, FileText, TrendingUp, TrendingDown,
   DollarSign, Activity, Brain, Shield, Settings, Play, Square, Edit3,
@@ -2463,13 +2463,19 @@ function NewsAlert({ alert, onDismiss }) {
 
 // ─── COMMAND CENTER PAGE ────────────────────────────────────────────────────
 function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit }) {
+  // ─── Interactive State ──────────────────────────────────────────────
+  const [expandedTradeIndex, setExpandedTradeIndex] = useState(null);
+  const [activeSetupFilter, setActiveSetupFilter] = useState(null);
+  const [activeDayFilter, setActiveDayFilter] = useState(null);
   const [livePrices, setLivePrices] = useState({
-    NQ: { price: 21550.25, change: +45.50 },
-    ES: { price: 5845.75, change: +12.25 },
-    YM: { price: 43850.00, change: -15.00 }
+    NQ: { price: 21550.25, change: +45.50, flash: null },
+    ES: { price: 5845.75, change: +12.25, flash: null },
+    YM: { price: 43850.00, change: -15.00, flash: null }
   });
+  const [streakPulse, setStreakPulse] = useState(false);
+  const prevStreakRef = useRef(0);
 
-  // Simulate live price updates
+  // ─── Simulated live price updates ─────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => {
       setLivePrices(prev => {
@@ -2477,10 +2483,17 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
         Object.keys(updated).forEach(ticker => {
           const tick = updated[ticker];
           const change = (Math.random() - 0.5) * 10;
+          const newChange = tick.change + change;
+          const direction = change > 0 ? "up" : change < 0 ? "down" : null;
           updated[ticker] = {
             price: tick.price + change,
-            change: tick.change + change
+            change: newChange,
+            flash: direction
           };
+          // Clear flash after animation
+          setTimeout(() => {
+            setLivePrices(p => ({ ...p, [ticker]: { ...p[ticker], flash: null } }));
+          }, 600);
         });
         return updated;
       });
@@ -2488,6 +2501,7 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
     return () => clearInterval(interval);
   }, []);
 
+  // ─── Streak pulse on increase ───────────────────────────────────────
   const stats = {
     total: trades.reduce((s, t) => s + t.pnl, 0),
     wins: trades.filter(t => t.pnl > 0).length,
@@ -2502,6 +2516,24 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
       return count;
     })()
   };
+
+  useEffect(() => {
+    if (stats.streak > prevStreakRef.current) {
+      setStreakPulse(true);
+      setTimeout(() => setStreakPulse(false), 800);
+    }
+    prevStreakRef.current = stats.streak;
+  }, [stats.streak]);
+
+  // ─── Filtered trades ───────────────────────────────────────────────────
+  const filteredTrades = useMemo(() => {
+    let result = [...trades].sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (activeSetupFilter) result = result.filter(t => t.entryModel === activeSetupFilter);
+    if (activeDayFilter !== null) result = result.filter(t => new Date(t.date).getDay() === activeDayFilter);
+    return result;
+  }, [trades, activeSetupFilter, activeDayFilter]);
+
+  const hasActiveFilter = activeSetupFilter !== null || activeDayFilter !== null;
 
   const quote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
 
@@ -2566,7 +2598,6 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
           <p style={{ fontSize: 14, color: C.textMuted, fontStyle: "italic" }}>"{quote}"</p>
         </div>
         <div style={{ display: "flex", gap: 12 }}>
-          <WinStreakBadge streak={stats.streak} />
           {!session.active && (
             <button onClick={() => setPage("presession")} style={S.btn("primary")}>
               <Play size={16} /> Start Session
@@ -2579,66 +2610,385 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
           )}
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Stats */}
-      <div style={S.grid(4, 16)}>
-        <MiniStat icon={DollarSign} label="Total P&L" value={fmt(stats.total)} color={pnlColor(stats.total)} />
-        <MiniStat icon={Target} label="Win Rate" value={`${stats.wr}%`} color={Number(stats.wr) >= 50 ? C.green : C.red} />
-        <MiniStat icon={Flame} label="Win Streak" value={`${stats.streak} Days`} color={C.gold} />
-        <MiniStat icon={Briefcase} label="Prop Balance" value={fmtUsd(propAccounts.reduce((s, a) => s + a.balance, 0))} color={C.purple} />
+// ─── ANALYTICS HUB ──────────────────────────────────────────────────────────
+function AnalyticsHub({ trades }) {
+  const { totalPnl, winRate, avgWinner, avgLoser, expectancy, profitFactor } = useMemo(() => computeStats(trades), [trades]);
+  const equityCurve = useMemo(() => computeStats(trades).equityCurve, [trades]);
+  const highWatermark = useMemo(() => {
+    let hw = 0;
+    let peak = 0;
+    trades.slice().sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(t => {
+      peak += t.pnl;
+      if (peak > hw) hw = peak;
+    });
+    return hw;
+  }, [trades]);
+
+  const statCards = [
+    { label: "Total P&L", value: totalPnl, fmt: fmt, color: pnlColor(totalPnl), prefix: "" },
+    { label: "Win Rate", value: winRate, fmt: v => `${v}%`, color: winRate >= 50 ? C.green : winRate >= 40 ? C.yellow : C.red },
+    { label: "Avg Winner", value: avgWinner, fmt: fmt, color: C.green },
+    { label: "Avg Loser", value: avgLoser, fmt: v => `-${fmt(Math.abs(v))}`, color: C.red },
+    { label: "Expectancy", value: expectancy, fmt: v => (v >= 0 ? "+" : "") + v.toFixed(2), color: pnlColor(expectancy) },
+    { label: "Profit Factor", value: profitFactor, fmt: v => v.toFixed(2), color: profitFactor >= 1.5 ? C.green : profitFactor >= 1 ? C.yellow : C.red }
+  ];
+
+  return (
+    <>
+      {/* Hero Stat Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12 }}>
+        {statCards.map((card, i) => (
+          <AnimatedStatCard key={card.label} card={card} delay={i * 80} />
+        ))}
       </div>
 
-      <LivePnlWidget />
-
-      {/* Main Content */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20, marginTop: 24 }}>
-        {/* Recent Trades */}
-        <div style={S.glassCard}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700 }}>Recent Trades</h3>
-            <button onClick={() => setPage("journal")} style={S.btn("ghost", "sm")}>View All</button>
-          </div>
-          {trades.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 40, color: C.textDim }}>
-              <TrendingUp size={40} style={{ opacity: 0.2, marginBottom: 12 }} />
-              <p>No trades yet. Start a session!</p>
-            </div>
+      {/* Equity Curve + Setup Performance */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div style={{ ...S.glassCard, padding: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: C.text }}>Equity Curve</h3>
+          {equityCurve.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 32, color: C.textDim, fontSize: 13 }}>No trade data yet</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {trades.slice(-5).reverse().map((t, i) => (
-                <div key={i} style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: "12px 16px", borderRadius: 12, background: "rgba(0,0,0,0.2)", border: `1px solid ${C.border}`
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: pnlBg(t.pnl), display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {t.direction === "Long" ? <ArrowUpRight size={18} color={C.green} /> : <ArrowDownRight size={18} color={C.red} />}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 700 }}>{t.ticker} — {t.direction}</div>
-                      <div style={{ fontSize: 12, color: C.textDim }}>{t.date}</div>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: pnlColor(t.pnl) }}>{fmt(t.pnl)}</span>
-                </div>
-              ))}
-            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <AreaChart data={equityCurve} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={C.accent} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: C.textDim }} tickFormatter={d => d.split("-")[2]} />
+                <YAxis tick={{ fontSize: 10, fill: C.textDim }} tickFormatter={v => `$${v}`} width={55} />
+                <Tooltip
+                  contentStyle={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, fontSize: 12 }}
+                  labelStyle={{ color: C.text }}
+                  formatter={(val, name) => [name === "cumulative" ? fmt(val) : val, name === "cumulative" ? "Cumulative" : "Daily"]}
+                />
+                {highWatermark > 0 && (
+                  <ReferenceLine y={highWatermark} stroke={C.yellow} strokeDasharray="5 5" label={{ value: `HWM $${fmtUsd(highWatermark)}`, position: "right", fontSize: 9, fill: C.yellow }} />
+                )}
+                <Area type="monotone" dataKey="cumulative" stroke={C.accent} fill="url(#eqGrad)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
           )}
         </div>
 
-        {/* Right Column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <DashboardCalendar />
-          <StatsPanel
-            trades={trades}
-            dailyGoal={dailyGoal}
-            weeklyGoal={weeklyGoal}
-            monthlyGoal={monthlyGoal}
-            dailyLossLimit={dailyLossLimit}
-          />
+        <div style={{ ...S.glassCard, padding: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text }}>Top Setups</h3>
+          <SetupMiniTable trades={trades} />
         </div>
       </div>
+
+      {/* Day of Week + More Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div style={{ ...S.glassCard, padding: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text }}>Day Performance</h3>
+          <DayOfWeekMiniHeatmap trades={trades} />
+        </div>
+        <div style={{ ...S.glassCard, padding: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text }}>Session Breakdown</h3>
+          <SessionMiniBreakdown trades={trades} />
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Animated Stat Card ────────────────────────────────────────────────────────
+function AnimatedStatCard({ card, delay }) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const [hovered, setHovered] = useState(false);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const target = card.value || 0;
+    const isFloat = typeof target === "number" && !Number.isInteger(target);
+    const start = performance.now();
+    const duration = 900;
+
+    const animate = (now) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(target * eased);
+      if (progress < 1) rafRef.current = requestAnimationFrame(animate);
+    };
+
+    setTimeout(() => { rafRef.current = requestAnimationFrame(animate); }, delay);
+    return () => rafRef.current && cancelAnimationFrame(rafRef.current);
+  }, [card.value, delay]);
+
+  const fmtVal = isNaN(displayValue) ? "—" : card.fmt(displayValue);
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: C.bgCard,
+        backdropFilter: "blur(16px)",
+        borderRadius: 16,
+        border: `1px solid ${hovered ? C.borderLight : C.border}`,
+        padding: "16px 14px",
+        cursor: "default",
+        transition: "all 0.2s ease",
+        animation: `fadeInUp 0.5s ease-out ${delay}ms both`,
+        transform: hovered ? "translateY(-3px)" : "translateY(0)",
+        boxShadow: hovered ? `0 12px 32px rgba(0,0,0,0.5), 0 0 20px ${C.accentGlow}` : "0 4px 12px rgba(0,0,0,0.3)"
+      }}
+    >
+      <div style={{ fontSize: 10, fontWeight: 700, color: C.textDim, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+        {card.label}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: card.color, animation: "countUp 0.4s ease-out" }}>
+        {fmtVal}
+      </div>
     </div>
+  );
+}
+
+// ─── Setup Mini Table ─────────────────────────────────────────────────────────
+function SetupMiniTable({ trades }) {
+  const setups = useMemo(() => {
+    const map = {};
+    trades.forEach(t => {
+      const key = t.entryModel || "Unknown";
+      if (!map[key]) map[key] = { total: 0, wins: 0, count: 0 };
+      map[key].total += t.pnl;
+      map[key].wins += t.pnl > 0 ? 1 : 0;
+      map[key].count++;
+    });
+    return Object.entries(map)
+      .map(([name, v]) => ({ name, ...v, wr: v.count ? (v.wins / v.count * 100).toFixed(0) : 0 }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 6);
+  }, [trades]);
+
+  if (setups.length === 0) return <div style={{ color: C.textDim, fontSize: 12, textAlign: "center", padding: 16 }}>No data yet</div>;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {setups.map(s => (
+        <div key={s.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "rgba(0,0,0,0.2)" }}>
+          <div style={{ fontSize: 11, color: C.textMuted, maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <div style={{ fontSize: 10, color: C.textDim }}>{s.wr}%</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: pnlColor(s.total), minWidth: 50, textAlign: "right" }}>{fmt(s.total)}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Day of Week Mini Heatmap ─────────────────────────────────────────────────
+function DayOfWeekMiniHeatmap({ trades }) {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+  const data = useMemo(() => {
+    const map = Array(5).fill(null).map(() => ({ pnl: 0, count: 0 }));
+    trades.forEach(t => {
+      const d = new Date(t.date).getDay();
+      if (d >= 1 && d <= 5) { map[d - 1].pnl += t.pnl; map[d - 1].count++; }
+    });
+    return map;
+  }, [trades]);
+
+  const maxAbs = Math.max(...data.map(d => Math.abs(d.pnl)), 1);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
+      {data.map((d, i) => {
+        const intensity = Math.abs(d.pnl) / maxAbs;
+        const bgColor = d.pnl >= 0 ? `rgba(16,185,129,${0.1 + intensity * 0.5})` : `rgba(239,68,68,${0.1 + intensity * 0.5})`;
+        return (
+          <div key={i} style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 9, color: C.textDim, marginBottom: 4 }}>{days[i]}</div>
+            <div style={{ padding: "8px 4px", borderRadius: 8, background: bgColor, border: `1px solid ${d.pnl >= 0 ? C.greenBorder : C.redBorder}` }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: pnlColor(d.pnl) }}>{d.count > 0 ? fmt(d.pnl) : "—"}</div>
+              <div style={{ fontSize: 9, color: C.textDim }}>{d.count > 0 ? `${d.count} trades` : ""}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Session Mini Breakdown ───────────────────────────────────────────────────
+function SessionMiniBreakdown({ trades }) {
+  const sessions = useMemo(() => {
+    const map = { Morning: 0, Afternoon: 0, Overnight: 0 };
+    trades.forEach(t => {
+      if (t.session === "Morning" || t.session === "morning") map.Morning += t.pnl;
+      else if (t.session === "Afternoon" || t.session === "afternoon") map.Afternoon += t.pnl;
+      else if (t.session === "Overnight" || t.session === "overnight") map.Overnight += t.pnl;
+      else {
+        const h = new Date(t.date + "T12:00:00").getHours();
+        if (h < 12) map.Morning += t.pnl; else if (h < 17) map.Afternoon += t.pnl; else map.Overnight += t.pnl;
+      }
+    });
+    return map;
+  }, [trades]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {Object.entries(sessions).map(([name, pnl]) => (
+        <div key={name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "rgba(0,0,0,0.2)" }}>
+          <div style={{ fontSize: 12, color: C.textMuted }}>{name}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: pnlColor(pnl) }}>{fmt(pnl)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── TRADE PANEL ─────────────────────────────────────────────────────────────
+function TradePanel({ trades, activeSetupFilter, activeDayFilter, setActiveSetupFilter, setActiveDayFilter, onAddTrade }) {
+  const [expandedIdx, setExpandedIdx] = useState(null);
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const displayedTrades = useMemo(() => {
+    return [...trades].sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [trades]);
+
+  const todayPnl = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    return trades.filter(t => t.date === today).reduce((s, t) => s + t.pnl, 0);
+  }, [trades]);
+
+  const currentStreak = useMemo(() => {
+    const dailyPnl = {};
+    trades.forEach(t => { dailyPnl[t.date] = (dailyPnl[t.date] || 0) + t.pnl; });
+    const dates = Object.keys(dailyPnl).sort().reverse();
+    let count = 0;
+    for (const d of dates) { if (dailyPnl[d] > 0) count++; else break; }
+    return count;
+  }, [trades]);
+
+  return (
+    <>
+      {/* Top Stats Strip */}
+      <div style={{ ...S.glassCard, padding: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Today P&L</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: pnlColor(todayPnl) }}>{fmt(todayPnl)}</div>
+          </div>
+          <div style={{ textAlign: "center", position: "relative" }}>
+            {currentStreak > 0 && (
+              <div style={{ position: "absolute", top: -4, right: -4, width: 10, height: 10, borderRadius: "50%", background: C.green, animation: "pulseRing 0.8s ease-out" }} />
+            )}
+            <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Win Streak</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{currentStreak} Days</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Active Filters */}
+      {activeSetupFilter !== null && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 12, background: `${C.accent}15`, border: `1px solid ${C.accent}40`, animation: "fadeInScale 0.2s ease-out" }}>
+          <Filter size={12} color={C.accent} />
+          <span style={{ fontSize: 11, color: C.accentLight, flex: 1 }}>Setup: {activeSetupFilter}</span>
+          <button onClick={() => setActiveSetupFilter(null)} style={{ background: "none", border: "none", cursor: "pointer", color: C.accent, display: "flex", alignItems: "center" }}>
+            <X size={12} />
+          </button>
+        </div>
+      )}
+      {activeDayFilter !== null && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 12, background: `${C.cyan}15`, border: `1px solid ${C.cyan}40`, animation: "fadeInScale 0.2s ease-out" }}>
+          <Calendar size={12} color={C.cyan} />
+          <span style={{ fontSize: 11, color: C.cyan, flex: 1 }}>Day: {dayNames[activeDayFilter]}</span>
+          <button onClick={() => setActiveDayFilter(null)} style={{ background: "none", border: "none", cursor: "pointer", color: C.cyan, display: "flex", alignItems: "center" }}>
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
+      {/* Recent Trades */}
+      <div style={{ ...S.glassCard, padding: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Recent Trades</h3>
+          <button onClick={onAddTrade} style={S.btn("ghost", "sm")}>View All</button>
+        </div>
+
+        {displayedTrades.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 32, color: C.textDim }}>
+            <TrendingUp size={36} style={{ opacity: 0.2, marginBottom: 12 }} />
+            <p style={{ fontSize: 13 }}>No trades yet. Start a session!</p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {displayedTrades.slice(0, 8).map((t, i) => {
+              const isExpanded = expandedIdx === i;
+              return (
+                <div key={i} style={{ borderRadius: 12, border: `1px solid ${isExpanded ? C.borderLight : C.border}`, background: isExpanded ? C.bgHover : "rgba(0,0,0,0.2)", overflow: "hidden", transition: "all 0.25s ease" }}>
+                  {/* Row */}
+                  <div
+                    onClick={() => setExpandedIdx(isExpanded ? null : i)}
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", cursor: "pointer" }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: pnlBg(t.pnl), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {t.direction === "Long" ? <ArrowUpRight size={16} color={C.green} /> : <ArrowDownRight size={16} color={C.red} />}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{t.ticker} — {t.direction}</div>
+                        <div style={{ fontSize: 11, color: C.textDim }}>{t.date}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {t.grade && (
+                        <div style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 20, background: `${gradeColor(t.grade)}20`, color: gradeColor(t.grade), border: `1px solid ${gradeColor(t.grade)}40` }}>
+                          {t.grade}
+                        </div>
+                      )}
+                      <span style={{ fontSize: 14, fontWeight: 800, color: pnlColor(t.pnl) }}>{fmt(t.pnl)}</span>
+                      <ChevronRight size={14} color={C.textDim} style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }} />
+                    </div>
+                  </div>
+
+                  {/* Expanded Detail */}
+                  {isExpanded && (
+                    <div style={{ padding: "0 14px 14px", borderTop: `1px solid ${C.border}`, animation: "slideDownExpand 0.3s ease-out" }}>
+                      <div style={{ paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                        {t.notes && <div><span style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: "0.06em" }}>Notes</span><div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>{t.notes}</div></div>}
+                        {t.mistake && <div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: "0.06em" }}>Mistake</span><div style={{ ...S.badge(C.red) }}>{t.mistake}</div></div>}
+                        {t.entryModel && <div style={{ fontSize: 11, color: C.textMuted }}><span style={{ fontWeight: 600 }}>Setup:</span> {t.entryModel}</div>}
+                        {t.contracts && <div style={{ fontSize: 11, color: C.textMuted }}><span style={{ fontWeight: 600 }}>Contracts:</span> {t.contracts}</div>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Quick-Add FAB */}
+      <button
+        onClick={onAddTrade}
+        title="Add Trade"
+        style={{
+          width: 56, height: 56, borderRadius: "50%",
+          background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+          border: "none", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: `0 4px 20px ${C.accentGlow}`,
+          alignSelf: "flex-end",
+          transition: "all 0.2s ease"
+        }}
+        onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px) rotate(90deg)"; e.currentTarget.style.boxShadow = `0 8px 32px ${C.accentGlow}, 0 0 40px ${C.accentGlow}`; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0) rotate(0deg)"; e.currentTarget.style.boxShadow = `0 4px 20px ${C.accentGlow}`; }}
+      >
+        <Plus size={22} color={C.white} />
+      </button>
+    </>
   );
 }
 
@@ -4414,6 +4764,8 @@ export default function App() {
       
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInScale { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
         @keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.1); } }
         @keyframes firePulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.3); } }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
@@ -4421,6 +4773,17 @@ export default function App() {
         @keyframes slideDown { from { transform: translateX(-50%) translateY(-100%); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
         @keyframes scrollLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes countUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes hoverLift { from { transform: translateY(0px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); } to { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.5); } }
+        @keyframes priceFlashGreen { 0% { color: inherit; } 30% { color: #22c55e; } 100% { color: inherit; } }
+        @keyframes priceFlashRed { 0% { color: inherit; } 30% { color: #ef4444; } 100% { color: inherit; } }
+        @keyframes pulseRing { 0% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 0 0 rgba(99,102,241,0.4); } 70% { transform: scale(1.3); opacity: 0; box-shadow: 0 0 0 12px rgba(99,102,241,0); } 100% { transform: scale(1.3); opacity: 0; } }
+        @keyframes fabHover { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }
+        @keyframes slideDownExpand { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 500px; } }
+        @keyframes progressFill { from { width: 0%; } to { width: var(--progress-width, 0%); } }
+        @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+        @keyframes ambientGlow { 0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.1); } 50% { box-shadow: 0 0 40px rgba(99,102,241,0.25); } }
+        @keyframes borderPulse { 0%, 100% { border-color: rgba(255,255,255,0.08); } 50% { border-color: rgba(99,102,241,0.3); } }
         * { scrollbar-width: thin; scrollbar-color: ${C.border} transparent; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 10px; }

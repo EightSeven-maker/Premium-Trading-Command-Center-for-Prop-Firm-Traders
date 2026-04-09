@@ -219,6 +219,25 @@ const today = () => new Date().toISOString().split("T")[0];
 const gradeColor = (g) => g === "A+" || g === "A" ? C.green : g === "B+" || g === "B" ? C.yellow : C.red;
 const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
+const getApiBaseUrl = () => {
+  const fromEnv = (import.meta.env.VITE_API_BASE_URL || "").trim();
+  if (fromEnv) return fromEnv.replace(/\/$/, "");
+  if (typeof window === "undefined") return "";
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return "http://localhost:3001";
+  return "";
+};
+
+const getWsUrl = () => {
+  const fromEnv = (import.meta.env.VITE_WS_URL || "").trim();
+  if (fromEnv) return fromEnv;
+  if (typeof window === "undefined") return "";
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return "ws://localhost:3001/ws";
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}/ws`;
+};
+
 // ─── TOAST SYSTEM ─────────────────────────────────────────────────────────────
 function Toast({ toast, onDismiss }) {
   if (!toast) return null;
@@ -455,192 +474,6 @@ function ZenQuote() {
   );
 }
 
-// ─── TRUMP TWITTER FEED ────────────────────────────────────────────────────
-function TrumpTwitterFeed() {
-  const [tweets, setTweets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
-
-  // Fetch tweets from Nitter RSS feed
-  const fetchTweets = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Using rss2json to convert Nitter RSS to JSON
-      const rssUrl = encodeURIComponent('https://nitter.net/realdonaldtrump/rss');
-      const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch');
-      }
-      
-      const data = await response.json();
-      
-      if (data.status === 'ok' && data.items) {
-        const formattedTweets = data.items.slice(0, 5).map((item, index) => {
-          // Clean HTML from title
-          const cleanText = item.title
-            .replace(/^realdonaldtrump: /i, '')
-            .replace(/<[^>]*>/g, '')
-            .trim();
-          
-          // Parse date
-          const pubDate = new Date(item.pubDate);
-          const now = new Date();
-          const diffMs = now - pubDate;
-          const diffMins = Math.floor(diffMs / 60000);
-          const diffHours = Math.floor(diffMs / 3600000);
-          const diffDays = Math.floor(diffMs / 86400000);
-          
-          let timeAgo;
-          if (diffMins < 60) timeAgo = `${diffMins}m ago`;
-          else if (diffHours < 24) timeAgo = `${diffHours}h ago`;
-          else if (diffDays < 7) timeAgo = `${diffDays}d ago`;
-          else timeAgo = pubDate.toLocaleDateString();
-          
-          return {
-            id: index,
-            text: cleanText,
-            time: timeAgo,
-            link: item.link
-          };
-        });
-        
-        setTweets(formattedTweets);
-        setLastUpdated(new Date());
-      } else {
-        throw new Error('No tweets found');
-      }
-    } catch (err) {
-      console.error('Error fetching tweets:', err);
-      setError('Unable to load tweets');
-      // Fallback tweets
-      setTweets([
-        { id: 1, text: "Click 'View on X' to see Trump's latest tweets", time: "—", link: "https://x.com/realDonaldTrump" },
-        { id: 2, text: "Nitter RSS temporarily unavailable", time: "—", link: "https://x.com/realDonaldTrump" },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch on mount and every 5 minutes
-  useEffect(() => {
-    fetchTweets();
-    const interval = setInterval(fetchTweets, 300000); // 5 minutes
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div style={S.glassCard}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 8,
-            background: "linear-gradient(135deg, #1DA1F2, #0d8ed9)",
-            display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <span style={{ fontSize: 18, color: "white", fontWeight: "bold" }}>𝕏</span>
-          </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>@realDonaldTrump</div>
-            <div style={{ fontSize: 11, color: C.textDim }}>
-              {loading ? 'Loading...' : `${tweets.length} tweets`}
-            </div>
-          </div>
-        </div>
-        <button 
-          onClick={fetchTweets}
-          disabled={loading}
-          style={{
-            padding: "6px 10px", borderRadius: 8, background: C.bgCardAlt,
-            border: `1px solid ${C.border}`, cursor: loading ? "wait" : "pointer",
-            display: "flex", alignItems: "center", gap: 6, opacity: loading ? 0.5 : 1,
-            transition: "opacity 0.2s"
-          }}
-          title="Refresh"
-        >
-          <RefreshCw size={12} color={C.textDim} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
-        </button>
-      </div>
-      
-      {/* Loading State */}
-      {loading && tweets.length === 0 && (
-        <div style={{ textAlign: "center", padding: 20, color: C.textDim }}>
-          <div style={{ animation: "livePulse 1.5s infinite", marginBottom: 8 }}>
-            <Radio size={24} color={C.accent} />
-          </div>
-          <p style={{ fontSize: 12 }}>Loading tweets...</p>
-        </div>
-      )}
-      
-      {/* Error State */}
-      {error && (
-        <div style={{ 
-          padding: 10, borderRadius: 10, background: `${C.yellow}15`, 
-          border: `1px solid ${C.yellow}30`, marginBottom: 12
-        }}>
-          <p style={{ fontSize: 11, color: C.yellow, textAlign: "center" }}>{error}</p>
-        </div>
-      )}
-      
-      {/* Tweets List */}
-      {!loading && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {tweets.map((tweet) => (
-            <a 
-              key={tweet.id} 
-              href={tweet.link || "https://x.com/realDonaldTrump"} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              style={{
-                display: "block", padding: 10, borderRadius: 10,
-                background: "rgba(0,0,0,0.2)",
-                border: `1px solid ${C.border}`,
-                textDecoration: "none", color: "inherit",
-                transition: "all 0.2s"
-              }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = C.accent}
-              onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-            >
-              <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4, lineHeight: 1.4, color: C.text }}>
-                {tweet.text}
-              </div>
-              <div style={{ fontSize: 10, color: C.accent }}>
-                {tweet.time}
-              </div>
-            </a>
-          ))}
-        </div>
-      )}
-      
-      {/* Live Link */}
-      <a 
-        href="https://x.com/realDonaldTrump" 
-        target="_blank" 
-        rel="noopener noreferrer"
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          marginTop: 16, padding: "10px 16px", borderRadius: 10,
-          background: "rgba(29, 161, 242, 0.1)",
-          border: "1px solid rgba(29, 161, 242, 0.3)",
-          color: "#1DA1F2", textDecoration: "none", fontSize: 12, fontWeight: 600
-        }}
-      >
-        <ExternalLink size={12} /> View on X
-      </a>
-      
-      {/* Last Updated */}
-      {lastUpdated && (
-        <div style={{ textAlign: "center", fontSize: 9, color: C.textDim, marginTop: 8 }}>
-          Updated: {lastUpdated.toLocaleTimeString()}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── MARKET SQUAWK TICKER ──────────────────────────────────────────────────
 function MarketSquawkTicker() {
@@ -855,6 +688,798 @@ function WinStreakBadge({ streak }) {
     }}>
       <Flame size={18} color={C.gold} />
       <span style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>{streak} Day Win Streak</span>
+    </div>
+  );
+}
+
+// ─── ANALYTICS ENGINE ────────────────────────────────────────────────────────
+function computeStats(trades) {
+  if (!trades || trades.length === 0) {
+    return {
+      totalPnl: 0, winRate: 0, avgWinner: 0, avgLoser: 0,
+      expectancy: 0, profitFactor: 0, bestTrade: 0, worstTrade: 0,
+      totalTrades: 0, bestDay: 0, worstDay: 0, maxDrawdown: 0,
+      currentStreak: 0, maxWinStreak: 0, maxLossStreak: 0,
+      pnlBySymbol: {}, pnlBySession: {}, pnlByDayOfWeek: {},
+      setupPerformance: [], todayStats: { pnl: 0, wins: 0, losses: 0 },
+      dailyLossLimitUsed: 0, highWatermark: 0, equityCurve: [],
+    };
+  }
+
+  const wins = trades.filter(t => t.pnl > 0);
+  const losses = trades.filter(t => t.pnl < 0);
+  const totalPnl = trades.reduce((sum, t) => sum + (t.pnl || 0), 0);
+  const winRate = trades.length > 0 ? (wins.length / trades.length) * 100 : 0;
+  const avgWinner = wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+  const avgLoser = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0;
+  const expectancy = trades.length > 0
+    ? (winRate / 100 * avgWinner) - ((1 - winRate / 100) * avgLoser)
+    : 0;
+  const totalWins = wins.reduce((s, t) => s + t.pnl, 0);
+  const totalLosses = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
+  const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
+  const bestTrade = Math.max(...trades.map(t => t.pnl || 0));
+  const worstTrade = Math.min(...trades.map(t => t.pnl || 0));
+
+  // Streaks
+  const sorted = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+  let maxWinStreak = 0, maxLossStreak = 0, curRun = 0, curType = null;
+  sorted.forEach(t => {
+    const type = t.pnl > 0 ? "win" : "loss";
+    if (type === curType) { curRun++; }
+    else {
+      if (curType === "win" && curRun > maxWinStreak) maxWinStreak = curRun;
+      if (curType === "loss" && curRun > maxLossStreak) maxLossStreak = curRun;
+      curRun = 1; curType = type;
+    }
+  });
+  if (curType === "win" && curRun > maxWinStreak) maxWinStreak = curRun;
+  if (curType === "loss" && curRun > maxLossStreak) maxLossStreak = curRun;
+  // Current streak
+  let currentStreak = 0;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const win = sorted[i].pnl > 0;
+    const lastWin = sorted[sorted.length - 1].pnl > 0;
+    if (i === sorted.length - 1) { currentStreak = 1; }
+    else if (win === lastWin) { currentStreak++; }
+    else { break; }
+  }
+
+  // P&L by Symbol
+  const pnlBySymbol = {};
+  trades.forEach(t => {
+    const sym = t.ticker || "Other";
+    pnlBySymbol[sym] = (pnlBySymbol[sym] || 0) + (t.pnl || 0);
+  });
+
+  // P&L by Session
+  const pnlBySession = { Morning: { pnl: 0, count: 0 }, Afternoon: { pnl: 0, count: 0 }, Overnight: { pnl: 0, count: 0 } };
+  trades.forEach(t => {
+    const d = new Date(t.date);
+    const h = d.getHours();
+    let session = "Overnight";
+    if (h >= 8 && h < 12) session = "Morning";
+    else if (h >= 12 && h < 16) session = "Afternoon";
+    pnlBySession[session].pnl += t.pnl || 0;
+    pnlBySession[session].count++;
+  });
+
+  // P&L by Day of Week
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const pnlByDayOfWeek = {};
+  days.forEach(d => { pnlByDayOfWeek[d] = { pnl: 0, count: 0 }; });
+  trades.forEach(t => {
+    const day = days[new Date(t.date).getDay()];
+    pnlByDayOfWeek[day].pnl += t.pnl || 0;
+    pnlByDayOfWeek[day].count++;
+  });
+
+  // Setup Performance
+  const setupMap = {};
+  trades.forEach(t => {
+    const setup = t.entryModel || t.setup || "Untagged";
+    if (!setupMap[setup]) setupMap[setup] = { wins: 0, losses: 0, pnl: 0, count: 0 };
+    setupMap[setup].pnl += t.pnl || 0;
+    setupMap[setup].count++;
+    if (t.pnl > 0) setupMap[setup].wins++;
+    else if (t.pnl < 0) setupMap[setup].losses++;
+  });
+  const setupPerformance = Object.entries(setupMap).map(([name, d]) => ({
+    name, winRate: d.count > 0 ? (d.wins / d.count) * 100 : 0,
+    avgPnl: d.count > 0 ? d.pnl / d.count : 0,
+    totalPnl: d.pnl, count: d.count,
+  })).sort((a, b) => b.totalPnl - a.totalPnl);
+
+  // Today's Stats
+  const today = new Date().toISOString().split("T")[0];
+  const todayTrades = trades.filter(t => t.date && t.date.startsWith(today));
+  const todayStats = {
+    pnl: todayTrades.reduce((s, t) => s + (t.pnl || 0), 0),
+    wins: todayTrades.filter(t => t.pnl > 0).length,
+    losses: todayTrades.filter(t => t.pnl < 0).length,
+  };
+
+  // Best/Worst Day
+  const byDay = {};
+  trades.forEach(t => { const day = t.date || today; byDay[day] = (byDay[day] || 0) + (t.pnl || 0); });
+  const bestDay = Object.values(byDay).length > 0 ? Math.max(...Object.values(byDay)) : 0;
+  const worstDay = Object.values(byDay).length > 0 ? Math.min(...Object.values(byDay)) : 0;
+
+  // Max Drawdown + Equity Curve
+  let equity = 0, highWater = 0, maxDrawdown = 0;
+  const equityCurve = [];
+  sorted.forEach(t => {
+    equity += t.pnl || 0;
+    if (equity > highWater) highWater = equity;
+    const dd = highWater - equity;
+    if (dd > maxDrawdown) maxDrawdown = dd;
+    equityCurve.push({ date: t.date, equity, pnl: t.pnl || 0 });
+  });
+
+  return {
+    totalPnl, winRate, avgWinner, avgLoser,
+    expectancy, profitFactor, bestTrade, worstTrade,
+    totalTrades: trades.length, bestDay, worstDay, maxDrawdown,
+    currentStreak, maxWinStreak, maxLossStreak,
+    pnlBySymbol, pnlBySession, pnlByDayOfWeek,
+    setupPerformance, todayStats,
+    dailyLossLimitUsed: Math.max(0, -(todayStats.pnl)),
+    highWatermark: highWater, equityCurve,
+  };
+}
+
+// ─── STAT CARD ─────────────────────────────────────────────────────────────
+function StatCard({ icon, label, value, sub, color }) {
+  const isPositive = typeof value === "number" && value > 0;
+  const isNegative = typeof value === "number" && value < 0;
+  const displayColor = isPositive ? "#22c55e" : isNegative ? "#ef4444" : (color || C.text.secondary);
+  const prefix = typeof value === "number" && value > 0 ? "+" : "";
+
+  return (
+    <div style={{
+      background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.18)",
+      borderRadius: 10, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 3, minWidth: 0,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        {icon && React.cloneElement(icon, { size: 12, style: { color: C.accent } })}
+        <span style={{ fontSize: 9, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</span>
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: displayColor, lineHeight: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {typeof value === "number" ? `${prefix}$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: value % 1 !== 0 ? 2 : 0 })}` : value}
+      </div>
+      {sub && <div style={{ fontSize: 9, color: C.textMuted }}>{sub}</div>}
+    </div>
+  );
+}
+
+// ─── PROP GUARDRAILS ───────────────────────────────────────────────────────
+function PropGuardrails({ trades, dailyLossLimit }) {
+  const stats = computeStats(trades);
+  const limitPct = dailyLossLimit > 0 ? (stats.dailyLossLimitUsed / dailyLossLimit) * 100 : 0;
+  const limitColor = limitPct > 80 ? "#ef4444" : limitPct > 50 ? "#f59e0b" : "#22c55e";
+  const today = new Date();
+  const daysLeftInWeek = 7 - (today.getDay() === 0 ? 7 : today.getDay());
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <Shield size={13} style={{ color: C.accent }} />
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Prop Guardrails</span>
+      </div>
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.textMuted, marginBottom: 4 }}>
+          <span>Daily Loss Used</span>
+          <span style={{ color: limitColor, fontWeight: 700 }}>${stats.dailyLossLimitUsed.toFixed(0)} / ${dailyLossLimit}</span>
+        </div>
+        <div style={{ height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${Math.min(limitPct, 100)}%`, background: limitColor, borderRadius: 3, transition: "width 0.3s" }} />
+        </div>
+        {limitPct > 80 && (
+          <div style={{ fontSize: 10, color: "#ef4444", marginTop: 3 }}>⚠️ Stop trading — limit approaching</div>
+        )}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+        <span style={{ color: C.textMuted }}>High Watermark</span>
+        <span style={{ color: "#22c55e", fontWeight: 700 }}>${stats.highWatermark.toFixed(0)}</span>
+      </div>
+      {stats.maxDrawdown > 0 && (
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+          <span style={{ color: C.textMuted }}>Max Drawdown</span>
+          <span style={{ color: "#ef4444", fontWeight: 700 }}>${stats.maxDrawdown.toFixed(0)}</span>
+        </div>
+      )}
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+        <span style={{ color: C.textMuted }}>Days Left This Week</span>
+        <span style={{ color: C.textMuted, fontWeight: 700 }}>{daysLeftInWeek}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── DAY OF WEEK HEATMAP ────────────────────────────────────────────────────
+function DayOfWeekHeatmap({ trades }) {
+  const stats = computeStats(trades);
+  const dayKeys = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+  const maxAbs = Math.max(...dayKeys.map(k => Math.abs(stats.pnlByDayOfWeek[k]?.pnl || 0)), 1);
+
+  const bestDay = dayKeys.reduce((best, k) =>
+    (stats.pnlByDayOfWeek[k]?.pnl || 0) > (stats.pnlByDayOfWeek[best]?.pnl || 0) ? k : best, "Monday");
+  const worstDay = dayKeys.reduce((worst, k) =>
+    (stats.pnlByDayOfWeek[k]?.pnl || 0) < (stats.pnlByDayOfWeek[worst]?.pnl || 0) ? k : worst, "Monday");
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <Calendar size={13} style={{ color: C.accent }} />
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>P&L by Day</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4 }}>
+        {dayKeys.map((day, i) => {
+          const pnl = stats.pnlByDayOfWeek[day]?.pnl || 0;
+          const intensity = Math.abs(pnl) / maxAbs;
+          const bg = pnl > 0 ? `rgba(34,197,94,${0.1 + intensity * 0.55})`
+            : pnl < 0 ? `rgba(239,68,68,${0.1 + intensity * 0.55})`
+            : "rgba(255,255,255,0.04)";
+          const border = pnl > 0 ? "rgba(34,197,94,0.25)" : pnl < 0 ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.08)";
+          return (
+            <div key={day} style={{ background: bg, borderRadius: 6, padding: "6px 3px", textAlign: "center", border: `1px solid ${border}` }}>
+              <div style={{ fontSize: 9, color: C.textMuted, marginBottom: 2 }}>{dayLabels[i]}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: pnl >= 0 ? "#22c55e" : "#ef4444" }}>
+                {pnl > 0 ? "+" : ""}{pnl.toFixed(0)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 10, color: C.textMuted }}>
+        <span>Best: <span style={{ color: "#22c55e" }}>{bestDay.slice(0, 3)}</span></span>
+        <span>Worst: <span style={{ color: "#ef4444" }}>{worstDay.slice(0, 3)}</span></span>
+      </div>
+    </div>
+  );
+}
+
+// ─── SETUP PERFORMANCE ────────────────────────────────────────────────────────
+function SetupPerformance({ trades }) {
+  const stats = computeStats(trades);
+
+  if (stats.setupPerformance.length === 0) {
+    return (
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          <Target size={13} style={{ color: C.accent }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Setup Performance</span>
+        </div>
+        <div style={{ fontSize: 12, color: C.textMuted, textAlign: "center", padding: "12px 0" }}>
+          Add setup tags to your journal to see this
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <Target size={13} style={{ color: C.accent }} />
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Setup Performance</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 120, overflowY: "auto" }}>
+        {stats.setupPerformance.slice(0, 8).map((s, i) => (
+          <div key={s.name} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "5px 8px", borderRadius: 6,
+            background: i === 0 ? "rgba(34,197,94,0.06)" : i === stats.setupPerformance.length - 1 ? "rgba(239,68,68,0.06)" : "rgba(255,255,255,0.02)",
+            border: `1px solid ${i === 0 ? "rgba(34,197,94,0.15)" : i === stats.setupPerformance.length - 1 ? "rgba(239,68,68,0.15)" : "transparent"}`,
+          }}>
+            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
+              <span style={{ fontSize: 9, color: C.textMuted }}>{s.winRate.toFixed(0)}% WR · {s.count} trades</span>
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 700, color: s.totalPnl >= 0 ? "#22c55e" : "#ef4444", flexShrink: 0 }}>
+              {s.totalPnl >= 0 ? "+" : ""}{s.totalPnl.toFixed(0)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── SESSION BREAKDOWN ──────────────────────────────────────────────────────
+function SessionBreakdown({ trades }) {
+  const stats = computeStats(trades);
+  const sessions = [
+    { key: "Morning", label: "Morning", sub: "8am–12pm", icon: <Sun size={11} /> },
+    { key: "Afternoon", label: "Afternoon", sub: "12pm–4pm", icon: <Sun size={11} /> },
+    { key: "Overnight", label: "Overnight", sub: "4pm–8am", icon: <Moon size={11} /> },
+  ];
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <Clock size={13} style={{ color: C.accent }} />
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Session Breakdown</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {sessions.map(s => {
+          const data = stats.pnlBySession[s.key];
+          const pnl = data?.pnl || 0;
+          return (
+            <div key={s.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 8px", background: "rgba(255,255,255,0.02)", borderRadius: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ color: C.accent }}>{s.icon}</span>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.textMuted }}>{s.label}</div>
+                  <div style={{ fontSize: 9, color: C.textMuted }}>{s.sub} · {data?.count || 0} trades</div>
+                </div>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: pnl >= 0 ? "#22c55e" : "#ef4444" }}>{pnl >= 0 ? "+" : ""}{pnl.toFixed(0)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── STREAK TRACKER ─────────────────────────────────────────────────────────
+function StreakTracker({ trades }) {
+  const stats = computeStats(trades);
+  const streakEmoji = (n) => "🔥".repeat(Math.min(n, 5));
+  const isWin = stats.currentStreak > 0 && trades.length > 0 && trades[trades.length - 1].pnl > 0;
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <Flame size={13} style={{ color: C.accent }} />
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Streaks</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        {[
+          { label: "Current", value: stats.currentStreak, sub: isWin ? "Wins" : "Losses", color: isWin ? "#22c55e" : "#ef4444", emoji: streakEmoji(stats.currentStreak) },
+          { label: "Best Win", value: stats.maxWinStreak, sub: "consecutive", color: "#22c55e", emoji: streakEmoji(stats.maxWinStreak) },
+          { label: "Worst Loss", value: stats.maxLossStreak, sub: "consecutive", color: "#ef4444", emoji: null },
+          { label: "Profit Factor", value: stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2), sub: "win/loss ratio", color: stats.profitFactor >= 1 ? "#22c55e" : "#ef4444", emoji: null },
+        ].map(item => (
+          <div key={item.label} style={{ padding: "8px", background: "rgba(255,255,255,0.02)", borderRadius: 6, textAlign: "center" }}>
+            <div style={{ fontSize: 9, color: C.textMuted, marginBottom: 2 }}>{item.label}</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: item.color }}>
+              {item.emoji ? `${item.emoji} ${item.value}` : item.value}
+            </div>
+            <div style={{ fontSize: 9, color: C.textMuted }}>{item.sub}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── GOAL PROGRESS ─────────────────────────────────────────────────────────
+function GoalProgress({ trades, dailyGoal, weeklyGoal, monthlyGoal }) {
+  const today = new Date();
+  const todayStr = today.toISOString().split("T")[0];
+  const weekStart = new Date(today); weekStart.setDate(today.getDate() - today.getDay() + 1);
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  const todayPnl = trades.filter(t => t.date === todayStr).reduce((s, t) => s + (t.pnl || 0), 0);
+  const weekPnl = trades.filter(t => new Date(t.date) >= weekStart).reduce((s, t) => s + (t.pnl || 0), 0);
+  const monthPnl = trades.filter(t => new Date(t.date) >= monthStart).reduce((s, t) => s + (t.pnl || 0), 0);
+
+  const goals = [
+    { label: "Daily", current: todayPnl, target: dailyGoal, color: todayPnl >= dailyGoal ? "#22c55e" : C.accent },
+    { label: "Weekly", current: weekPnl, target: weeklyGoal, color: weekPnl >= weeklyGoal ? "#22c55e" : C.accent },
+    { label: "Monthly", current: monthPnl, target: monthlyGoal, color: monthPnl >= monthlyGoal ? "#22c55e" : C.accent },
+  ];
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <Target size={13} style={{ color: C.accent }} />
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Goal Progress</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {goals.map(g => {
+          const pct = g.target > 0 ? Math.min((g.current / g.target) * 100, 100) : 0;
+          return (
+            <div key={g.label}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
+                <span style={{ color: C.textMuted }}>{g.label}</span>
+                <span style={{ color: g.current >= g.target ? "#22c55e" : C.textMuted, fontWeight: 700 }}>
+                  ${g.current.toFixed(0)} / ${g.target}
+                </span>
+              </div>
+              <div style={{ height: 5, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${pct}%`, background: g.color, borderRadius: 3, transition: "width 0.3s" }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── EQUITY CURVE CHART ──────────────────────────────────────────────────────
+function EquityCurveChart({ trades }) {
+  const stats = computeStats(trades);
+
+  if (stats.equityCurve.length < 2) {
+    return (
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          <TrendingUp size={13} style={{ color: C.accent }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Equity Curve</span>
+        </div>
+        <div style={{ fontSize: 12, color: C.textMuted, textAlign: "center", padding: "16px 0" }}>
+          Log trades to see your equity curve
+        </div>
+      </div>
+    );
+  }
+
+  const last30 = stats.equityCurve.slice(-30);
+  const data = last30.map((d, i) => ({ name: i, equity: d.equity }));
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <TrendingUp size={13} style={{ color: C.accent }} />
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Equity Curve</span>
+      </div>
+      <ResponsiveContainer width="100%" height={110}>
+        <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
+              <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+          <XAxis dataKey="name" tick={false} stroke="rgba(255,255,255,0.15)" />
+          <YAxis tickFormatter={v => `$${v}`} tick={{ fontSize: 9, fill: "rgba(255,255,255,0.35)" }} width={48} />
+          <Tooltip
+            formatter={(val) => [`$${Number(val).toFixed(0)}`, "Equity"]}
+            contentStyle={{ background: "#1e1b4b", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: 11 }}
+            labelStyle={{ color: C.textMuted }}
+          />
+          <Area type="monotone" dataKey="equity" stroke="#6366f1" fill="url(#eqGrad)" strokeWidth={2} dot={false} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// ─── DEEPER STATS ─────────────────────────────────────────────────────────────
+function DeeperStats({ trades }) {
+  const [expanded, setExpanded] = useState(false);
+  const stats = computeStats(trades);
+
+  const rows = [
+    { label: "Total P&L", value: `$${stats.totalPnl.toFixed(0)}`, color: stats.totalPnl >= 0 ? "#22c55e" : "#ef4444" },
+    { label: "Total Trades", value: stats.totalTrades },
+    { label: "Win Rate", value: `${stats.winRate.toFixed(1)}%` },
+    { label: "Avg Winner", value: `$${stats.avgWinner.toFixed(0)}`, color: "#22c55e" },
+    { label: "Avg Loser", value: `$${stats.avgLoser.toFixed(0)}`, color: "#ef4444" },
+    { label: "Expectancy", value: `$${stats.expectancy.toFixed(2)}/trade`, color: stats.expectancy >= 0 ? "#22c55e" : "#ef4444" },
+    { label: "Profit Factor", value: stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2), color: stats.profitFactor >= 1 ? "#22c55e" : "#ef4444" },
+    { label: "Best Trade", value: `$${stats.bestTrade.toFixed(0)}`, color: "#22c55e" },
+    { label: "Worst Trade", value: `$${stats.worstTrade.toFixed(0)}`, color: "#ef4444" },
+    { label: "Best Day", value: `$${stats.bestDay.toFixed(0)}`, color: "#22c55e" },
+    { label: "Worst Day", value: `$${stats.worstDay.toFixed(0)}`, color: "#ef4444" },
+    { label: "Max Drawdown", value: `$${stats.maxDrawdown.toFixed(0)}`, color: "#ef4444" },
+    { label: "Avg R/R", value: stats.avgLoser > 0 ? `${(stats.avgWinner / stats.avgLoser).toFixed(2)}:1` : "N/A" },
+  ];
+
+  return (
+    <div style={{ borderTop: "1px solid rgba(99,102,241,0.12)", paddingTop: 12 }}>
+      <div
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: expanded ? 10 : 0 }}
+        onClick={() => setExpanded(e => !e)}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <BarChart3 size={13} style={{ color: C.accent }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>All Stats</span>
+        </div>
+        <ChevronDown size={13} style={{ color: C.textMuted, transform: expanded ? "rotate(180deg)" : "none", transition: "0.2s" }} />
+      </div>
+      {expanded && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 12px" }}>
+          {rows.map(r => (
+            <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <span style={{ fontSize: 11, color: C.textMuted }}>{r.label}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: r.color || C.textMuted }}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── STATS PANEL ─────────────────────────────────────────────────────────────
+function StatsPanel({ trades, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit }) {
+  const stats = computeStats(trades);
+
+  if (!trades || trades.length === 0) {
+    return (
+      <div style={{
+        background: "rgba(99,102,241,0.05)", border: "1px dashed rgba(99,102,241,0.3)",
+        borderRadius: 12, padding: 28, textAlign: "center",
+      }}>
+        <Activity size={28} style={{ color: C.accent, margin: "0 auto 12px" }} />
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>Start Logging Trades</div>
+        <div style={{ fontSize: 12, color: C.textMuted }}>Add trades to your journal to see your analytics here</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Today's Snapshot */}
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          <Zap size={13} style={{ color: C.accent }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Today</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+          <StatCard icon={<DollarSign size={10} />} label="P&L" value={stats.todayStats.pnl} />
+          <StatCard icon={<TrendingUp size={10} />} label="Wins" value={stats.todayStats.wins} color="#22c55e" />
+          <StatCard icon={<TrendingDown size={10} />} label="Losses" value={stats.todayStats.losses} color="#ef4444" />
+          <StatCard icon={<Flame size={10} />} label="Streak" value={stats.currentStreak} sub={stats.currentStreak > 0 ? "Wins" : stats.currentStreak < 0 ? "Losses" : "None"} />
+        </div>
+      </div>
+
+      {/* Equity Curve */}
+      <EquityCurveChart trades={trades} />
+
+      {/* Win Rate + P&L by Symbol */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <PieChart size={13} style={{ color: C.accent }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Win Rate</span>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <ResponsiveContainer width="100%" height={90}>
+              <RePieChart>
+                <Pie data={[{ name: "Wins", value: trades.filter(t => t.pnl > 0).length }, { name: "Losses", value: trades.filter(t => t.pnl <= 0).length }]} cx="50%" cy="50%" innerRadius={24} outerRadius={42} dataKey="value" startAngle={90} endAngle={-270}>
+                  <Cell fill="#22c55e" /><Cell fill="#ef4444" />
+                </Pie>
+                <Tooltip contentStyle={{ background: "#1e1b4b", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: 11 }} />
+              </RePieChart>
+            </ResponsiveContainer>
+            <div style={{ fontSize: 20, fontWeight: 800, color: stats.winRate >= 50 ? "#22c55e" : "#ef4444" }}>{stats.winRate.toFixed(0)}%</div>
+            <div style={{ fontSize: 9, color: C.textMuted }}>{trades.filter(t => t.pnl > 0).length}W / {trades.filter(t => t.pnl <= 0).length}L</div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <BarChart3 size={13} style={{ color: C.accent }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>P&L / Symbol</span>
+          </div>
+          {Object.keys(stats.pnlBySymbol).length === 0 ? (
+            <div style={{ fontSize: 11, color: C.textMuted, textAlign: "center", padding: "20px 0" }}>No data</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={90}>
+              <BarChart data={Object.entries(stats.pnlBySymbol).map(([name, value]) => ({ name, value }))} layout="vertical" margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <XAxis type="number" tick={{ fontSize: 9, fill: "rgba(255,255,255,0.35)" }} tickFormatter={v => `$${v}`} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: C.textMuted }} width={28} />
+                <Tooltip formatter={(val) => [`$${val.toFixed(0)}`, "P&L"]} contentStyle={{ background: "#1e1b4b", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: 11 }} />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                  {Object.entries(stats.pnlBySymbol).map(([_, v], i) => <Cell key={i} fill={v >= 0 ? "#22c55e" : "#ef4444"} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      {/* Session Breakdown */}
+      <SessionBreakdown trades={trades} />
+
+      {/* Day of Week */}
+      <DayOfWeekHeatmap trades={trades} />
+
+      {/* Setup Performance */}
+      <SetupPerformance trades={trades} />
+
+      {/* Streak Tracker */}
+      <StreakTracker trades={trades} />
+
+      {/* Goal Progress */}
+      <GoalProgress trades={trades} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} />
+
+      {/* Prop Guardrails */}
+      <PropGuardrails trades={trades} dailyLossLimit={dailyLossLimit} />
+
+      {/* Deeper Stats */}
+      <DeeperStats trades={trades} />
+    </div>
+  );
+}
+
+function LivePnlWidget() {
+  const [loading, setLoading] = useState(true);
+  const [configured, setConfigured] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [data, setData] = useState({
+    totalBalance: 0,
+    totalUnrealizedPnl: 0,
+    totalDailyPnl: 0,
+    openPositionsCount: 0,
+    positions: []
+  });
+
+  const wsRef = useRef(null);
+  const pollRef = useRef(null);
+  const apiBase = getApiBaseUrl();
+  const wsUrl = getWsUrl();
+
+  const fetchDashboard = async () => {
+    try {
+      const statusRes = await fetch(`${apiBase}/api/status`);
+      const status = await statusRes.json();
+      setConfigured(Boolean(status?.tradovate?.configured));
+
+      if (!status?.tradovate?.configured) {
+        setConnected(false);
+        setLoading(false);
+        return;
+      }
+
+      const dashRes = await fetch(`${apiBase}/api/dashboard`);
+      if (!dashRes.ok) throw new Error("Failed to fetch live P&L");
+      const dash = await dashRes.json();
+
+      setData({
+        totalBalance: dash.totalBalance || 0,
+        totalUnrealizedPnl: dash.totalUnrealizedPnl || 0,
+        totalDailyPnl: dash.totalDailyPnl || 0,
+        openPositionsCount: dash.openPositionsCount || 0,
+        positions: Array.isArray(dash.positions) ? dash.positions : []
+      });
+      setLastUpdated(dash.lastUpdated || new Date().toISOString());
+      setConnected(true);
+      setError("");
+      setLoading(false);
+    } catch (e) {
+      setConnected(false);
+      setLoading(false);
+      setError(e.message || "Unable to load Tradovate data");
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+
+    try {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === "dashboard" && payload.data) {
+            setConfigured(true);
+            setConnected(true);
+            setLoading(false);
+            setError("");
+            setData({
+              totalBalance: payload.data.totalBalance || 0,
+              totalUnrealizedPnl: payload.data.totalUnrealizedPnl || 0,
+              totalDailyPnl: payload.data.totalDailyPnl || 0,
+              openPositionsCount: payload.data.positions?.length || 0,
+              positions: Array.isArray(payload.data.positions) ? payload.data.positions : []
+            });
+            setLastUpdated(payload.data.lastUpdated || new Date().toISOString());
+          }
+        } catch {
+          // Ignore malformed payloads
+        }
+      };
+
+      ws.onerror = () => {
+        if (!pollRef.current) pollRef.current = setInterval(fetchDashboard, 10000);
+      };
+
+      ws.onclose = () => {
+        setConnected(false);
+        if (!pollRef.current) pollRef.current = setInterval(fetchDashboard, 10000);
+      };
+    } catch {
+      if (!pollRef.current) pollRef.current = setInterval(fetchDashboard, 10000);
+    }
+
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  return (
+    <div style={{ ...S.glassCard, marginTop: 20, marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+            <Gauge size={18} color={C.accent} />
+            Live Tradovate P&L
+          </h3>
+          <div style={{ fontSize: 11, color: C.textDim, marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: connected ? C.green : C.red }} />
+            {configured ? (connected ? "Connected" : "Disconnected") : "Not configured"}
+            {lastUpdated && ` • Updated ${new Date(lastUpdated).toLocaleTimeString()}`}
+          </div>
+        </div>
+        <button onClick={fetchDashboard} style={S.btn("ghost", "sm")}>
+          <RefreshCw size={14} /> Refresh
+        </button>
+      </div>
+
+      {!configured && (
+        <div style={{ ...S.badge(C.yellow), display: "block", borderRadius: 12, padding: "12px 14px" }}>
+          Tradovate backend is not configured. Add `TRADOVATE_USERNAME`, `TRADOVATE_PASSWORD`, `TRADOVATE_CID`, and `TRADOVATE_SECRET` to server env.
+        </div>
+      )}
+
+      {error && configured && (
+        <div style={{ ...S.badge(C.red), display: "block", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ color: C.textDim, fontSize: 13 }}>Loading live account data...</div>
+      ) : configured && (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+            <div style={{ ...S.glassCard, padding: 14 }}>
+              <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>TOTAL BALANCE</div>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>{fmtUsd(data.totalBalance)}</div>
+            </div>
+            <div style={{ ...S.glassCard, padding: 14 }}>
+              <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>OPEN P&L</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: pnlColor(data.totalUnrealizedPnl) }}>{fmt(data.totalUnrealizedPnl)}</div>
+            </div>
+            <div style={{ ...S.glassCard, padding: 14 }}>
+              <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>TODAY P&L</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: pnlColor(data.totalDailyPnl) }}>{fmt(data.totalDailyPnl)}</div>
+            </div>
+            <div style={{ ...S.glassCard, padding: 14 }}>
+              <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>OPEN POSITIONS</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: C.accentLight }}>{data.openPositionsCount}</div>
+            </div>
+          </div>
+
+          {data.positions.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
+              {data.positions.map((pos, idx) => (
+                <div key={`${pos.symbol}-${idx}`} style={{
+                  borderRadius: 12,
+                  border: `1px solid ${C.border}`,
+                  background: "rgba(0,0,0,0.22)",
+                  padding: 12
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>{pos.symbol}</span>
+                    <span style={{ fontSize: 12, color: pos.netQty > 0 ? C.green : C.red }}>
+                      {pos.netQty > 0 ? "LONG" : "SHORT"} {Math.abs(pos.netQty)}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11, color: C.textDim }}>Avg: {Number(pos.avgPrice || 0).toFixed(2)}</div>
+                  <div style={{ fontSize: 11, color: C.textDim }}>Last: {Number(pos.lastPrice || 0).toFixed(2)}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginTop: 6, color: pnlColor(pos.unrealizedPnl || 0) }}>
+                    {fmt(pos.unrealizedPnl || 0)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -1497,10 +2122,10 @@ function MultiSelectDropdown({ label, options, selected, onChange, placeholder }
 }
 
 // ─── POST SESSION PAGE ────────────────────────────────────────────────────
-function PostSessionPage({ setPage, showToast, trades, onAddTrade }) {
+function PostSessionPage({ setPage, showToast, trades, onAddTrade, spiritualMode = true }) {
   const [step, setStep] = useState(0);
   
-  // Step 1: Ardas
+  // Step 1: Opening reflection
   const [ardasDone, setArdasDone] = useState(false);
   
   // Step 2: Session Reflection
@@ -1565,7 +2190,7 @@ function PostSessionPage({ setPage, showToast, trades, onAddTrade }) {
         ))}
       </div>
 
-      {/* Step 0: Ardas */}
+      {/* Step 0: Opening reflection */}
       {step === 0 && (
         <div style={{ ...S.glassCard, maxWidth: 580, margin: "0 auto", textAlign: "center", boxShadow: `0 0 60px ${C.accentGlow}`, border: `1px solid ${C.border}` }}>
           <div style={{
@@ -1576,28 +2201,33 @@ function PostSessionPage({ setPage, showToast, trades, onAddTrade }) {
           }}>
             <Moon size={40} color={C.purple} />
           </div>
-          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>End With Gratitude</h2>
+          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>
+            {spiritualMode ? "End With Gratitude" : "End With Reflection"}
+          </h2>
           
-          {/* Gurmukhi Ardas */}
-          <div style={{
-            padding: 20, borderRadius: 14, background: `linear-gradient(135deg, ${C.purple}15, ${C.accent}10)`,
-            border: `1px solid ${C.border}`, marginBottom: 24
-          }}>
-            <p style={{ fontFamily: "'Noto Sans Gurmukhi', sans-serif", fontSize: 18, color: C.text, lineHeight: 2, margin: 0 }}>
-              ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕਰਿ ਹਮ ਸਾਕਹ ਜਿਉ ਭਾਵੈ ਤਿਵੈ ਬਖਸਿ ॥੧॥ ਰਹਾਉ ॥
-            </p>
-            <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, fontStyle: "italic" }}>
-              I have no power to do anything at all. As it pleases You, You forgive us. ||1||Pause||
-            </p>
-          </div>
+          {spiritualMode && (
+            <div style={{
+              padding: 20, borderRadius: 14, background: `linear-gradient(135deg, ${C.purple}15, ${C.accent}10)`,
+              border: `1px solid ${C.border}`, marginBottom: 24
+            }}>
+              <p style={{ fontFamily: "'Noto Sans Gurmukhi', sans-serif", fontSize: 18, color: C.text, lineHeight: 2, margin: 0 }}>
+                ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕਰਿ ਹਮ ਸਾਕਹ ਜਿਉ ਭਾਵੈ ਤਿਵੈ ਬਖਸਿ ॥੧॥ ਰਹਾਉ ॥
+              </p>
+              <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, fontStyle: "italic" }}>
+                I have no power to do anything at all. As it pleases You, You forgive us. ||1||Pause||
+              </p>
+            </div>
+          )}
           
           <p style={{ color: C.textMuted, lineHeight: 1.8, marginBottom: 24 }}>
-            Take a moment to give thanks. Reflect on your session with gratitude.
+            {spiritualMode
+              ? "Take a moment to give thanks. Reflect on your session with gratitude."
+              : "Take a calm pause. Reflect on your session before moving forward."}
           </p>
           <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, cursor: "pointer", marginBottom: 24 }}>
             <input type="checkbox" checked={ardasDone} onChange={e => setArdasDone(e.target.checked)}
               style={{ width: 20, height: 20, accentColor: C.accent, cursor: "pointer" }} />
-            <span style={{ fontWeight: 600 }}>I have completed my Ardas</span>
+            <span style={{ fontWeight: 600 }}>{spiritualMode ? "I have completed my Ardas" : "I have completed my reflection"}</span>
           </label>
           <button disabled={!ardasDone} onClick={() => setStep(1)} style={{
             ...S.btn("primary", "lg"), width: "100%", opacity: ardasDone ? 1 : 0.4, cursor: ardasDone ? "pointer" : "not-allowed"
@@ -1832,7 +2462,7 @@ function NewsAlert({ alert, onDismiss }) {
 }
 
 // ─── COMMAND CENTER PAGE ────────────────────────────────────────────────────
-function CommandCenterPage({ trades, session, propAccounts, setPage }) {
+function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit }) {
   const [livePrices, setLivePrices] = useState({
     NQ: { price: 21550.25, change: +45.50 },
     ES: { price: 5845.75, change: +12.25 },
@@ -1958,6 +2588,8 @@ function CommandCenterPage({ trades, session, propAccounts, setPage }) {
         <MiniStat icon={Briefcase} label="Prop Balance" value={fmtUsd(propAccounts.reduce((s, a) => s + a.balance, 0))} color={C.purple} />
       </div>
 
+      <LivePnlWidget />
+
       {/* Main Content */}
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20, marginTop: 24 }}>
         {/* Recent Trades */}
@@ -1996,11 +2628,14 @@ function CommandCenterPage({ trades, session, propAccounts, setPage }) {
 
         {/* Right Column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Economic Calendar Widget */}
           <DashboardCalendar />
-          
-          {/* Trump Twitter Feed - Below Calendar */}
-          <TrumpTwitterFeed />
+          <StatsPanel
+            trades={trades}
+            dailyGoal={dailyGoal}
+            weeklyGoal={weeklyGoal}
+            monthlyGoal={monthlyGoal}
+            dailyLossLimit={dailyLossLimit}
+          />
         </div>
       </div>
     </div>
@@ -2010,7 +2645,104 @@ function CommandCenterPage({ trades, session, propAccounts, setPage }) {
 // ─── PROP FIRMS PAGE ─────────────────────────────────────────────────────────
 function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
   const [showAdd, setShowAdd] = useState(false);
+  const [showConnect, setShowConnect] = useState(false);
+  const [connectingFirm, setConnectingFirm] = useState(null);
+  const [apiCredentials, setApiCredentials] = useState({ apiKey: "", apiSecret: "", accountId: "" });
+  const [connectedAccounts, setConnectedAccounts] = useState([]);
+  const [livePositions, setLivePositions] = useState([]);
+  const [syncing, setSyncing] = useState(false);
   const [newAccount, setNewAccount] = useState({ firm: "", name: "", balance: 50000, target: 55000, dailyLossLimit: 1000 });
+
+  // Prop firm API configurations
+  const propFirms = [
+    { id: "tradeovate", name: "Tradeovate (NinjaTrader)", icon: "N", color: "#00AEFF", description: "Connect via NinjaTrader API" },
+    { id: "topstep", name: "TopStepTrader", icon: "TS", color: "#FF6B35", description: "Connect your TST account" },
+    { id: "apex", name: "ApexTrader", icon: "AP", color: "#00D4AA", description: "Connect Apex account" },
+    { id: "ftmo", name: "FTMO", icon: "F", color: "#7B68EE", description: "Connect FTMO account" },
+  ];
+
+  // Connect to prop firm API
+  const connectToFirm = async (firmId) => {
+    if (!apiCredentials.apiKey || !apiCredentials.apiSecret) {
+      showToast("Please enter API Key and Secret", "error");
+      return;
+    }
+
+    setSyncing(true);
+    
+    // Simulate API connection (in production, this would call the actual API)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // For demo, simulate connected account with live data
+    const firm = propFirms.find(f => f.id === firmId);
+    const newConnection = {
+      id: Date.now(),
+      firmId: firm.id,
+      firmName: firm.name,
+      firmColor: firm.color,
+      accountId: apiCredentials.accountId || "DEMO-001",
+      apiKey: apiCredentials.apiKey.slice(0, 8) + "...",
+      connected: true,
+      lastSync: new Date(),
+      // Simulated live data
+      balance: 52150.00,
+      equity: 52380.50,
+      openPnl: 230.50,
+      marginUsed: 850.00,
+      marginAvailable: 4150.00,
+      todayPnl: 350.00,
+      todayTrades: 3,
+      status: "active"
+    };
+    
+    setConnectedAccounts([...connectedAccounts, newConnection]);
+    setSyncing(false);
+    setShowConnect(false);
+    setApiCredentials({ apiKey: "", apiSecret: "", accountId: "" });
+    setConnectingFirm(null);
+    showToast(`Connected to ${firm.name}!`, "success");
+    
+    // Start simulating live position updates
+    simulateLiveUpdates(newConnection.id);
+  };
+
+  // Simulate live position updates
+  const simulateLiveUpdates = (connectionId) => {
+    const interval = setInterval(() => {
+      setConnectedAccounts(prev => prev.map(acc => {
+        if (acc.id === connectionId) {
+          const pnlChange = (Math.random() - 0.5) * 50;
+          return {
+            ...acc,
+            openPnl: acc.openPnl + pnlChange,
+            equity: acc.equity + pnlChange,
+            balance: acc.balance + pnlChange * 0.8,
+            lastSync: new Date()
+          };
+        }
+        return acc;
+      }));
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  };
+
+  // Sync account data
+  const syncAccount = async (accountId) => {
+    setSyncing(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setConnectedAccounts(prev => prev.map(acc => 
+      acc.id === accountId ? { ...acc, lastSync: new Date() } : acc
+    ));
+    setSyncing(false);
+    showToast("Account synced!", "success");
+  };
+
+  // Disconnect account
+  const disconnectAccount = (accountId) => {
+    setConnectedAccounts(prev => prev.filter(acc => acc.id !== accountId));
+    showToast("Account disconnected", "info");
+  };
 
   const addAccount = () => {
     if (!newAccount.firm || !newAccount.name) {
@@ -2027,95 +2759,209 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
     setPropAccounts(propAccounts.map(a => a.id === id ? { ...a, balance: a.balance + change } : a));
   };
 
+  const totalEquity = connectedAccounts.reduce((s, a) => s + a.equity, 0);
+  const totalOpenPnl = connectedAccounts.reduce((s, a) => s + a.openPnl, 0);
+  const totalTodayPnl = connectedAccounts.reduce((s, a) => s + a.todayPnl, 0);
+
   return (
     <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800 }}>Prop Firm Tracker</h1>
-          <p style={{ fontSize: 13, color: C.textMuted }}>Track your funded accounts and progress</p>
+          <h1 style={{ fontSize: 26, fontWeight: 800 }}>Prop Firm Hub</h1>
+          <p style={{ fontSize: 13, color: C.textMuted }}>Connect your prop firm accounts for live tracking</p>
         </div>
-        <button onClick={() => setShowAdd(true)} style={S.btn("primary")}>
-          <Plus size={16} /> Add Account
-        </button>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={() => setShowConnect(true)} style={S.btn("primary")}>
+            <Zap size={16} /> Connect Account
+          </button>
+          <button onClick={() => setShowAdd(true)} style={S.btn("ghost")}>
+            <Plus size={16} /> Manual Add
+          </button>
+        </div>
       </div>
 
-      {/* Summary */}
-      <div style={S.grid(4, 16)}>
-        <MiniStat icon={Briefcase} label="Total Accounts" value={propAccounts.length} color={C.gold} />
-        <MiniStat icon={DollarSign} label="Total Balance" value={fmtUsd(propAccounts.reduce((s, a) => s + a.balance, 0))} color={C.green} />
-        <MiniStat icon={TrendingUp} label="Total Profit" value={fmtUsd(propAccounts.reduce((s, a) => s + (a.balance - a.startingBalance || a.balance - 50000), 0))} color={C.gold} />
-        <MiniStat icon={Shield} label="Active Challenges" value={propAccounts.filter(a => a.status === "challenge").length} color={C.purple} />
+      <div style={{ ...S.glassCard, marginBottom: 20, background: `linear-gradient(135deg, ${C.accent}12, ${C.purple}06)` }}>
+        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>Your All-In-One Command Center</h2>
+        <p style={{ color: C.textMuted, marginBottom: 18 }}>
+          Stop juggling spreadsheets. We've built everything you need to make smarter trading decisions.
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div style={{ padding: 14, borderRadius: 12, background: "rgba(0,0,0,0.22)", border: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Visualize Your Vitals</div>
+            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6 }}>
+              The main dashboard gives you a live, at-a-glance view of your most critical metrics. Instantly see your total payouts, overall expenses, true net profit, and pass rate across all firms.
+            </div>
+          </div>
+
+          <div style={{ padding: 14, borderRadius: 12, background: "rgba(0,0,0,0.22)", border: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Manage Subscriptions</div>
+            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6 }}>
+              Stay on top of your recurring trading costs. Effortlessly track monthly or yearly subscriptions for platforms, data feeds, and trading communities.
+            </div>
+          </div>
+
+          <div style={{ padding: 14, borderRadius: 12, background: "rgba(0,0,0,0.22)", border: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Analyze Your ROI</div>
+            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6 }}>
+              Go beyond simple tracking. Compare your total payouts against your costs for each firm, helping you identify which evaluations are worth your focus.
+            </div>
+          </div>
+
+          <div style={{ padding: 14, borderRadius: 12, background: "rgba(0,0,0,0.22)", border: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Effortless Bookkeeping</div>
+            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6 }}>
+              Stop dreading tax time. With a single click, generate a professional PDF report for any year summarizing your total payouts and expenses.
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Account Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 20, marginTop: 24 }}>
+      {/* Connected Accounts Summary */}
+      {connectedAccounts.length > 0 && (
+        <>
+          <div style={{ ...S.glassCard, marginBottom: 20, padding: 20, background: `linear-gradient(135deg, ${C.accent}10, ${C.purple}05)` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: C.green, animation: "livePulse 1.5s infinite" }} />
+                Live Connected Accounts
+              </h3>
+              <button onClick={() => connectedAccounts.forEach(a => syncAccount(a.id))} disabled={syncing} style={{ ...S.btn("ghost", "sm") }}>
+                <RefreshCw size={14} style={{ animation: syncing ? "spin 1s linear infinite" : "none" }} /> Sync All
+              </button>
+            </div>
+            
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>TOTAL EQUITY</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: C.text }}>{fmtUsd(totalEquity)}</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>OPEN P&L</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: totalOpenPnl >= 0 ? C.green : C.red }}>{fmt(totalOpenPnl)}</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>TODAY'S P&L</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: totalTodayPnl >= 0 ? C.green : C.red }}>{fmt(totalTodayPnl)}</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>ACCOUNTS</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: C.accent }}>{connectedAccounts.length}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Connected Account Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 20, marginBottom: 24 }}>
+            {connectedAccounts.map(account => (
+              <div key={account.id} style={{ ...S.glassCard, borderTop: `3px solid ${account.firmColor}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ 
+                        width: 32, height: 32, borderRadius: 8, 
+                        background: account.firmColor, display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 12, fontWeight: 800, color: C.white 
+                      }}>
+                        {account.firmName.split(" ")[0][0]}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700 }}>{account.firmName}</div>
+                        <div style={{ fontSize: 11, color: C.textMuted }}>{account.accountId}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.green, animation: "livePulse 1.5s infinite" }} />
+                    <span style={{ fontSize: 11, color: C.green }}>Live</span>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+                  <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" }}>
+                    <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4 }}>EQUITY</div>
+                    <div style={{ fontSize: 18, fontWeight: 800 }}>{fmtUsd(account.equity)}</div>
+                  </div>
+                  <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" }}>
+                    <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4 }}>OPEN P&L</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: account.openPnl >= 0 ? C.green : C.red }}>{fmt(account.openPnl)}</div>
+                  </div>
+                  <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" }}>
+                    <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4 }}>TODAY</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: account.todayPnl >= 0 ? C.green : C.red }}>{fmt(account.todayPnl)}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+                  <div style={{ fontSize: 11 }}>
+                    <span style={{ color: C.textMuted }}>Margin Used: </span>
+                    <span style={{ fontWeight: 600 }}>{fmtUsd(account.marginUsed)}</span>
+                  </div>
+                  <div style={{ fontSize: 11 }}>
+                    <span style={{ color: C.textMuted }}>Available: </span>
+                    <span style={{ fontWeight: 600, color: C.green }}>{fmtUsd(account.marginAvailable)}</span>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 12 }}>
+                  Last sync: {account.lastSync.toLocaleTimeString()}
+                </div>
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => syncAccount(account.id)} disabled={syncing} style={{ ...S.btn("ghost", "sm"), flex: 1 }}>
+                    <RefreshCw size={12} /> Sync
+                  </button>
+                  <button onClick={() => disconnectAccount(account.id)} style={{ ...S.btn("danger", "sm") }}>
+                    <X size={12} /> Disconnect
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Manual Accounts Section */}
+      <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Manual Accounts</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 20 }}>
         {propAccounts.length === 0 ? (
-          <div style={{ ...S.glassCard, padding: 60, gridColumn: "1/-1", textAlign: "center" }}>
-            <Briefcase size={48} color={C.textDim} style={{ opacity: 0.3, marginBottom: 16 }} />
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>No Accounts Yet</h3>
-            <p style={{ color: C.textMuted, marginBottom: 20 }}>Add your first funded account to start tracking.</p>
-            <button onClick={() => setShowAdd(true)} style={S.btn("primary")}>
-              <Plus size={16} /> Add Account
-            </button>
+          <div style={{ ...S.glassCard, padding: 40, gridColumn: "1/-1", textAlign: "center" }}>
+            <Briefcase size={40} color={C.textDim} style={{ opacity: 0.3, marginBottom: 12 }} />
+            <p style={{ color: C.textMuted }}>No manual accounts. Connect via API for live tracking.</p>
           </div>
         ) : propAccounts.map(account => {
           const startingBalance = account.startingBalance || 50000;
           const profitProgress = ((account.balance - startingBalance) / (account.target - startingBalance)) * 100;
-          const ddUsed = ((account.dailyLossLimit - (account.balance * 0.1)) / account.dailyLossLimit) * 100;
-          const isDanger = ddUsed > 70;
 
           return (
             <div key={account.id} style={S.glassCard}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                 <div>
-                  <div style={{ fontSize: 10, color: C.textDim, textTransform: "uppercase", marginBottom: 4 }}>{account.firm}</div>
-                  <h3 style={{ fontSize: 18, fontWeight: 700 }}>{account.name}</h3>
+                  <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", marginBottom: 4 }}>{account.firm}</div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700 }}>{account.name}</h3>
                 </div>
                 <span style={S.badge(account.status === "funded" ? C.green : C.yellow)}>
                   {account.status === "funded" ? "Funded" : "Challenge"}
                 </span>
               </div>
 
-              <div style={{ display: "flex", gap: 20, marginBottom: 16 }}>
+              <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
                 <div>
                   <div style={S.label}>Balance</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{fmtUsd(account.balance)}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800 }}>{fmtUsd(account.balance)}</div>
                 </div>
                 <div>
                   <div style={S.label}>Target</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>{fmtUsd(account.target)}</div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <ProgressBar value={account.balance} max={account.target} color={C.green} />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
-                <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Profit</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: account.balance > startingBalance ? C.green : C.red }}>
-                    {fmt(account.balance - startingBalance)}
-                  </div>
-                </div>
-                <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Progress</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: C.gold }}>{profitProgress.toFixed(1)}%</div>
-                </div>
-                <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>DD Left</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: isDanger ? C.red : C.yellow }}>
-                    {Math.max(0, 100 - ddUsed).toFixed(1)}%
-                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: C.green }}>{fmtUsd(account.target)}</div>
                 </div>
               </div>
 
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => updateBalance(account.id, 500)} style={{ ...S.btn("success", "sm"), flex: 1 }}>
-                  <Plus size={12} /> Profit
+                  <Plus size={12} /> +$500
                 </button>
                 <button onClick={() => updateBalance(account.id, -100)} style={{ ...S.btn("danger", "sm"), flex: 1 }}>
-                  <TrendingDown size={12} /> DD
+                  <TrendingDown size={12} /> -$100
                 </button>
               </div>
             </div>
@@ -2123,7 +2969,120 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
         })}
       </div>
 
-      {/* Add Account Modal */}
+      {/* Connect Account Modal */}
+      {showConnect && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 3000, backdropFilter: "blur(8px)"
+        }}>
+          <div style={{ ...S.glassCard, padding: 32, width: 500, maxWidth: "95vw" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h3 style={{ fontSize: 20, fontWeight: 700 }}>Connect Prop Firm</h3>
+              <button onClick={() => { setShowConnect(false); setConnectingFirm(null); }} style={S.btn("ghost", "sm")}><X size={18} /></button>
+            </div>
+
+            {!connectingFirm ? (
+              <>
+                <p style={{ color: C.textMuted, marginBottom: 20 }}>Select a prop firm to connect:</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {propFirms.map(firm => (
+                    <button 
+                      key={firm.id}
+                      onClick={() => setConnectingFirm(firm)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 16, padding: 16,
+                        background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}`,
+                        borderRadius: 12, cursor: "pointer", transition: "all 0.2s"
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = firm.color}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                    >
+                      <div style={{ 
+                        width: 48, height: 48, borderRadius: 12, 
+                        background: firm.color, display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 16, fontWeight: 800, color: C.white 
+                      }}>
+                        {firm.icon}
+                      </div>
+                      <div style={{ textAlign: "left" }}>
+                        <div style={{ fontSize: 14, fontWeight: 700 }}>{firm.name}</div>
+                        <div style={{ fontSize: 12, color: C.textMuted }}>{firm.description}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, padding: 12, background: "rgba(0,0,0,0.3)", borderRadius: 12 }}>
+                  <div style={{ 
+                    width: 40, height: 40, borderRadius: 10, 
+                    background: connectingFirm.color, display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 14, fontWeight: 800, color: C.white 
+                  }}>
+                    {connectingFirm.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{connectingFirm.name}</div>
+                    <div style={{ fontSize: 12, color: C.textMuted }}>Enter your API credentials</div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div>
+                    <label style={S.label}>API Key</label>
+                    <input 
+                      type="password" 
+                      value={apiCredentials.apiKey} 
+                      onChange={e => setApiCredentials({ ...apiCredentials, apiKey: e.target.value })}
+                      style={S.input} 
+                      placeholder="Enter your API key" 
+                    />
+                  </div>
+                  <div>
+                    <label style={S.label}>API Secret</label>
+                    <input 
+                      type="password" 
+                      value={apiCredentials.apiSecret} 
+                      onChange={e => setApiCredentials({ ...apiCredentials, apiSecret: e.target.value })}
+                      style={S.input} 
+                      placeholder="Enter your API secret" 
+                    />
+                  </div>
+                  <div>
+                    <label style={S.label}>Account ID (optional)</label>
+                    <input 
+                      value={apiCredentials.accountId} 
+                      onChange={e => setApiCredentials({ ...apiCredentials, accountId: e.target.value })}
+                      style={S.input} 
+                      placeholder="Leave blank for default" 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+                  <button onClick={() => setConnectingFirm(null)} style={{ ...S.btn("ghost", "md"), flex: 1 }}>
+                    <ChevronLeft size={16} /> Back
+                  </button>
+                  <button onClick={() => connectToFirm(connectingFirm.id)} disabled={syncing} style={{ ...S.btn("primary", "md"), flex: 1 }}>
+                    {syncing ? (
+                      <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Connecting...</>
+                    ) : (
+                      <><Zap size={14} /> Connect</>
+                    )}
+                  </button>
+                </div>
+
+                <p style={{ fontSize: 11, color: C.textMuted, marginTop: 16, textAlign: "center" }}>
+                  Your API credentials are encrypted and stored locally.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Add Manual Account Modal */}
       {showAdd && (
         <div style={{
           position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex",
@@ -2131,7 +3090,7 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
         }}>
           <div style={{ ...S.glassCard, padding: 32, width: 440 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700 }}>Add Prop Account</h3>
+              <h3 style={{ fontSize: 18, fontWeight: 700 }}>Add Manual Account</h3>
               <button onClick={() => setShowAdd(false)} style={S.btn("ghost", "sm")}><X size={18} /></button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -2161,7 +3120,6 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
     </div>
   );
 }
-
 // ─── NEWS PAGE ───────────────────────────────────────────────────────────────
 function NewsPage({ showToast }) {
   const [newsBlocked, setNewsBlocked] = useState(false);
@@ -2526,14 +3484,14 @@ function NewsPage({ showToast }) {
 }
 
 // ─── PRE-SESSION PAGE ───────────────────────────────────────────────────────
-function PreSessionPage({ onStartSession, setPage }) {
+function PreSessionPage({ onStartSession, setPage, spiritualMode = true }) {
   const [step, setStep] = useState(0);
   const [ardasDone, setArdasDone] = useState(false);
   const [analysis, setAnalysis] = useState({ bias: "", htf: "", mmxm: "", newsDay: "", notes: "" });
   const [rulesChecked, setRulesChecked] = useState(TRADING_RULES.map(() => false));
 
   const allRulesChecked = rulesChecked.every(Boolean);
-  const steps = ["Ardas", "Analysis", "Commit"];
+  const steps = [spiritualMode ? "Ardas" : "Center", "Analysis", "Commit"];
 
   return (
     <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
@@ -2557,7 +3515,7 @@ function PreSessionPage({ onStartSession, setPage }) {
         ))}
       </div>
 
-      {/* Step 0: Ardas */}
+      {/* Step 0: Opening reflection */}
       {step === 0 && (
         <div style={{ ...S.glassCard, maxWidth: 580, margin: "0 auto", textAlign: "center", boxShadow: `0 0 60px ${C.accentGlow}`, border: `1px solid ${C.border}` }}>
           <div style={{
@@ -2568,28 +3526,33 @@ function PreSessionPage({ onStartSession, setPage }) {
           }}>
             <Sun size={40} color={C.purple} />
           </div>
-          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Begin With Ardas</h2>
+          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>
+            {spiritualMode ? "Begin With Ardas" : "Begin With Intention"}
+          </h2>
           
-          {/* Gurmukhi Ardas Verse */}
-          <div style={{
-            padding: 20, borderRadius: 14, background: `linear-gradient(135deg, ${C.purple}15, ${C.accent}10)`,
-            border: `1px solid ${C.border}`, marginBottom: 24
-          }}>
-            <p style={{ fontFamily: "'Noto Sans Gurmukhi', sans-serif", fontSize: 18, color: C.text, lineHeight: 2, margin: 0 }}>
-              ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕਰਿ ਹਮ ਸਾਕਹ ਜਿਉ ਭਾਵੈ ਤਿਵੈ ਬਖਸਿ ॥੧॥ ਰਹਾਉ ॥
-            </p>
-            <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, fontStyle: "italic" }}>
-              I have no power to do anything at all. As it pleases You, You forgive us. ||1||Pause||
-            </p>
-          </div>
+          {spiritualMode && (
+            <div style={{
+              padding: 20, borderRadius: 14, background: `linear-gradient(135deg, ${C.purple}15, ${C.accent}10)`,
+              border: `1px solid ${C.border}`, marginBottom: 24
+            }}>
+              <p style={{ fontFamily: "'Noto Sans Gurmukhi', sans-serif", fontSize: 18, color: C.text, lineHeight: 2, margin: 0 }}>
+                ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕਰਿ ਹਮ ਸਾਕਹ ਜਿਉ ਭਾਵੈ ਤਿਵੈ ਬਖਸਿ ॥੧॥ ਰਹਾਉ ॥
+              </p>
+              <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, fontStyle: "italic" }}>
+                I have no power to do anything at all. As it pleases You, You forgive us. ||1||Pause||
+              </p>
+            </div>
+          )}
           
           <p style={{ color: C.textMuted, lineHeight: 1.8, marginBottom: 24 }}>
-            Take a moment of stillness. Recite your Ardas, clear your mind, and surrender the outcome to Waheguru.
+            {spiritualMode
+              ? "Take a moment of stillness. Recite your Ardas, clear your mind, and surrender the outcome to Waheguru."
+              : "Take a moment of stillness. Breathe, clear your mind, and commit to disciplined execution."}
           </p>
           <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, cursor: "pointer", marginBottom: 24 }}>
             <input type="checkbox" checked={ardasDone} onChange={e => setArdasDone(e.target.checked)}
               style={{ width: 20, height: 20, accentColor: C.accent, cursor: "pointer" }} />
-            <span style={{ fontWeight: 600 }}>I have completed my Ardas</span>
+            <span style={{ fontWeight: 600 }}>{spiritualMode ? "I have completed my Ardas" : "I am mentally centered"}</span>
           </label>
           <button disabled={!ardasDone} onClick={() => setStep(1)} style={{
             ...S.btn("primary", "lg"), width: "100%", opacity: ardasDone ? 1 : 0.4, cursor: ardasDone ? "pointer" : "not-allowed"
@@ -3081,7 +4044,8 @@ function AnalyticsPage({ trades }) {
 }
 
 // ─── SETTINGS PAGE ──────────────────────────────────────────────────────────
-function SettingsPage({ trades, setTrades, propAccounts, showToast }) {
+function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMode, setSpiritualMode, dailyGoal, setDailyGoal, weeklyGoal, setWeeklyGoal, monthlyGoal, setMonthlyGoal, dailyLossLimit, setDailyLossLimit }) {
+  const [showGoals, setShowGoals] = useState(false);
   const exportCSV = () => {
     const headers = ["date", "ticker", "direction", "contracts", "pnl", "grade", "mistake", "notes", "entryModel"];
     const rows = trades.map(t => headers.map(h => t[h] || ""));
@@ -3135,6 +4099,115 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast }) {
     <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
       <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 28 }}>Settings</h1>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div style={{ ...S.glassCard, gridColumn: "1/-1" }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+            <Sparkles size={20} color={C.accent} /> Experience Settings
+          </h3>
+          <label style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            padding: 14,
+            borderRadius: 12,
+            background: "rgba(0,0,0,0.25)",
+            border: `1px solid ${C.border}`,
+            cursor: "pointer"
+          }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Spiritual Mode</div>
+              <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>
+                Show Ardas and Gurmukhi guidance in pre/post session flows.
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={spiritualMode}
+              onChange={e => setSpiritualMode(e.target.checked)}
+              style={{ width: 20, height: 20, accentColor: C.accent, cursor: "pointer" }}
+            />
+          </label>
+        </div>
+
+        {/* Trading Goals */}
+        <div style={{ ...S.glassCard, gridColumn: "1/-1" }}>
+          <div
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
+            onClick={() => setShowGoals(s => !s)}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Target size={18} color={C.accent} />
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Trading Goals</h3>
+            </div>
+            <ChevronDown size={16} style={{ color: C.textMuted, transform: showGoals ? "rotate(180deg)" : "none", transition: "0.2s" }} />
+          </div>
+
+          {showGoals && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "rgba(34,197,94,0.08)", borderRadius: 8, border: "1px solid rgba(34,197,94,0.2)" }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#22c55e" }}>Daily Goal</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>Target P&L per trading day</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ color: "#22c55e", fontWeight: 700 }}>$</span>
+                  <input
+                    type="number"
+                    value={dailyGoal}
+                    onChange={e => setDailyGoal(Number(e.target.value))}
+                    style={{ ...S.input(100), background: "rgba(0,0,0,0.3)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e", fontWeight: 700 }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "rgba(99,102,241,0.08)", borderRadius: 8, border: "1px solid rgba(99,102,241,0.2)" }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.accent }}>Weekly Goal</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>Target P&L per week</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ color: C.accent, fontWeight: 700 }}>$</span>
+                  <input
+                    type="number"
+                    value={weeklyGoal}
+                    onChange={e => setWeeklyGoal(Number(e.target.value))}
+                    style={{ ...S.input(100), background: "rgba(0,0,0,0.3)", border: "1px solid rgba(99,102,241,0.3)", color: C.accent, fontWeight: 700 }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "rgba(168,85,247,0.08)", borderRadius: 8, border: "1px solid rgba(168,85,247,0.2)" }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#a855f7" }}>Monthly Goal</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>Target P&L per month</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ color: "#a855f7", fontWeight: 700 }}>$</span>
+                  <input
+                    type="number"
+                    value={monthlyGoal}
+                    onChange={e => setMonthlyGoal(Number(e.target.value))}
+                    style={{ ...S.input(100), background: "rgba(0,0,0,0.3)", border: "1px solid rgba(168,85,247,0.3)", color: "#a855f7", fontWeight: 700 }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "rgba(239,68,68,0.08)", borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)" }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#ef4444" }}>Daily Loss Limit</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>Stop trading if losses reach this</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ color: "#ef4444", fontWeight: 700 }}>$</span>
+                  <input
+                    type="number"
+                    value={dailyLossLimit}
+                    onChange={e => setDailyLossLimit(Number(e.target.value))}
+                    style={{ ...S.input(100), background: "rgba(0,0,0,0.3)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", fontWeight: 700 }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Export Data */}
         <div style={S.glassCard}>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
@@ -3189,18 +4262,45 @@ export default function App() {
   const [trades, setTrades] = useState([]);
   const [session, setSession] = useState({ active: false, startTime: null, trades: 0, analysis: null });
   const [propAccounts, setPropAccounts] = useState([]);
+  const [spiritualMode, setSpiritualMode] = useState(true);
   const [toast, setToast] = useState(null);
   const [lastSessionData, setLastSessionData] = useState(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [dailyGoal, setDailyGoal] = useState(() => {
+    try {
+      const saved = localStorage.getItem("87capital_v4");
+      if (saved) { const d = JSON.parse(saved); if (d.dailyGoal) return d.dailyGoal; }
+    } catch(e) {}
+    return 250;
+  });
+  const [weeklyGoal, setWeeklyGoal] = useState(() => {
+    try {
+      const saved = localStorage.getItem("87capital_v4");
+      if (saved) { const d = JSON.parse(saved); if (d.weeklyGoal) return d.weeklyGoal; }
+    } catch(e) {}
+    return 1000;
+  });
+  const [monthlyGoal, setMonthlyGoal] = useState(() => {
+    try {
+      const saved = localStorage.getItem("87capital_v4");
+      if (saved) { const d = JSON.parse(saved); if (d.monthlyGoal) return d.monthlyGoal; }
+    } catch(e) {}
+    return 4000;
+  });
+  const [dailyLossLimit, setDailyLossLimit] = useState(() => {
+    try {
+      const saved = localStorage.getItem("87capital_v4");
+      if (saved) { const d = JSON.parse(saved); if (d.dailyLossLimit) return d.dailyLossLimit; }
+    } catch(e) {}
+    return 250;
+  });
 
   // Toast helper - defined first to avoid closure issues
   const showToast = (message, type = "info") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
-
-  // Trump tweets are now displayed on Dashboard - no popup alerts
 
   // Load from localStorage
   useEffect(() => {
@@ -3211,14 +4311,19 @@ export default function App() {
         if (data.trades) setTrades(data.trades);
         if (data.session) setSession(data.session);
         if (data.propAccounts) setPropAccounts(data.propAccounts);
+        if (typeof data.spiritualMode === "boolean") setSpiritualMode(data.spiritualMode);
+        if (data.dailyGoal) setDailyGoal(data.dailyGoal);
+        if (data.weeklyGoal) setWeeklyGoal(data.weeklyGoal);
+        if (data.monthlyGoal) setMonthlyGoal(data.monthlyGoal);
+        if (data.dailyLossLimit) setDailyLossLimit(data.dailyLossLimit);
       }
     } catch (e) {}
   }, []);
 
   // Save to localStorage
   useEffect(() => {
-    localStorage.setItem("87capital_v4", JSON.stringify({ trades, session, propAccounts }));
-  }, [trades, session, propAccounts]);
+    localStorage.setItem("87capital_v4", JSON.stringify({ trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit }));
+  }, [trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit]);
 
   const onStartSession = (analysis) => {
     setSession({ active: true, startTime: Date.now(), trades: 0, analysis });
@@ -3251,16 +4356,16 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case "trading-floor": return <TradingFloorPage session={session} onAddTrade={onAddTrade} setPage={setPage} showToast={showToast} trades={trades} />;
-      case "dashboard": return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} />;
+      case "dashboard": return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} dailyLossLimit={dailyLossLimit} />;
       case "prop-firms": return <PropFirmsPage propAccounts={propAccounts} setPropAccounts={setPropAccounts} showToast={showToast} />;
       case "news": return <NewsPage showToast={showToast} />;
-      case "presession": return <PreSessionPage onStartSession={onStartSession} setPage={setPage} />;
-      case "postsession": return <PostSessionPage setPage={setPage} showToast={showToast} trades={trades} onAddTrade={onAddTrade} />;
+      case "presession": return <PreSessionPage onStartSession={onStartSession} setPage={setPage} spiritualMode={spiritualMode} />;
+      case "postsession": return <PostSessionPage setPage={setPage} showToast={showToast} trades={trades} onAddTrade={onAddTrade} spiritualMode={spiritualMode} />;
       case "journal": return <JournalPage trades={trades} onDeleteTrade={onDeleteTrade} onUpdateTrade={onUpdateTrade} showToast={showToast} />;
       case "analytics": return <AnalyticsPage trades={trades} />;
       case "ai": return <AICoachPage trades={trades} />;
-      case "settings": return <SettingsPage trades={trades} setTrades={setTrades} propAccounts={propAccounts} showToast={showToast} />;
-      default: return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} />;
+      case "settings": return <SettingsPage trades={trades} setTrades={setTrades} propAccounts={propAccounts} showToast={showToast} spiritualMode={spiritualMode} setSpiritualMode={setSpiritualMode} dailyGoal={dailyGoal} setDailyGoal={setDailyGoal} weeklyGoal={weeklyGoal} setWeeklyGoal={setWeeklyGoal} monthlyGoal={monthlyGoal} setMonthlyGoal={setMonthlyGoal} dailyLossLimit={dailyLossLimit} setDailyLossLimit={setDailyLossLimit} />;
+      default: return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} dailyLossLimit={dailyLossLimit} />;
     }
   };
 

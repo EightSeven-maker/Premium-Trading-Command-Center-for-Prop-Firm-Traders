@@ -98,6 +98,8 @@ const QUOTES = [
 
 const PROP_FIRMS = ["TopStepTrader", "ApexTrader", "ApexFutures", "MyFundedFX", "FTMO", "Blue Guardian", "Lux Trading", "The Funded Trader"];
 
+const TICKERS = ["NQ", "ES", "YM", "RTY", "CL", "GC", "SI", "NG", "ZB", "ZN"];
+
 // ─── NOTION JOURNAL FIELD OPTIONS ──────────────────────────────────────────
 const HTF_ORDERFLOW = ["Bullish", "Bearish", "Neutral", "Bar Code"];
 const MMXM_OPTIONS = ["MMBM", "MMSM"];
@@ -2609,6 +2611,19 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
             </button>
           )}
         </div>
+      </div>
+
+      {/* Main Content */}
+      <div style={{ display: "grid", gridTemplateColumns: "60% 40%", gap: 20 }}>
+        <AnalyticsHub trades={trades} />
+        <TradePanel
+          trades={trades}
+          activeSetupFilter={activeSetupFilter}
+          activeDayFilter={activeDayFilter}
+          setActiveSetupFilter={setActiveSetupFilter}
+          setActiveDayFilter={setActiveDayFilter}
+          onAddTrade={() => setPage("journal")}
+        />
       </div>
     </div>
   );

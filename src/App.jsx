@@ -3,16 +3,18 @@ import {
   BarChart3, Calendar, BookOpen, Target, FileText, TrendingUp, TrendingDown,
   DollarSign, Activity, Brain, Shield, Settings, Play, Square, Edit3,
   Calculator, Quote, Timer, Zap, AlertTriangle, CheckCircle, Building,
-  LayoutDashboard, Radio, Clock, Eye, X, Plus, ChevronRight, ChevronLeft, ChevronDown,
+  LayoutDashboard, Radio, Clock, Eye, X, Plus,  ChevronRight, ChevronLeft, ChevronDown, ChevronUp,
   Sun, ArrowUpRight, ArrowDownRight, Search, Trash2, Bell, Check, Lock,
   Briefcase, Globe, Star, Coffee, Flame, Crosshair, Camera, Save,
-  ExternalLink, RefreshCw, Gauge, Award, MessageSquare, Send, CreditCard,
-  Download, Upload, Sparkles, PieChart, TrendingUp as TrendingIcon, Filter, EyeOff, Moon
+  ExternalLink, RefreshCw, Gauge, Award, MessageSquare, Send, CreditCard, Receipt,
+   Download, Upload, Sparkles, PieChart, TrendingUp as TrendingIcon, Filter, EyeOff, Moon,
+   Trophy, ClipboardCheck
 } from "lucide-react";
+import jsPDF from "jspdf";
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart as RePieChart, Pie, Cell, BarChart, Bar,
-  Legend
+  Legend, ReferenceLine
 } from "recharts";
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
@@ -35,7 +37,7 @@ class ErrorBoundary extends React.Component {
           <pre style={{ textAlign: "left", background: "rgba(0,0,0,0.3)", padding: 20, borderRadius: 12, marginTop: 20, fontSize: 12, overflow: "auto" }}>
             {this.state.error?.toString()}
           </pre>
-          <button onClick={() => window.location.reload()} style={{ marginTop: 20, padding: "12px 24px", background: "#6366f1", border: "none", borderRadius: 8, color: "white", cursor: "pointer" }}>
+          <button onClick={() => window.location.reload()} style={{ marginTop: 20, padding: "12px 24px", background: "#b026ff", border: "none", borderRadius: 8, color: "white", cursor: "pointer", boxShadow: "0 0 20px rgba(176, 38, 255, 0.4)" }}>
             Reload Page
           </button>
         </div>
@@ -46,42 +48,53 @@ class ErrorBoundary extends React.Component {
 }
 
 // ─── THEME & CONSTANTS ──────────────────────────────────────────────────────
-// V3 NEON GLASS DESIGN SYSTEM (Restored)
+// V4.5 — Near-pure black / Purple neon glass / Cream primitives
 const C = {
-  bg: "#030712",
-  bgCard: "rgba(17, 24, 39, 0.7)",
-  bgCardAlt: "rgba(31, 41, 55, 0.5)",
-  bgHover: "rgba(99, 102, 241, 0.1)",
-  bgGlass: "rgba(17, 24, 39, 0.5)",
-  border: "rgba(255, 255, 255, 0.08)",
-  borderLight: "rgba(255, 255, 255, 0.15)",
-  borderGlow: "rgba(99, 102, 241, 0.4)",
-  // Primary Indigo/Purple
-  accent: "#6366f1",
-  accentLight: "#818cf8",
-  accentGlow: "rgba(99, 102, 241, 0.25)",
+  // Surfaces
+  bg: "#020409",
+  bgCard: "rgba(2, 4, 9, 0.65)",
+  bgCardAlt: "rgba(6, 8, 18, 0.5)",
+  bgHover: "rgba(16, 20, 35, 0.7)",
+  bgGlass: "rgba(2, 4, 9, 0.55)",
+  // Borders
+  border: "rgba(255, 255, 255, 0.06)",
+  borderLight: "rgba(255, 255, 255, 0.1)",
+  borderGlow: "rgba(176, 38, 255, 0.2)",
+  // Primary Purple (Neon edge glow)
+  accent: "#b026ff",
+  accentLight: "#ca6eff",
+  accentGlow: "rgba(176, 38, 255, 0.35)",
   purple: "#a855f7",
-  purpleGlow: "rgba(168, 85, 247, 0.2)",
-  // Trading Colors
-  green: "#10b981",
-  greenLight: "#34d399",
-  greenBg: "rgba(16, 185, 129, 0.1)",
-  greenBorder: "rgba(16, 185, 129, 0.25)",
-  greenGlow: "rgba(16, 185, 129, 0.15)",
-  red: "#ef4444",
-  redLight: "#f87171",
-  redBg: "rgba(239, 68, 68, 0.1)",
-  redBorder: "rgba(239, 68, 68, 0.25)",
-  redGlow: "rgba(239, 68, 68, 0.15)",
-  yellow: "#f59e0b",
-  yellowBg: "rgba(245, 158, 11, 0.1)",
-  orange: "#f97316",
-  cyan: "#06b6d4",
-  pink: "#ec4899",
+  purpleGlow: "rgba(168, 85, 247, 0.15)",
+  // Cream / Off-white (Topstep-style primary buttons)
+  cream: "#f5f0e8",
+  creamHover: "#ede6db",
+  creamText: "#1a1a1a",
+  // Blue (restrained focus rings & link affordance)
+  blue: "#3b82f6",
+  blueLight: "#60a5fa",
+  blueGlow: "rgba(59, 130, 246, 0.2)",
+  // Semantic — emerald (positive) / amber (caution/loss)
+  emerald: "#10b981",
+  emeraldLight: "#34d399",
+  emeraldBg: "rgba(16, 185, 129, 0.12)",
+  emeraldBorder: "rgba(16, 185, 129, 0.22)",
+  emeraldGlow: "rgba(16, 185, 129, 0.12)",
+  amber: "#d97706",
+  amberLight: "#f59e0b",
+  amberBg: "rgba(217, 119, 6, 0.12)",
+  amberBorder: "rgba(217, 119, 6, 0.22)",
+  amberGlow: "rgba(217, 119, 6, 0.12)",
+  // Accent warmth (streaks, milestones, celebration)
+  gold: "#d97706",
+  goldLight: "#f59e0b",
+  goldBg: "rgba(217, 119, 6, 0.12)",
+  goldBorder: "rgba(217, 119, 6, 0.22)",
+  goldGlow: "rgba(217, 119, 6, 0.15)",
   // Text
-  text: "#f8fafc",
-  textMuted: "#94a3b8",
-  textDim: "#64748b",
+  text: "#ffffff",
+  textMuted: "#8896a6",
+  textDim: "#5a6b7d",
   white: "#ffffff"
 };
 
@@ -120,6 +133,11 @@ const MENTAL_STATE = ["10/10", "9/10", "8/10", "7/10", "6/10", "5/10", "4/10", "
 const ENERGY_LEVEL = ["Very High", "High", "Normal", "Low", "Very Low"];
 const DISTRACTIONS = ["Phone", "Social Media", "Family", "News", "Other Charts", "Chat", "Food", "None"];
 
+// Edit Trade options
+const SETUP_GRADES = ["A+", "A", "B+", "B", "C", "D", "F"];
+const ENTRY_MODELS = ["Unicorn", "FVG", "IFVG", "OB", "BRKR", "CISD", "Turtle Soup", "RTH Gap Fill"];
+const MISTAKES = ["Overtrading", "Revenge Trading", "FOMO", "Ignored Stop Loss", "No Plan", "Wrong Direction", "Early Exit", "Held Too Long", "Size Too Big", "No Confluence", "Chasing Price", "News Fade", "Late Entry", "Green Bleed"];
+
 const TRADING_RULES = [
   "Only trade during Kill Zones (NY AM 9:30-11:00, NY PM 13:30-15:00)",
   "Must have HTF PD Array confluence before entry",
@@ -133,19 +151,19 @@ const TRADING_RULES = [
   "Ardas before every session — mind must be clear"
 ];
 
-// ─── STYLES (V3 GLASS DESIGN) ───────────────────────────────────────────────
+// ─── STYLES (V4.5 — Near-black glass / Cream primitives) ────────────────────
 const S = {
   glassCard: {
-    background: C.bgCard,
-    backdropFilter: "blur(16px)",
+    background: "rgba(2, 4, 9, 0.55)",
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)",
     borderRadius: 20,
     border: `1px solid ${C.border}`,
-    padding: 24,
-    boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.4)",
-    transition: "all 0.3s ease"
+    boxShadow: `0 8px 32px 0 rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(176, 38, 255, 0.06) inset`,
+    transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)"
   },
   input: {
-    background: "rgba(0, 0, 0, 0.3)",
+    background: "rgba(2, 4, 9, 0.5)",
     border: `1px solid ${C.border}`,
     borderRadius: 12,
     padding: "12px 16px",
@@ -154,7 +172,12 @@ const S = {
     outline: "none",
     width: "100%",
     fontFamily: "Inter, sans-serif",
-    transition: "all 0.2s ease"
+    transition: "all 0.2s ease",
+    boxShadow: "none"
+  },
+  inputFocus: {
+    borderColor: C.blue,
+    boxShadow: `0 0 0 2px ${C.blueGlow}`
   },
   btn: (variant = "primary", size = "md") => {
     const sizes = {
@@ -164,12 +187,12 @@ const S = {
       lg: { padding: "16px 28px", fontSize: 16 }
     };
     const variants = {
-      primary: { background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, boxShadow: `0 4px 20px ${C.accentGlow}`, border: "none" },
-      secondary: { background: C.bgCardAlt, border: `1px solid ${C.border}`, boxShadow: "none" },
-      success: { background: `linear-gradient(135deg, ${C.green}, #059669)`, border: "none" },
-      danger: { background: `linear-gradient(135deg, ${C.red}, #dc2626)`, border: "none" },
+      primary: { background: C.cream, color: C.creamText, border: "none", fontWeight: 700, boxShadow: "0 2px 12px rgba(0,0,0,0.2)" },
+      secondary: { background: "rgba(6, 8, 18, 0.6)", border: `1px solid ${C.border}`, boxShadow: "none" },
+      success: { background: `linear-gradient(135deg, ${C.emerald}, #047857)`, border: "none", boxShadow: `0 0 20px ${C.emeraldGlow}` },
+      danger: { background: `linear-gradient(135deg, ${C.amber}, #b45309)`, border: "none" },
       ghost: { background: "transparent", border: `1px solid ${C.border}` },
-      glass: { background: C.bgCardAlt, border: `1px solid ${C.border}`, color: C.text }
+      glass: { background: "rgba(2, 4, 9, 0.65)", border: `1px solid ${C.border}`, color: C.text, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }
     };
     return {
       display: "inline-flex",
@@ -215,10 +238,10 @@ const S = {
 // ─── UTILITIES ───────────────────────────────────────────────────────────────
 const fmt = (n) => (n >= 0 ? "+" : "") + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtUsd = (n) => "$" + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const pnlColor = (n) => n >= 0 ? C.green : C.red;
-const pnlBg = (n) => n >= 0 ? C.greenBg : C.redBg;
+const pnlColor = (n) => n >= 0 ? C.emerald : C.amber;
+const pnlBg = (n) => n >= 0 ? C.emeraldBg : C.amberBg;
 const today = () => new Date().toISOString().split("T")[0];
-const gradeColor = (g) => g === "A+" || g === "A" ? C.green : g === "B+" || g === "B" ? C.yellow : C.red;
+const gradeColor = (g) => g === "A+" || g === "A" ? C.emerald : g === "B+" || g === "B" ? C.amber : C.amber;
 const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
 const getApiBaseUrl = () => {
@@ -244,7 +267,7 @@ const getWsUrl = () => {
 function Toast({ toast, onDismiss }) {
   if (!toast) return null;
   
-  const bgColor = toast.type === "success" ? C.green : toast.type === "error" ? C.red : toast.type === "warning" ? C.yellow : C.accent;
+  const bgColor = toast.type === "success" ? C.emerald : toast.type === "error" ? C.amber : toast.type === "warning" ? C.yellow : C.accent;
   const textColor = toast.type === "success" || toast.type === "error" ? C.white : toast.type === "warning" ? C.bg : C.white;
   
   return (
@@ -346,9 +369,9 @@ const ProgressBar = ({ value, max, color = C.gold, showLabel = true }) => {
       <div style={{ height: 8, background: "rgba(0,0,0,0.4)", borderRadius: 4, overflow: "hidden" }}>
         <div style={{
           width: `${pct}%`, height: "100%",
-          background: `linear-gradient(90deg, ${isDanger ? C.red : color}, ${isDanger ? C.orange : color}80)`,
+          background: `linear-gradient(90deg, ${isDanger ? C.amber : color}, ${isDanger ? C.amber : color}80)`,
           borderRadius: 4, transition: "width 0.5s ease",
-          boxShadow: `0 0 10px ${isDanger ? C.red : color}60`
+          boxShadow: `0 0 10px ${isDanger ? C.amber : color}60`
         }} />
       </div>
     </div>
@@ -443,14 +466,14 @@ function SessionTimer({ startTime, active, onToggle }) {
   return (
     <div style={{
       ...S.glassCard, padding: "12px 20px", display: "flex", alignItems: "center", gap: 14,
-      boxShadow: active ? `0 0 30px ${C.greenGlow}` : "none",
-      borderColor: active ? C.greenBorder : C.border
+      boxShadow: active ? `0 0 30px ${C.emeraldGlow}` : "none",
+      borderColor: active ? C.emeraldBorder : C.border
     }}>
-      <Timer size={20} color={active ? C.green : C.textDim} />
-      <span style={{ fontSize: 20, fontWeight: 800, fontFamily: "monospace", color: active ? C.green : C.text }}>
+      <Timer size={20} color={active ? C.emerald : C.textDim} />
+      <span style={{ fontSize: 20, fontWeight: 800, fontFamily: "monospace", color: active ? C.emerald : C.text }}>
         {format(elapsed)}
       </span>
-      {active && <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.green, animation: "livePulse 1.5s ease-in-out infinite" }} />}
+      {active && <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.emerald, animation: "livePulse 1.5s ease-in-out infinite" }} />}
       <button onClick={onToggle} style={S.btn("ghost", "sm")}>
         {active ? <Square size={14} /> : <Play size={14} />}
       </button>
@@ -503,8 +526,8 @@ function MarketSquawkTicker() {
   }, []);
 
   const getSentimentColor = (sentiment) => {
-    if (sentiment === "bullish") return C.green;
-    if (sentiment === "bearish") return C.red;
+    if (sentiment === "bullish") return C.emerald;
+    if (sentiment === "bearish") return C.amber;
     return C.yellow;
   };
 
@@ -593,14 +616,14 @@ function DashboardCalendar() {
   }, []);
 
   const getImpactColor = (impact) => {
-    if (impact === "High") return C.red;
+    if (impact === "High") return C.amber;
     if (impact === "Medium") return C.yellow;
-    return C.green;
+    return C.emerald;
   };
 
   const getSentimentColor = (sent) => {
-    if (sent === "bullish") return C.green;
-    if (sent === "bearish") return C.red;
+    if (sent === "bullish") return C.emerald;
+    if (sent === "bearish") return C.amber;
     return C.yellow;
   };
 
@@ -661,7 +684,7 @@ function DashboardCalendar() {
         marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}`
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-          <Radio size={12} color={C.green} style={{ animation: "livePulse 1.5s infinite" }} />
+          <Radio size={12} color={C.emerald} style={{ animation: "livePulse 1.5s infinite" }} />
           <span style={{ fontSize: 10, fontWeight: 700, color: C.textDim }}>MARKET NEWS</span>
         </div>
         <div style={{
@@ -1133,8 +1156,8 @@ function EquityCurveChart({ trades }) {
         <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
-              <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
+              <stop offset="0%" stopColor="#b026ff" stopOpacity={0.4} />
+              <stop offset="100%" stopColor="#b026ff" stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
@@ -1145,7 +1168,7 @@ function EquityCurveChart({ trades }) {
             contentStyle={{ background: "#1e1b4b", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: 11 }}
             labelStyle={{ color: C.textMuted }}
           />
-          <Area type="monotone" dataKey="equity" stroke="#6366f1" fill="url(#eqGrad)" strokeWidth={2} dot={false} />
+          <Area type="monotone" dataKey="equity" stroke="#b026ff" fill="url(#eqGrad)" strokeWidth={2} dot={false} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -1411,7 +1434,7 @@ function LivePnlWidget() {
             Live Tradovate P&L
           </h3>
           <div style={{ fontSize: 11, color: C.textDim, marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: connected ? C.green : C.red }} />
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: connected ? C.emerald : C.amber }} />
             {configured ? (connected ? "Connected" : "Disconnected") : "Not configured"}
             {lastUpdated && ` • Updated ${new Date(lastUpdated).toLocaleTimeString()}`}
           </div>
@@ -1428,7 +1451,7 @@ function LivePnlWidget() {
       )}
 
       {error && configured && (
-        <div style={{ ...S.badge(C.red), display: "block", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+        <div style={{ ...S.badge(C.amber), display: "block", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
           {error}
         </div>
       )}
@@ -1467,7 +1490,7 @@ function LivePnlWidget() {
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <span style={{ fontSize: 13, fontWeight: 700 }}>{pos.symbol}</span>
-                    <span style={{ fontSize: 12, color: pos.netQty > 0 ? C.green : C.red }}>
+                    <span style={{ fontSize: 12, color: pos.netQty > 0 ? C.emerald : C.amber }}>
                       {pos.netQty > 0 ? "LONG" : "SHORT"} {Math.abs(pos.netQty)}
                     </span>
                   </div>
@@ -1527,7 +1550,7 @@ function SessionSummaryModal({ sessionData, onClose }) {
           </div>
           <div style={{ ...S.glassCard, padding: 16, textAlign: "center" }}>
             <div style={{ fontSize: 10, color: C.textDim, textTransform: "uppercase", marginBottom: 4 }}>Win Rate</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: Number(stats.wr) >= 50 ? C.green : C.red }}>{stats.wr}%</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: Number(stats.wr) >= 50 ? C.emerald : C.amber }}>{stats.wr}%</div>
           </div>
         </div>
         
@@ -1553,12 +1576,14 @@ function SessionSummaryModal({ sessionData, onClose }) {
 function TopBar({ session, showToast }) {
   return (
     <div style={{
-      height: 60, background: C.bgCard, borderBottom: `1px solid ${C.border}`,
+      height: 60, background: "rgba(2, 4, 9, 0.7)",
+      borderBottom: `1px solid ${C.border}`,
+      boxShadow: "0 1px 0 rgba(176, 38, 255, 0.06)",
       display: "flex", alignItems: "center", justifyContent: "space-between",
       padding: "0 24px", position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
-      backdropFilter: "blur(20px)"
+      backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)"
     }}>
-      {/* Logo - Original Style */}
+      {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <div style={{
           width: 40, height: 40, borderRadius: 12,
@@ -1569,7 +1594,7 @@ function TopBar({ session, showToast }) {
         }}>87</div>
         <div>
           <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>EightSeven HQ</div>
-          <div style={{ fontSize: 9, color: C.accentLight, fontWeight: 600, letterSpacing: "0.1em" }}>TRADING OS V4</div>
+          <div style={{ fontSize: 9, color: C.accentLight, fontWeight: 600, letterSpacing: "0.1em" }}>TRADING OS V4.5</div>
         </div>
       </div>
 
@@ -1577,11 +1602,11 @@ function TopBar({ session, showToast }) {
       {session.active && (
         <div style={{
           display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", borderRadius: 20,
-          background: `${C.green}15`, border: `1px solid ${C.greenBorder}`,
-          boxShadow: `0 0 20px ${C.greenGlow}`
+          background: `${C.emerald}15`, border: `1px solid ${C.emeraldBorder}`,
+          boxShadow: `0 0 20px ${C.emeraldGlow}`
         }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.green, animation: "livePulse 1.5s infinite" }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.green }}>LIVE</span>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.emerald, animation: "livePulse 1.5s infinite" }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.emerald }}>LIVE</span>
           <span style={{ fontSize: 11, color: C.textMuted }}>{session.trades}/2 trades</span>
         </div>
       )}
@@ -1592,7 +1617,7 @@ function TopBar({ session, showToast }) {
           display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10,
           background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}`
         }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.green }} />
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.emerald }} />
           <span style={{ fontSize: 12, color: C.textMuted }}>Market Open</span>
         </div>
         <button style={S.btn("ghost", "sm")}>
@@ -1631,15 +1656,16 @@ const ARDAS_VERSE = "ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕ
 
 // ─── SIDEBAR ────────────────────────────────────────────────────────────────
 function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
-  // Main quick actions
-  const quickActions = [
-    { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { id: "presession", icon: Sun, label: "Pre-Session" },
-    { id: "trading-floor", icon: Zap, label: "Active Session" },
-    { id: "postsession", icon: Moon, label: "Post Session" },
-  ];
-
-  const navSections = [
+  const navGroups = [
+    {
+      label: "SESSION",
+      items: [
+        { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
+        { id: "presession", icon: Sun, label: "Pre-Session" },
+        { id: "trading-floor", icon: Zap, label: "Active Session" },
+        { id: "postsession", icon: Moon, label: "Post Session" },
+      ]
+    },
     {
       label: "OPERATIONS",
       items: [
@@ -1656,6 +1682,13 @@ function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
       ]
     },
     {
+      label: "TRACKING",
+      items: [
+        { id: "milestones", icon: Trophy, label: "Milestones" },
+        { id: "weekly-review", icon: ClipboardCheck, label: "Weekly Review" },
+      ]
+    },
+    {
       label: "SYSTEM",
       items: [
         { id: "settings", icon: Settings, label: "Settings" },
@@ -1664,15 +1697,16 @@ function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
   ];
 
   return (
-    <div style={{
+    <div data-sidebar style={{
       width: collapsed ? 60 : 240, height: "calc(100vh - 60px)", position: "fixed", top: 60, left: 0,
-      background: `linear-gradient(180deg, ${C.bgCard} 0%, rgba(3,7,18,0.95) 100%)`,
-      backdropFilter: "blur(20px)", borderRight: `1px solid ${C.border}`,
+      background: "rgba(2, 4, 9, 0.75)",
+      backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+      borderRight: `1px solid ${C.border}`,
       display: "flex", flexDirection: "column", padding: collapsed ? "16px 8px" : "16px 0", 
       overflowY: "auto", transition: "width 0.3s ease, padding 0.3s ease",
       zIndex: 100
     }}>
-      {/* Minimize Button */}
+      {/* Collapse Toggle */}
       <button 
         onClick={onToggleCollapse}
         style={{
@@ -1682,7 +1716,7 @@ function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
       >
         <div style={{
           width: 32, height: 32, borderRadius: 8,
-          background: C.bgCardAlt, border: `1px solid ${C.border}`,
+          background: "rgba(2,4,9,0.5)", border: `1px solid ${C.border}`,
           display: "flex", alignItems: "center", justifyContent: "center"
         }}>
           {collapsed ? (
@@ -1693,77 +1727,47 @@ function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
         </div>
       </button>
 
-      {/* Quick Actions */}
-      <div style={{ padding: collapsed ? "0" : "0 12px", marginBottom: 8 }}>
-        {quickActions.map(item => {
-          const active = page === item.id;
-          const isActiveSession = item.id === "trading-floor" && session.active;
-          return (
-            <button 
-              key={item.id} 
-              onClick={() => setPage(item.id)} 
-              title={collapsed ? item.label : ""}
-              style={{
+      {navGroups.map((group, gi) => (
+        <div key={group.label} style={{ marginBottom: gi < navGroups.length - 1 ? 8 : 0 }}>
+          {!collapsed && (
+            <div style={{
+              fontSize: 10, fontWeight: 800, color: C.textDim, padding: "4px 20px 6px",
+              letterSpacing: "0.12em"
+            }}>{group.label}</div>
+          )}
+          {group.items.map(item => {
+            const active = page === item.id;
+            const isLive = item.id === "trading-floor" && session.active;
+            return (
+              <button key={item.id} onClick={() => setPage(item.id)} title={collapsed ? item.label : ""} style={{
                 display: "flex", alignItems: "center", gap: collapsed ? 0 : 12, 
-                padding: collapsed ? "12px" : "12px 16px",
+                padding: collapsed ? "12px" : "10px 20px",
                 width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
                 justifyContent: collapsed ? "center" : "flex-start",
-                background: isActiveSession ? `linear-gradient(90deg, ${C.green}20, transparent)` : 
-                             active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
-                color: isActiveSession ? C.green : active ? C.accentLight : C.textMuted,
-                fontWeight: isActiveSession || active ? 700 : 500, fontSize: 13,
-                borderLeft: isActiveSession ? `3px solid ${C.green}` : active ? `3px solid ${C.accent}` : "3px solid transparent",
+                background: isLive ? `linear-gradient(90deg, ${C.emerald}15, transparent)` : 
+                             active ? `linear-gradient(90deg, ${C.accent}12, transparent)` : "transparent",
+                color: isLive ? C.emerald : active ? C.accentLight : C.textMuted,
+                fontWeight: isLive || active ? 700 : 500, fontSize: 13,
+                borderLeft: isLive ? `2px solid ${C.emerald}` : active ? `2px solid ${C.accent}` : "2px solid transparent",
                 transition: "all 0.2s ease", textAlign: "left",
-                borderRadius: 8, marginBottom: 4
-              }}
-            >
-              <item.icon size={18} color={isActiveSession ? C.green : active ? C.accent : C.textDim} />
-              {!collapsed && item.label}
-              {isActiveSession && !collapsed && (
-                <div style={{ marginLeft: "auto" }}>
-                  <div style={{ 
-                    width: 8, height: 8, borderRadius: "50%", background: C.green,
-                    animation: "livePulse 1.5s infinite"
-                  }} />
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {!collapsed && (
-        <>
-          <div style={{ height: 1, background: C.border, margin: "8px 20px" }} />
-
-          {/* Other Sections */}
-          {navSections.map((sec, si) => (
-            <div key={sec.label} style={{ marginBottom: 16 }}>
-              <div style={{
-                fontSize: 10, fontWeight: 800, color: C.textDim, padding: "0 20px 8px",
-                letterSpacing: "0.1em"
-              }}>{sec.label}</div>
-              {sec.items.map(item => {
-                const active = page === item.id;
-                return (
-                  <button key={item.id} onClick={() => setPage(item.id)} style={{
-                    display: "flex", alignItems: "center", gap: 12, padding: "11px 20px",
-                    width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
-                    background: active ? `linear-gradient(90deg, ${C.accent}20, transparent)` : "transparent",
-                    color: active ? C.accentLight : C.textMuted,
-                    fontWeight: active ? 700 : 500, fontSize: 13,
-                    borderLeft: active ? `3px solid ${C.accent}` : "3px solid transparent",
-                    transition: "all 0.2s ease", textAlign: "left"
-                  }}>
-                    <item.icon size={18} color={active ? C.accent : C.textDim} />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </>
-      )}
+                borderRadius: collapsed ? 8 : 0,
+                position: "relative"
+              }}>
+                <item.icon size={18} color={isLive ? C.emerald : active ? C.accent : C.textDim} />
+                {!collapsed && item.label}
+                {isLive && !collapsed && (
+                  <div style={{ marginLeft: "auto" }}>
+                    <div style={{ 
+                      width: 8, height: 8, borderRadius: "50%", background: C.emerald,
+                      animation: "livePulse 1.5s infinite"
+                    }} />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
@@ -1943,9 +1947,9 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
           <h1 style={{ fontSize: 26, fontWeight: 800, display: "flex", alignItems: "center", gap: 12 }}>
             Log Trade
             {session.active && (
-              <span style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 20, background: `${C.green}20`, border: `1px solid ${C.greenBorder}` }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.green, animation: "livePulse 1.5s infinite" }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.green }}>LIVE</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 20, background: `${C.emerald}20`, border: `1px solid ${C.emeraldBorder}` }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.emerald, animation: "livePulse 1.5s infinite" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.emerald }}>LIVE</span>
               </span>
             )}
           </h1>
@@ -1975,7 +1979,7 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
               <label style={S.label}>P&L ($)</label>
               <input type="number" value={pnl} onChange={e => setPnl(e.target.value)} style={{
                 ...S.input, fontWeight: 700,
-                color: pnl && !isNaN(parseFloat(pnl)) ? (parseFloat(pnl) >= 0 ? C.green : C.red) : C.text
+                color: pnl && !isNaN(parseFloat(pnl)) ? (parseFloat(pnl) >= 0 ? C.emerald : C.amber) : C.text
               }} placeholder="+/- amount" />
             </div>
             <div>
@@ -2018,7 +2022,24 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
               Session Info
             </h4>
 
-            <MultiSelectDropdown label="News Day" options={NEWS_DAY} selected={newsDay} onChange={setNewsDay} placeholder="Select News Day..." />
+            {/* News Day - Auto-detect based on today */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Today is News Day</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 24, fontWeight: 700, color: C.yellow }}>
+                  {(new Date().getDay() === 5) ? "NFP" : 
+                   (new Date().getDate() >= 28 && new Date().getDate() <= 31) ? "Month End" : 
+                   "NO"}
+                </span>
+                <span style={{ fontSize: 12, color: C.textMuted }}>
+                  {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                </span>
+              </div>
+              <p style={{ fontSize: 11, color: C.textMuted, margin: "4px 0 0" }}>
+                {new Date().getDay() === 5 ? "NFP Friday - higher volatility expected" : 
+                 "Normal trading day"}
+              </p>
+            </div>
             <div style={{ marginBottom: 14 }}>
               <label style={S.label}>POI</label>
               <input type="text" value={poi} onChange={e => setPoi(e.target.value)} style={S.input} placeholder="Point of Interest" />
@@ -2284,8 +2305,8 @@ function PostSessionPage({ setPage, showToast, trades, onAddTrade, spiritualMode
             <Shield size={22} color={C.accent} /> Trade Discipline
           </h2>
           
-          <label style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "16px", borderRadius: 12, background: followedPlan ? `${C.green}10` : "rgba(0,0,0,0.3)", border: `1px solid ${followedPlan ? C.greenBorder : C.border}`, marginBottom: 20, cursor: "pointer" }}>
-            <input type="checkbox" checked={followedPlan} onChange={e => setFollowedPlan(e.target.checked)} style={{ width: 20, height: 20, accentColor: C.green, marginTop: 2 }} />
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "16px", borderRadius: 12, background: followedPlan ? `${C.emerald}10` : "rgba(0,0,0,0.3)", border: `1px solid ${followedPlan ? C.emeraldBorder : C.border}`, marginBottom: 20, cursor: "pointer" }}>
+            <input type="checkbox" checked={followedPlan} onChange={e => setFollowedPlan(e.target.checked)} style={{ width: 20, height: 20, accentColor: C.emerald, marginTop: 2 }} />
             <div>
               <span style={{ fontWeight: 600, fontSize: 14 }}>I followed my trading plan</span>
               <p style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>Did you stick to your rules and methodology?</p>
@@ -2299,9 +2320,9 @@ function PostSessionPage({ setPage, showToast, trades, onAddTrade, spiritualMode
               {mistakeOptions.map(opt => (
                 <button key={opt} onClick={() => toggleItem(tradeMistakes, setTradeMistakes, opt)} style={{
                   padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  background: tradeMistakes.includes(opt) ? `${C.red}25` : "rgba(0,0,0,0.3)",
-                  color: tradeMistakes.includes(opt) ? C.redLight : C.textDim,
-                  border: `1px solid ${tradeMistakes.includes(opt) ? C.red : C.border}`
+                  background: tradeMistakes.includes(opt) ? `${C.amber}25` : "rgba(0,0,0,0.3)",
+                  color: tradeMistakes.includes(opt) ? C.amberLight : C.textDim,
+                  border: `1px solid ${tradeMistakes.includes(opt) ? C.amber : C.border}`
                 }}>
                   {opt}
                 </button>
@@ -2395,7 +2416,7 @@ function LiveMarketTicker() {
           </div>
           <div style={{
             fontSize: 12, fontWeight: 600,
-            color: data.change >= 0 ? C.green : C.red
+            color: data.change >= 0 ? C.emerald : C.amber
           }}>
             {data.change >= 0 ? "+" : ""}{data.change.toFixed(2)}
           </div>
@@ -2415,9 +2436,9 @@ function NewsAlert({ alert, onDismiss }) {
       zIndex: 5000, animation: "slideDown 0.4s ease-out", maxWidth: 500, width: "90vw"
     }}>
       <div style={{
-        background: `linear-gradient(135deg, ${C.red}, #991b1b)`,
-        border: `2px solid ${C.red}`,
-        borderRadius: 16, padding: 20, boxShadow: `0 8px 32px ${C.red}60`
+        background: `linear-gradient(135deg, ${C.amber}, #78350f)`,
+        border: `2px solid ${C.amber}`,
+        borderRadius: 16, padding: 20, boxShadow: `0 8px 32px ${C.amber}60`
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <div style={{
@@ -2452,7 +2473,7 @@ function NewsAlert({ alert, onDismiss }) {
             rel="noopener noreferrer"
             style={{
               flex: 1, padding: "10px 20px", borderRadius: 10, border: "none",
-              background: C.white, color: C.red, fontWeight: 600, textAlign: "center", textDecoration: "none"
+              background: C.white, color: C.amber, fontWeight: 600, textAlign: "center", textDecoration: "none"
             }}
           >
             View on X
@@ -2464,7 +2485,7 @@ function NewsAlert({ alert, onDismiss }) {
 }
 
 // ─── COMMAND CENTER PAGE ────────────────────────────────────────────────────
-function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit }) {
+function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, milestones, weeklyReviews }) {
   // ─── Interactive State ──────────────────────────────────────────────
   const [expandedTradeIndex, setExpandedTradeIndex] = useState(null);
   const [activeSetupFilter, setActiveSetupFilter] = useState(null);
@@ -2560,7 +2581,7 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
                 <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{data.price.toFixed(2)}</div>
                 <div style={{ 
                   fontSize: 12, fontWeight: 600, 
-                  color: isPositive ? C.green : C.red 
+                  color: isPositive ? C.emerald : C.amber 
                 }}>
                   {isPositive ? "+" : ""}{data.change.toFixed(2)}
                 </div>
@@ -2623,8 +2644,14 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
           setActiveSetupFilter={setActiveSetupFilter}
           setActiveDayFilter={setActiveDayFilter}
           onAddTrade={() => setPage("journal")}
+          milestones={milestones}
         />
       </div>
+
+      {/* ── Analytics Charts ─────────────────────────────────────── */}
+      {trades.length > 0 && (
+        <AnalyticsCharts trades={trades} />
+      )}
     </div>
   );
 }
@@ -2645,11 +2672,11 @@ function AnalyticsHub({ trades }) {
 
   const statCards = [
     { label: "Total P&L", value: totalPnl, fmt: fmt, color: pnlColor(totalPnl), prefix: "" },
-    { label: "Win Rate", value: winRate, fmt: v => `${v}%`, color: winRate >= 50 ? C.green : winRate >= 40 ? C.yellow : C.red },
-    { label: "Avg Winner", value: avgWinner, fmt: fmt, color: C.green },
-    { label: "Avg Loser", value: avgLoser, fmt: v => `-${fmt(Math.abs(v))}`, color: C.red },
+    { label: "Win Rate", value: winRate, fmt: v => `${v}%`, color: winRate >= 50 ? C.emerald : winRate >= 40 ? C.yellow : C.amber },
+    { label: "Avg Winner", value: avgWinner, fmt: fmt, color: C.emerald },
+    { label: "Avg Loser", value: avgLoser, fmt: v => `-${fmt(Math.abs(v))}`, color: C.amber },
     { label: "Expectancy", value: expectancy, fmt: v => (v >= 0 ? "+" : "") + v.toFixed(2), color: pnlColor(expectancy) },
-    { label: "Profit Factor", value: profitFactor, fmt: v => v.toFixed(2), color: profitFactor >= 1.5 ? C.green : profitFactor >= 1 ? C.yellow : C.red }
+    { label: "Profit Factor", value: profitFactor, fmt: v => v.toFixed(2), color: profitFactor >= 1.5 ? C.emerald : profitFactor >= 1 ? C.yellow : C.amber }
   ];
 
   return (
@@ -2823,7 +2850,7 @@ function DayOfWeekMiniHeatmap({ trades }) {
         return (
           <div key={i} style={{ textAlign: "center" }}>
             <div style={{ fontSize: 9, color: C.textDim, marginBottom: 4 }}>{days[i]}</div>
-            <div style={{ padding: "8px 4px", borderRadius: 8, background: bgColor, border: `1px solid ${d.pnl >= 0 ? C.greenBorder : C.redBorder}` }}>
+            <div style={{ padding: "8px 4px", borderRadius: 8, background: bgColor, border: `1px solid ${d.pnl >= 0 ? C.emeraldBorder : C.amberBorder}` }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: pnlColor(d.pnl) }}>{d.count > 0 ? fmt(d.pnl) : "—"}</div>
               <div style={{ fontSize: 9, color: C.textDim }}>{d.count > 0 ? `${d.count} trades` : ""}</div>
             </div>
@@ -2863,7 +2890,7 @@ function SessionMiniBreakdown({ trades }) {
 }
 
 // ─── TRADE PANEL ─────────────────────────────────────────────────────────────
-function TradePanel({ trades, activeSetupFilter, activeDayFilter, setActiveSetupFilter, setActiveDayFilter, onAddTrade }) {
+function TradePanel({ trades, activeSetupFilter, activeDayFilter, setActiveSetupFilter, setActiveDayFilter, onAddTrade, milestones }) {
   const [expandedIdx, setExpandedIdx] = useState(null);
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -2896,7 +2923,7 @@ function TradePanel({ trades, activeSetupFilter, activeDayFilter, setActiveSetup
           </div>
           <div style={{ textAlign: "center", position: "relative" }}>
             {currentStreak > 0 && (
-              <div style={{ position: "absolute", top: -4, right: -4, width: 10, height: 10, borderRadius: "50%", background: C.green, animation: "pulseRing 0.8s ease-out" }} />
+              <div style={{ position: "absolute", top: -4, right: -4, width: 10, height: 10, borderRadius: "50%", background: C.emerald, animation: "pulseRing 0.8s ease-out" }} />
             )}
             <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Win Streak</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{currentStreak} Days</div>
@@ -2915,10 +2942,10 @@ function TradePanel({ trades, activeSetupFilter, activeDayFilter, setActiveSetup
         </div>
       )}
       {activeDayFilter !== null && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 12, background: `${C.cyan}15`, border: `1px solid ${C.cyan}40`, animation: "fadeInScale 0.2s ease-out" }}>
-          <Calendar size={12} color={C.cyan} />
-          <span style={{ fontSize: 11, color: C.cyan, flex: 1 }}>Day: {dayNames[activeDayFilter]}</span>
-          <button onClick={() => setActiveDayFilter(null)} style={{ background: "none", border: "none", cursor: "pointer", color: C.cyan, display: "flex", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 12, background: `${C.accent}15`, border: `1px solid ${C.accent}40`, animation: "fadeInScale 0.2s ease-out" }}>
+          <Calendar size={12} color={C.accent} />
+          <span style={{ fontSize: 11, color: C.accent, flex: 1 }}>Day: {dayNames[activeDayFilter]}</span>
+          <button onClick={() => setActiveDayFilter(null)} style={{ background: "none", border: "none", cursor: "pointer", color: C.accent, display: "flex", alignItems: "center" }}>
             <X size={12} />
           </button>
         </div>
@@ -2949,7 +2976,7 @@ function TradePanel({ trades, activeSetupFilter, activeDayFilter, setActiveSetup
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <div style={{ width: 32, height: 32, borderRadius: 8, background: pnlBg(t.pnl), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        {t.direction === "Long" ? <ArrowUpRight size={16} color={C.green} /> : <ArrowDownRight size={16} color={C.red} />}
+                        {t.direction === "Long" ? <ArrowUpRight size={16} color={C.emerald} /> : <ArrowDownRight size={16} color={C.amber} />}
                       </div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{t.ticker} — {t.direction}</div>
@@ -2972,7 +2999,7 @@ function TradePanel({ trades, activeSetupFilter, activeDayFilter, setActiveSetup
                     <div style={{ padding: "0 14px 14px", borderTop: `1px solid ${C.border}`, animation: "slideDownExpand 0.3s ease-out" }}>
                       <div style={{ paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                         {t.notes && <div><span style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: "0.06em" }}>Notes</span><div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>{t.notes}</div></div>}
-                        {t.mistake && <div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: "0.06em" }}>Mistake</span><div style={{ ...S.badge(C.red) }}>{t.mistake}</div></div>}
+                        {t.mistake && <div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: "0.06em" }}>Mistake</span><div style={{ ...S.badge(C.amber) }}>{t.mistake}</div></div>}
                         {t.entryModel && <div style={{ fontSize: 11, color: C.textMuted }}><span style={{ fontWeight: 600 }}>Setup:</span> {t.entryModel}</div>}
                         {t.contracts && <div style={{ fontSize: 11, color: C.textMuted }}><span style={{ fontWeight: 600 }}>Contracts:</span> {t.contracts}</div>}
                       </div>
@@ -2984,6 +3011,9 @@ function TradePanel({ trades, activeSetupFilter, activeDayFilter, setActiveSetup
           </div>
         )}
       </div>
+
+      {/* Milestone Strip */}
+      <MilestoneStrip milestones={milestones} onViewAll={() => setPage("milestones")} />
 
       {/* Quick-Add FAB */}
       <button
@@ -3008,17 +3038,31 @@ function TradePanel({ trades, activeSetupFilter, activeDayFilter, setActiveSetup
 }
 
 // ─── PROP FIRMS PAGE ─────────────────────────────────────────────────────────
-function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
+function PropFirmsPage({ propAccounts, setPropAccounts, showToast, subscriptions, setSubscriptions, expenses, setExpenses, payouts, setPayouts }) {
   const [showAdd, setShowAdd] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
   const [connectingFirm, setConnectingFirm] = useState(null);
   const [apiCredentials, setApiCredentials] = useState({ apiKey: "", apiSecret: "", accountId: "" });
   const [connectedAccounts, setConnectedAccounts] = useState([]);
-  const [livePositions, setLivePositions] = useState([]);
   const [syncing, setSyncing] = useState(false);
   const [newAccount, setNewAccount] = useState({ firm: "", name: "", balance: 50000, target: 55000, dailyLossLimit: 1000 });
 
-  // Prop firm API configurations
+  // Bookkeeping tab state
+  const [hqTab, setHqTab] = useState("subscriptions");
+  const [editingSub, setEditingSub] = useState(null);
+  const [showSubForm, setShowSubForm] = useState(false);
+  const [editingExp, setEditingExp] = useState(null);
+  const [showExpForm, setShowExpForm] = useState(false);
+  const [editingPayout, setEditingPayout] = useState(null);
+  const [showPayoutForm, setShowPayoutForm] = useState(false);
+  const [bookYear, setBookYear] = useState(new Date().getFullYear().toString());
+  const [pdfGenerating, setPdfGenerating] = useState(false);
+
+  // Sub-form state
+  const [subForm, setSubForm] = useState({ name: "", cost: "", billingCycle: "monthly", category: "platform", status: "active" });
+  const [expForm, setExpForm] = useState({ name: "", amount: "", date: "", category: "fee", firm: "" });
+  const [payoutForm, setPayoutForm] = useState({ firm: "", amount: "", date: new Date().toISOString().split("T")[0], account: "" });
+
   const propFirms = [
     { id: "tradeovate", name: "Tradeovate (NinjaTrader)", icon: "N", color: "#00AEFF", description: "Connect via NinjaTrader API" },
     { id: "topstep", name: "TopStepTrader", icon: "TS", color: "#FF6B35", description: "Connect your TST account" },
@@ -3026,94 +3070,278 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
     { id: "ftmo", name: "FTMO", icon: "F", color: "#7B68EE", description: "Connect FTMO account" },
   ];
 
-  // Connect to prop firm API
-  const connectToFirm = async (firmId) => {
-    if (!apiCredentials.apiKey || !apiCredentials.apiSecret) {
-      showToast("Please enter API Key and Secret", "error");
-      return;
-    }
+  // ── Computed Vitals ──────────────────────────────────────────────────────
+  const totalPayouts = payouts.reduce((s, p) => s + Number(p.amount || 0), 0);
+  const totalSubExpenses = subscriptions
+    .filter(s => s.status === "active")
+    .reduce((s, sub) => s + (sub.billingCycle === "yearly" ? Number(sub.cost) / 12 : Number(sub.cost)), 0);
+  const totalOneTimeExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const totalExpenses = totalSubExpenses * 12 + totalOneTimeExpenses;
+  const netProfit = totalPayouts - totalExpenses;
+  const fundedCount = propAccounts.filter(a => a.status === "funded").length;
+  const passRate = propAccounts.length > 0 ? ((fundedCount / propAccounts.length) * 100).toFixed(1) : "0.0";
 
+  // ── Subscription CRUD ───────────────────────────────────────────────────
+  const openSubForm = (sub = null) => {
+    if (sub) {
+      setEditingSub(sub.id);
+      setSubForm({ name: sub.name, cost: sub.cost, billingCycle: sub.billingCycle, category: sub.category, status: sub.status });
+    } else {
+      setEditingSub(null);
+      setSubForm({ name: "", cost: "", billingCycle: "monthly", category: "platform", status: "active" });
+    }
+    setShowSubForm(true);
+  };
+  const saveSub = () => {
+    if (!subForm.name || !subForm.cost) { showToast("Name and cost required", "error"); return; }
+    if (editingSub) {
+      setSubscriptions(subscriptions.map(s => s.id === editingSub ? { ...s, ...subForm, cost: Number(subForm.cost) } : s));
+    } else {
+      setSubscriptions([...subscriptions, { ...subForm, cost: Number(subForm.cost), id: Date.now() }]);
+    }
+    setShowSubForm(false);
+    showToast(editingSub ? "Subscription updated" : "Subscription added", "success");
+  };
+  const deleteSub = (id) => { setSubscriptions(subscriptions.filter(s => s.id !== id)); showToast("Subscription removed", "info"); };
+
+  // ── Expense CRUD ────────────────────────────────────────────────────────
+  const openExpForm = (exp = null) => {
+    if (exp) {
+      setEditingExp(exp.id);
+      setExpForm({ name: exp.name, amount: exp.amount, date: exp.date, category: exp.category, firm: exp.firm || "" });
+    } else {
+      setEditingExp(null);
+      setExpForm({ name: "", amount: "", date: new Date().toISOString().split("T")[0], category: "fee", firm: "" });
+    }
+    setShowExpForm(true);
+  };
+  const saveExp = () => {
+    if (!expForm.name || !expForm.amount) { showToast("Name and amount required", "error"); return; }
+    if (editingExp) {
+      setExpenses(expenses.map(e => e.id === editingExp ? { ...e, ...expForm, amount: Number(expForm.amount) } : e));
+    } else {
+      setExpenses([...expenses, { ...expForm, amount: Number(expForm.amount), id: Date.now() }]);
+    }
+    setShowExpForm(false);
+    showToast(editingExp ? "Expense updated" : "Expense added", "success");
+  };
+  const deleteExp = (id) => { setExpenses(expenses.filter(e => e.id !== id)); showToast("Expense removed", "info"); };
+
+  // ── Payout CRUD ────────────────────────────────────────────────────────
+  const openPayoutForm = (p = null) => {
+    if (p) {
+      setEditingPayout(p.id);
+      setPayoutForm({ firm: p.firm, amount: p.amount, date: p.date, account: p.account || "" });
+    } else {
+      setEditingPayout(null);
+      setPayoutForm({ firm: "", amount: "", date: new Date().toISOString().split("T")[0], account: "" });
+    }
+    setShowPayoutForm(true);
+  };
+  const savePayout = () => {
+    if (!payoutForm.firm || !payoutForm.amount) { showToast("Firm and amount required", "error"); return; }
+    if (editingPayout) {
+      setPayouts(payouts.map(p => p.id === editingPayout ? { ...p, ...payoutForm, amount: Number(payoutForm.amount) } : p));
+    } else {
+      setPayouts([...payouts, { ...payoutForm, amount: Number(payoutForm.amount), id: Date.now() }]);
+    }
+    setShowPayoutForm(false);
+    showToast(editingPayout ? "Payout updated" : "Payout added", "success");
+  };
+  const deletePayout = (id) => { setPayouts(payouts.filter(p => p.id !== id)); showToast("Payout removed", "info"); };
+
+  // ── PDF Bookkeeping ────────────────────────────────────────────────────
+  const generatePDF = () => {
+    setPdfGenerating(true);
+    setTimeout(() => {
+      try {
+        const doc = new jsPDF();
+        const yearNum = parseInt(bookYear);
+        const yearSubs = subscriptions.filter(s => s.year === yearNum || !s.year);
+        const yearExps = expenses.filter(e => e.date && e.date.startsWith(bookYear));
+        const yearPayouts = payouts.filter(p => p.date && p.date.startsWith(bookYear));
+
+        const subTotal = yearSubs.reduce((s, sub) => s + (sub.billingCycle === "yearly" ? Number(sub.cost) : Number(sub.cost) * 12), 0);
+        const expTotal = yearExps.reduce((s, e) => s + Number(e.amount || 0), 0);
+        const payoutTotal = yearPayouts.reduce((s, p) => s + Number(p.amount || 0), 0);
+        const net = payoutTotal - subTotal - expTotal;
+
+        // Header
+        doc.setFillColor(99, 102, 241); // C.accent
+        doc.rect(0, 0, 220, 40, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.text("87Capital Trading OS", 14, 20);
+        doc.setFontSize(13);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Bookkeeping Report — ${bookYear}`, 14, 30);
+
+        // Vitals
+        let y = 52;
+        doc.setTextColor(30, 30, 30);
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("ANNUAL SUMMARY", 14, y);
+        y += 10;
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        const vitals = [
+          ["Total Payouts Received", `$${payoutTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`],
+          ["Total Subscriptions (year)", `$${subTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`],
+          ["Total Expenses", `$${expTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`],
+          ["NET PROFIT", `$${net.toLocaleString("en-US", { minimumFractionDigits: 2 })}`],
+          ["Subscriptions Active", `${yearSubs.filter(s => s.status === "active").length}`],
+          ["Payouts Received", `${yearPayouts.length}`],
+        ];
+        vitals.forEach(([label, val]) => {
+          doc.setFont("helvetica", "normal");
+          doc.text(label, 14, y);
+          doc.setFont("helvetica", "bold");
+          doc.text(val, 120, y);
+          y += 8;
+        });
+
+        // Payouts
+        if (yearPayouts.length > 0) {
+          y += 8;
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "bold");
+          doc.text("PAYOUTS", 14, y);
+          y += 8;
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "bold");
+          doc.text("Date", 14, y); doc.text("Firm", 50, y); doc.text("Account", 110, y); doc.text("Amount", 160, y);
+          y += 2;
+          doc.setDrawColor(200);
+          doc.line(14, y, 196, y); y += 6;
+          doc.setFont("helvetica", "normal");
+          yearPayouts.forEach(p => {
+            doc.text(p.date || "—", 14, y);
+            doc.text(p.firm || "—", 50, y);
+            doc.text(p.account || "—", 110, y);
+            doc.text(`$${Number(p.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, 160, y);
+            y += 7;
+            if (y > 270) { doc.addPage(); y = 20; }
+          });
+        }
+
+        // Subscriptions
+        if (yearSubs.length > 0) {
+          y += 8;
+          if (y > 250) { doc.addPage(); y = 20; }
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "bold");
+          doc.text("SUBSCRIPTIONS", 14, y);
+          y += 8;
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "bold");
+          doc.text("Name", 14, y); doc.text("Category", 70, y); doc.text("Billing", 120, y); doc.text("Annual Cost", 160, y);
+          y += 2;
+          doc.line(14, y, 196, y); y += 6;
+          doc.setFont("helvetica", "normal");
+          yearSubs.forEach(s => {
+            const annual = s.billingCycle === "yearly" ? Number(s.cost) : Number(s.cost) * 12;
+            doc.text(s.name || "—", 14, y);
+            doc.text(s.category || "—", 70, y);
+            doc.text(s.billingCycle || "—", 120, y);
+            doc.text(`$${annual.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, 160, y);
+            y += 7;
+            if (y > 270) { doc.addPage(); y = 20; }
+          });
+        }
+
+        // Expenses
+        if (yearExps.length > 0) {
+          y += 8;
+          if (y > 250) { doc.addPage(); y = 20; }
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "bold");
+          doc.text("EXPENSES", 14, y);
+          y += 8;
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "bold");
+          doc.text("Date", 14, y); doc.text("Name", 50, y); doc.text("Category", 110, y); doc.text("Amount", 160, y);
+          y += 2;
+          doc.line(14, y, 196, y); y += 6;
+          doc.setFont("helvetica", "normal");
+          yearExps.forEach(e => {
+            doc.text(e.date || "—", 14, y);
+            doc.text(e.name || "—", 50, y);
+            doc.text(e.category || "—", 110, y);
+            doc.text(`$${Number(e.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, 160, y);
+            y += 7;
+            if (y > 270) { doc.addPage(); y = 20; }
+          });
+        }
+
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.setTextColor(150);
+          doc.text(`Generated by 87Capital Trading OS — ${new Date().toLocaleDateString()}`, 14, 287);
+          doc.text(`Page ${i} of ${pageCount}`, 186, 287);
+        }
+
+        doc.save(`87capital-bookkeeping-${bookYear}.pdf`);
+        showToast("PDF downloaded!", "success");
+      } catch (err) {
+        console.error(err);
+        showToast("PDF generation failed", "error");
+      }
+      setPdfGenerating(false);
+    }, 600);
+  };
+
+  // ── ROI per firm ────────────────────────────────────────────────────────
+  const firmROI = useMemo(() => {
+    const firms = {};
+    payouts.forEach(p => {
+      if (!firms[p.firm]) firms[p.firm] = { payouts: 0, subCost: 0, expCost: 0 };
+      firms[p.firm].payouts += Number(p.amount || 0);
+    });
+    subscriptions.forEach(s => {
+      s.firms && JSON.parse(s.firms).forEach(f => {
+        if (!firms[f]) firms[f] = { payouts: 0, subCost: 0, expCost: 0 };
+        const monthly = s.billingCycle === "yearly" ? Number(s.cost) / 12 : Number(s.cost);
+        firms[f].subCost += monthly * 12;
+      });
+    });
+    expenses.forEach(e => {
+      if (e.firm) {
+        if (!firms[e.firm]) firms[e.firm] = { payouts: 0, subCost: 0, expCost: 0 };
+        firms[e.firm].expCost += Number(e.amount || 0);
+      }
+    });
+    return Object.entries(firms).map(([name, data]) => ({
+      name, ...data, roi: data.payouts - data.subCost - data.expCost
+    })).sort((a, b) => b.roi - a.roi);
+  }, [payouts, subscriptions, expenses]);
+
+  const connectToFirm = async (firmId) => {
+    if (!apiCredentials.apiKey || !apiCredentials.apiSecret) { showToast("Please enter API Key and Secret", "error"); return; }
     setSyncing(true);
-    
-    // Simulate API connection (in production, this would call the actual API)
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // For demo, simulate connected account with live data
     const firm = propFirms.find(f => f.id === firmId);
     const newConnection = {
-      id: Date.now(),
-      firmId: firm.id,
-      firmName: firm.name,
-      firmColor: firm.color,
+      id: Date.now(), firmId: firm.id, firmName: firm.name, firmColor: firm.color,
       accountId: apiCredentials.accountId || "DEMO-001",
       apiKey: apiCredentials.apiKey.slice(0, 8) + "...",
-      connected: true,
-      lastSync: new Date(),
-      // Simulated live data
-      balance: 52150.00,
-      equity: 52380.50,
-      openPnl: 230.50,
-      marginUsed: 850.00,
-      marginAvailable: 4150.00,
-      todayPnl: 350.00,
-      todayTrades: 3,
-      status: "active"
+      connected: true, lastSync: new Date(),
+      balance: 52150.00, equity: 52380.50, openPnl: 230.50,
+      marginUsed: 850.00, marginAvailable: 4150.00, todayPnl: 350.00, todayTrades: 3, status: "active"
     };
-    
     setConnectedAccounts([...connectedAccounts, newConnection]);
-    setSyncing(false);
-    setShowConnect(false);
+    setSyncing(false); setShowConnect(false);
     setApiCredentials({ apiKey: "", apiSecret: "", accountId: "" });
     setConnectingFirm(null);
     showToast(`Connected to ${firm.name}!`, "success");
-    
-    // Start simulating live position updates
-    simulateLiveUpdates(newConnection.id);
-  };
-
-  // Simulate live position updates
-  const simulateLiveUpdates = (connectionId) => {
-    const interval = setInterval(() => {
-      setConnectedAccounts(prev => prev.map(acc => {
-        if (acc.id === connectionId) {
-          const pnlChange = (Math.random() - 0.5) * 50;
-          return {
-            ...acc,
-            openPnl: acc.openPnl + pnlChange,
-            equity: acc.equity + pnlChange,
-            balance: acc.balance + pnlChange * 0.8,
-            lastSync: new Date()
-          };
-        }
-        return acc;
-      }));
-    }, 3000);
-    
-    return () => clearInterval(interval);
-  };
-
-  // Sync account data
-  const syncAccount = async (accountId) => {
-    setSyncing(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setConnectedAccounts(prev => prev.map(acc => 
-      acc.id === accountId ? { ...acc, lastSync: new Date() } : acc
-    ));
-    setSyncing(false);
-    showToast("Account synced!", "success");
-  };
-
-  // Disconnect account
-  const disconnectAccount = (accountId) => {
-    setConnectedAccounts(prev => prev.filter(acc => acc.id !== accountId));
-    showToast("Account disconnected", "info");
   };
 
   const addAccount = () => {
-    if (!newAccount.firm || !newAccount.name) {
-      showToast("Please fill in firm and account name", "error");
-      return;
-    }
+    if (!newAccount.firm || !newAccount.name) { showToast("Please fill in firm and account name", "error"); return; }
     setPropAccounts([...propAccounts, { ...newAccount, id: Date.now(), status: "challenge", history: [] }]);
     setNewAccount({ firm: "", name: "", balance: 50000, target: 55000, dailyLossLimit: 1000 });
     setShowAdd(false);
@@ -3128,157 +3356,322 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
   const totalOpenPnl = connectedAccounts.reduce((s, a) => s + a.openPnl, 0);
   const totalTodayPnl = connectedAccounts.reduce((s, a) => s + a.todayPnl, 0);
 
+  const HQ_TABS = [
+    { id: "subscriptions", label: "Subscriptions", icon: <CreditCard size={14} /> },
+    { id: "expenses", label: "Expenses", icon: <Receipt size={14} /> },
+    { id: "payouts", label: "Payouts", icon: <DollarSign size={14} /> },
+    { id: "bookkeeping", label: "Bookkeeping", icon: <FileText size={14} /> },
+  ];
+
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
     <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 800 }}>Prop Firm Hub</h1>
-          <p style={{ fontSize: 13, color: C.textMuted }}>Connect your prop firm accounts for live tracking</p>
+          <p style={{ fontSize: 13, color: C.textMuted }}>Track accounts, costs, payouts & ROI</p>
         </div>
         <div style={{ display: "flex", gap: 12 }}>
-          <button onClick={() => setShowConnect(true)} style={S.btn("primary")}>
-            <Zap size={16} /> Connect Account
-          </button>
-          <button onClick={() => setShowAdd(true)} style={S.btn("ghost")}>
-            <Plus size={16} /> Manual Add
-          </button>
+          <button onClick={() => setShowConnect(true)} style={S.btn("primary")}><Zap size={16} /> Connect Account</button>
+          <button onClick={() => setShowAdd(true)} style={S.btn("ghost")}><Plus size={16} /> Manual Add</button>
         </div>
       </div>
 
-      <div style={{ ...S.glassCard, marginBottom: 20, background: `linear-gradient(135deg, ${C.accent}12, ${C.purple}06)` }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 10 }}>Your All-In-One Command Center</h2>
-        <p style={{ color: C.textMuted, marginBottom: 18 }}>
-          Stop juggling spreadsheets. We've built everything you need to make smarter trading decisions.
-        </p>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <div style={{ padding: 14, borderRadius: 12, background: "rgba(0,0,0,0.22)", border: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Visualize Your Vitals</div>
-            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6 }}>
-              The main dashboard gives you a live, at-a-glance view of your most critical metrics. Instantly see your total payouts, overall expenses, true net profit, and pass rate across all firms.
+      {/* ── Vitals Strip ──────────────────────────────────────────────── */}
+      <div style={{ ...S.glassCard, marginBottom: 20, background: `linear-gradient(135deg, ${C.accent}12, ${C.purple}06)`, padding: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+            <Activity size={15} color={C.accent} /> Your Vitals
+          </h3>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 16 }}>
+          {[
+            ["All-Time Payouts", fmtUsd(totalPayouts), C.emerald],
+            ["Total Expenses", fmtUsd(totalExpenses), C.amber],
+            ["Net Profit", fmtUsd(netProfit), netProfit >= 0 ? C.emerald : C.amber],
+            ["Pass Rate", `${passRate}%`, C.accent],
+            ["Monthly Subs", fmtUsd(totalSubExpenses), C.yellow],
+            ["Funded Accounts", `${fundedCount} / ${propAccounts.length}`, C.accent],
+          ].map(([label, val, color]) => (
+            <div key={label} style={{ textAlign: "center", padding: "12px 8px", background: "rgba(0,0,0,0.2)", borderRadius: 12 }}>
+              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color }}>{val}</div>
             </div>
-          </div>
-
-          <div style={{ padding: 14, borderRadius: 12, background: "rgba(0,0,0,0.22)", border: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Manage Subscriptions</div>
-            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6 }}>
-              Stay on top of your recurring trading costs. Effortlessly track monthly or yearly subscriptions for platforms, data feeds, and trading communities.
-            </div>
-          </div>
-
-          <div style={{ padding: 14, borderRadius: 12, background: "rgba(0,0,0,0.22)", border: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Analyze Your ROI</div>
-            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6 }}>
-              Go beyond simple tracking. Compare your total payouts against your costs for each firm, helping you identify which evaluations are worth your focus.
-            </div>
-          </div>
-
-          <div style={{ padding: 14, borderRadius: 12, background: "rgba(0,0,0,0.22)", border: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Effortless Bookkeeping</div>
-            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6 }}>
-              Stop dreading tax time. With a single click, generate a professional PDF report for any year summarizing your total payouts and expenses.
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Connected Accounts Summary */}
+      {/* ── HQ Tabs ─────────────────────────────────────────────────── */}
+      <div style={{ ...S.glassCard, marginBottom: 20, padding: 20 }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, borderBottom: `1px solid ${C.border}`, paddingBottom: 14 }}>
+          {HQ_TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setHqTab(tab.id)}
+              style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
+                borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13,
+                transition: "all 0.2s",
+                background: hqTab === tab.id ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : "rgba(0,0,0,0.25)",
+                color: hqTab === tab.id ? C.white : C.textMuted,
+                boxShadow: hqTab === tab.id ? `0 4px 16px ${C.accentGlow}` : "none",
+              }}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Subscriptions Tab ──────────────────────────────────────── */}
+        {hqTab === "subscriptions" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 13, color: C.textMuted }}>
+                Monthly cost: <span style={{ fontWeight: 700, color: C.yellow }}>{fmtUsd(totalSubExpenses)}</span>
+                {" · "}Annual: <span style={{ fontWeight: 700, color: C.text }}>{fmtUsd(totalSubExpenses * 12)}</span>
+              </div>
+              <button onClick={() => openSubForm()} style={S.btn("primary", "sm")}><Plus size={13} /> Add</button>
+            </div>
+            {subscriptions.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: C.textMuted }}>
+                <CreditCard size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
+                <p>No subscriptions yet. Add your trading platform costs.</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {subscriptions.map(sub => {
+                  const annual = sub.billingCycle === "yearly" ? Number(sub.cost) : Number(sub.cost) * 12;
+                  return (
+                    <div key={sub.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "rgba(0,0,0,0.2)", borderRadius: 12, border: `1px solid ${sub.status === "paused" ? C.yellow + "40" : C.border}` }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{sub.name}</div>
+                        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                          {fmtUsd(sub.billingCycle === "yearly" ? Number(sub.cost) / 12 : Number(sub.cost))}/mo · {sub.billingCycle} · {sub.category} · Annual: {fmtUsd(annual)}
+                        </div>
+                      </div>
+                      <span style={S.badge(sub.status === "active" ? C.emerald : C.yellow)}>{sub.status}</span>
+                      <button onClick={() => openSubForm(sub)} style={S.btn("ghost", "sm")}><Edit3 size={12} /></button>
+                      <button onClick={() => deleteSub(sub.id)} style={{ ...S.btn("danger", "sm"), padding: "6px 10px" }}><Trash2 size={12} /></button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Expenses Tab ──────────────────────────────────────────── */}
+        {hqTab === "expenses" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 13, color: C.textMuted }}>
+                Total one-time expenses: <span style={{ fontWeight: 700, color: C.amber }}>{fmtUsd(totalOneTimeExpenses)}</span>
+              </div>
+              <button onClick={() => openExpForm()} style={S.btn("primary", "sm")}><Plus size={13} /> Add</button>
+            </div>
+            {expenses.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: C.textMuted }}>
+                <Receipt size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
+                <p>No expenses recorded. Log one-time costs here.</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {expenses.map(exp => (
+                  <div key={exp.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "rgba(0,0,0,0.2)", borderRadius: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{exp.name}</div>
+                      <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                        {exp.date} · {exp.category}{exp.firm ? ` · ${exp.firm}` : ""}
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 700, color: C.amber, fontSize: 14 }}>-{fmtUsd(Number(exp.amount))}</div>
+                    <button onClick={() => openExpForm(exp)} style={S.btn("ghost", "sm")}><Edit3 size={12} /></button>
+                    <button onClick={() => deleteExp(exp.id)} style={{ ...S.btn("danger", "sm"), padding: "6px 10px" }}><Trash2 size={12} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Payouts Tab ────────────────────────────────────────────── */}
+        {hqTab === "payouts" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 13, color: C.textMuted }}>
+                Total payouts: <span style={{ fontWeight: 700, color: C.emerald }}>{fmtUsd(totalPayouts)}</span> across {payouts.length} payout{payouts.length !== 1 ? "s" : ""}
+              </div>
+              <button onClick={() => openPayoutForm()} style={S.btn("primary", "sm")}><Plus size={13} /> Add</button>
+            </div>
+            {payouts.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: C.textMuted }}>
+                <DollarSign size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
+                <p>No payouts recorded yet. Add payouts as you receive them.</p>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[...payouts].sort((a, b) => (b.date || "").localeCompare(a.date || "")).map(p => (
+                    <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "rgba(0,0,0,0.2)", borderRadius: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{p.firm}</div>
+                        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                          {p.date}{p.account ? ` · ${p.account}` : ""}
+                        </div>
+                      </div>
+                      <div style={{ fontWeight: 700, color: C.emerald, fontSize: 14 }}>+{fmtUsd(Number(p.amount))}</div>
+                      <button onClick={() => openPayoutForm(p)} style={S.btn("ghost", "sm")}><Edit3 size={12} /></button>
+                      <button onClick={() => deletePayout(p.id)} style={{ ...S.btn("danger", "sm"), padding: "6px 10px" }}><Trash2 size={12} /></button>
+                    </div>
+                  ))}
+                </div>
+                {/* ROI Chart */}
+                {firmROI.length > 0 && (
+                  <div style={{ marginTop: 24 }}>
+                    <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: C.textMuted }}>ROI PER FIRM</h4>
+                    <ResponsiveContainer width="100%" height={Math.max(120, firmROI.length * 40)}>
+                      <BarChart data={firmROI} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 0 }}>
+                        <XAxis type="number" tickFormatter={v => `$${v >= 0 ? "+" : ""}${v.toLocaleString()}`} tick={{ fill: C.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <YAxis type="category" dataKey="name" tick={{ fill: C.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} width={90} />
+                        <Tooltip formatter={(v) => [`$${v.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, "Net ROI"]} contentStyle={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text }} />
+                        <Bar dataKey="roi" radius={[0, 6, 6, 0]}>
+                          {firmROI.map((entry, i) => (
+                            <Cell key={i} fill={entry.roi >= 0 ? C.emerald : C.amber} fillOpacity={0.85} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Bookkeeping Tab ────────────────────────────────────────── */}
+        {hqTab === "bookkeeping" && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24, padding: 16, background: "rgba(0,0,0,0.2)", borderRadius: 12 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Year Selection</div>
+                <div style={{ fontSize: 12, color: C.textMuted }}>Generate a PDF for a specific tax year</div>
+              </div>
+              <select value={bookYear} onChange={e => setBookYear(e.target.value)} style={{ ...S.input, width: 140 }}>
+                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <button onClick={generatePDF} disabled={pdfGenerating} style={{ ...S.btn("primary", "md"), minWidth: 160 }}>
+                {pdfGenerating ? <><RefreshCw size={13} style={{ animation: "spin 1s linear infinite" }} /> Generating...</> : <><Download size={13} /> Download PDF</>}
+              </button>
+            </div>
+
+            {/* Year summary preview */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 20 }}>
+              {(() => {
+                const yearP = payouts.filter(p => p.date && p.date.startsWith(bookYear));
+                const yearE = expenses.filter(e => e.date && e.date.startsWith(bookYear));
+                const yearSubs = subscriptions;
+                const yPayouts = yearP.reduce((s, p) => s + Number(p.amount || 0), 0);
+                const ySubs = yearSubs.reduce((s, sub) => s + (sub.billingCycle === "yearly" ? Number(sub.cost) : Number(sub.cost) * 12), 0);
+                const yExp = yearE.reduce((s, e) => s + Number(e.amount || 0), 0);
+                const yNet = yPayouts - ySubs - yExp;
+                return [
+                  ["Payouts", yPayouts, C.emerald],
+                  ["Subscriptions", ySubs, C.yellow],
+                  ["Net Profit", yNet, yNet >= 0 ? C.emerald : C.amber],
+                ].map(([label, val, color]) => (
+                  <div key={label} style={{ padding: 16, background: "rgba(0,0,0,0.2)", borderRadius: 12, textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 6, textTransform: "uppercase", fontWeight: 600 }}>{label}</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color }}>{fmtUsd(val)}</div>
+                  </div>
+                ));
+              })()}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div style={{ padding: 16, background: "rgba(0,0,0,0.2)", borderRadius: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, color: C.textMuted }}>SUBSCRIPTIONS (annual)</div>
+                {subscriptions.length === 0 ? (
+                  <div style={{ fontSize: 12, color: C.textDim }}>No subscriptions</div>
+                ) : subscriptions.map(s => (
+                  <div key={s.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 12 }}>
+                    <span>{s.name}</span>
+                    <span style={{ color: C.yellow }}>{fmtUsd(s.billingCycle === "yearly" ? Number(s.cost) : Number(s.cost) * 12)}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding: 16, background: "rgba(0,0,0,0.2)", borderRadius: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, color: C.textMuted }}>TOP PAYOUTS THIS YEAR</div>
+                {payouts.filter(p => p.date && p.date.startsWith(bookYear)).sort((a, b) => Number(b.amount) - Number(a.amount)).slice(0, 5).map(p => (
+                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 12 }}>
+                    <span>{p.firm} <span style={{ color: C.textDim }}>{p.date}</span></span>
+                    <span style={{ color: C.emerald }}>{fmtUsd(Number(p.amount))}</span>
+                  </div>
+                ))}
+                {payouts.filter(p => p.date && p.date.startsWith(bookYear)).length === 0 && (
+                  <div style={{ fontSize: 12, color: C.textDim }}>No payouts for {bookYear}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Connected Accounts ──────────────────────────────────────────── */}
       {connectedAccounts.length > 0 && (
         <>
           <div style={{ ...S.glassCard, marginBottom: 20, padding: 20, background: `linear-gradient(135deg, ${C.accent}10, ${C.purple}05)` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: "50%", background: C.green, animation: "livePulse 1.5s infinite" }} />
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: C.emerald, animation: "livePulse 1.5s infinite" }} />
                 Live Connected Accounts
               </h3>
-              <button onClick={() => connectedAccounts.forEach(a => syncAccount(a.id))} disabled={syncing} style={{ ...S.btn("ghost", "sm") }}>
+              <button onClick={() => connectedAccounts.forEach(a => setConnectedAccounts(prev => prev.map(acc => acc.id === a.id ? { ...acc, lastSync: new Date() } : acc)))} disabled={syncing} style={{ ...S.btn("ghost", "sm") }}>
                 <RefreshCw size={14} style={{ animation: syncing ? "spin 1s linear infinite" : "none" }} /> Sync All
               </button>
             </div>
-            
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>TOTAL EQUITY</div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: C.text }}>{fmtUsd(totalEquity)}</div>
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>OPEN P&L</div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: totalOpenPnl >= 0 ? C.green : C.red }}>{fmt(totalOpenPnl)}</div>
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>TODAY'S P&L</div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: totalTodayPnl >= 0 ? C.green : C.red }}>{fmt(totalTodayPnl)}</div>
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>ACCOUNTS</div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: C.accent }}>{connectedAccounts.length}</div>
-              </div>
+              {[["TOTAL EQUITY", fmtUsd(totalEquity), C.text], ["OPEN P&L", fmt(totalOpenPnl), totalOpenPnl >= 0 ? C.emerald : C.amber], ["TODAY'S P&L", fmt(totalTodayPnl), totalTodayPnl >= 0 ? C.emerald : C.amber], ["ACCOUNTS", connectedAccounts.length, C.accent]].map(([label, val, color]) => (
+                <div key={label} style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color }}>{val}</div>
+                </div>
+              ))}
             </div>
           </div>
-
-          {/* Connected Account Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 20, marginBottom: 24 }}>
             {connectedAccounts.map(account => (
               <div key={account.id} style={{ ...S.glassCard, borderTop: `3px solid ${account.firmColor}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ 
-                        width: 32, height: 32, borderRadius: 8, 
-                        background: account.firmColor, display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 12, fontWeight: 800, color: C.white 
-                      }}>
-                        {account.firmName.split(" ")[0][0]}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 700 }}>{account.firmName}</div>
-                        <div style={{ fontSize: 11, color: C.textMuted }}>{account.accountId}</div>
-                      </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: account.firmColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: C.white }}>{account.firmName.split(" ")[0][0]}</div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700 }}>{account.firmName}</div>
+                      <div style={{ fontSize: 11, color: C.textMuted }}>{account.accountId}</div>
                     </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.green, animation: "livePulse 1.5s infinite" }} />
-                    <span style={{ fontSize: 11, color: C.green }}>Live</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.emerald, animation: "livePulse 1.5s infinite" }} />
+                    <span style={{ fontSize: 11, color: C.emerald }}>Live</span>
                   </div>
                 </div>
-
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
-                  <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" }}>
-                    <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4 }}>EQUITY</div>
-                    <div style={{ fontSize: 18, fontWeight: 800 }}>{fmtUsd(account.equity)}</div>
-                  </div>
-                  <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" }}>
-                    <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4 }}>OPEN P&L</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: account.openPnl >= 0 ? C.green : C.red }}>{fmt(account.openPnl)}</div>
-                  </div>
-                  <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" }}>
-                    <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4 }}>TODAY</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: account.todayPnl >= 0 ? C.green : C.red }}>{fmt(account.todayPnl)}</div>
-                  </div>
+                  {[["EQUITY", fmtUsd(account.equity)], ["OPEN P&L", fmt(account.openPnl), account.openPnl >= 0 ? C.emerald : C.amber], ["TODAY", fmt(account.todayPnl), account.todayPnl >= 0 ? C.emerald : C.amber]].map(([label, val, color]) => (
+                    <div key={label} style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10, textAlign: "center" }}>
+                      <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: color || C.text }}>{val}</div>
+                    </div>
+                  ))}
                 </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-                  <div style={{ fontSize: 11 }}>
-                    <span style={{ color: C.textMuted }}>Margin Used: </span>
-                    <span style={{ fontWeight: 600 }}>{fmtUsd(account.marginUsed)}</span>
-                  </div>
-                  <div style={{ fontSize: 11 }}>
-                    <span style={{ color: C.textMuted }}>Available: </span>
-                    <span style={{ fontWeight: 600, color: C.green }}>{fmtUsd(account.marginAvailable)}</span>
-                  </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16, fontSize: 11 }}>
+                  <div><span style={{ color: C.textMuted }}>Margin Used: </span><span style={{ fontWeight: 600 }}>{fmtUsd(account.marginUsed)}</span></div>
+                  <div><span style={{ color: C.textMuted }}>Available: </span><span style={{ fontWeight: 600, color: C.emerald }}>{fmtUsd(account.marginAvailable)}</span></div>
                 </div>
-
-                <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 12 }}>
-                  Last sync: {account.lastSync.toLocaleTimeString()}
-                </div>
-
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => syncAccount(account.id)} disabled={syncing} style={{ ...S.btn("ghost", "sm"), flex: 1 }}>
-                    <RefreshCw size={12} /> Sync
-                  </button>
-                  <button onClick={() => disconnectAccount(account.id)} style={{ ...S.btn("danger", "sm") }}>
-                    <X size={12} /> Disconnect
-                  </button>
+                  <button onClick={() => setConnectedAccounts(prev => prev.map(acc => acc.id === account.id ? { ...acc, lastSync: new Date() } : acc))} disabled={syncing} style={{ ...S.btn("ghost", "sm"), flex: 1 }}><RefreshCw size={12} /> Sync</button>
+                  <button onClick={() => setConnectedAccounts(prev => prev.filter(acc => acc.id !== account.id))} style={{ ...S.btn("danger", "sm") }}><X size={12} /> Disconnect</button>
                 </div>
               </div>
             ))}
@@ -3286,7 +3679,7 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
         </>
       )}
 
-      {/* Manual Accounts Section */}
+      {/* Manual Accounts */}
       <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Manual Accounts</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 20 }}>
         {propAccounts.length === 0 ? (
@@ -3296,8 +3689,6 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
           </div>
         ) : propAccounts.map(account => {
           const startingBalance = account.startingBalance || 50000;
-          const profitProgress = ((account.balance - startingBalance) / (account.target - startingBalance)) * 100;
-
           return (
             <div key={account.id} style={S.glassCard}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
@@ -3305,174 +3696,168 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
                   <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", marginBottom: 4 }}>{account.firm}</div>
                   <h3 style={{ fontSize: 16, fontWeight: 700 }}>{account.name}</h3>
                 </div>
-                <span style={S.badge(account.status === "funded" ? C.green : C.yellow)}>
-                  {account.status === "funded" ? "Funded" : "Challenge"}
-                </span>
+                <span style={S.badge(account.status === "funded" ? C.emerald : C.yellow)}>{account.status === "funded" ? "Funded" : "Challenge"}</span>
               </div>
-
               <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-                <div>
-                  <div style={S.label}>Balance</div>
-                  <div style={{ fontSize: 20, fontWeight: 800 }}>{fmtUsd(account.balance)}</div>
-                </div>
-                <div>
-                  <div style={S.label}>Target</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: C.green }}>{fmtUsd(account.target)}</div>
-                </div>
+                <div><div style={S.label}>Balance</div><div style={{ fontSize: 20, fontWeight: 800 }}>{fmtUsd(account.balance)}</div></div>
+                <div><div style={S.label}>Target</div><div style={{ fontSize: 20, fontWeight: 800, color: C.emerald }}>{fmtUsd(account.target)}</div></div>
               </div>
-
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => updateBalance(account.id, 500)} style={{ ...S.btn("success", "sm"), flex: 1 }}>
-                  <Plus size={12} /> +$500
-                </button>
-                <button onClick={() => updateBalance(account.id, -100)} style={{ ...S.btn("danger", "sm"), flex: 1 }}>
-                  <TrendingDown size={12} /> -$100
-                </button>
+                <button onClick={() => updateBalance(account.id, 500)} style={{ ...S.btn("success", "sm"), flex: 1 }}><Plus size={12} /> +$500</button>
+                <button onClick={() => updateBalance(account.id, -100)} style={{ ...S.btn("danger", "sm"), flex: 1 }}><TrendingDown size={12} /> -$100</button>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Connect Account Modal */}
+      {/* ── Modals ─────────────────────────────────────────────────────── */}
+      {/* Sub Form */}
+      {showSubForm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000, backdropFilter: "blur(8px)" }}>
+          <div style={{ ...S.glassCard, padding: 28, width: 460, maxWidth: "95vw" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700 }}>{editingSub ? "Edit Subscription" : "Add Subscription"}</h3>
+              <button onClick={() => setShowSubForm(false)} style={S.btn("ghost", "sm")}><X size={18} /></button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div><label style={S.label}>Name</label><input value={subForm.name} onChange={e => setSubForm({ ...subForm, name: e.target.value })} style={S.input} placeholder="e.g. Tradovate Pro" /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div><label style={S.label}>Cost</label><input type="number" value={subForm.cost} onChange={e => setSubForm({ ...subForm, cost: e.target.value })} style={S.input} placeholder="0.00" /></div>
+                <div><label style={S.label}>Billing</label>
+                  <select value={subForm.billingCycle} onChange={e => setSubForm({ ...subForm, billingCycle: e.target.value })} style={S.input}>
+                    <option value="monthly">Monthly</option><option value="yearly">Yearly</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div><label style={S.label}>Category</label>
+                  <select value={subForm.category} onChange={e => setSubForm({ ...subForm, category: e.target.value })} style={S.input}>
+                    <option value="platform">Platform</option><option value="data">Data Feed</option><option value="community">Community</option><option value="other">Other</option>
+                  </select>
+                </div>
+                <div><label style={S.label}>Status</label>
+                  <select value={subForm.status} onChange={e => setSubForm({ ...subForm, status: e.target.value })} style={S.input}>
+                    <option value="active">Active</option><option value="paused">Paused</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 12, marginTop: 22 }}>
+              <button onClick={() => setShowSubForm(false)} style={{ ...S.btn("ghost", "md"), flex: 1 }}>Cancel</button>
+              <button onClick={saveSub} style={{ ...S.btn("primary", "md"), flex: 1 }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expense Form */}
+      {showExpForm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000, backdropFilter: "blur(8px)" }}>
+          <div style={{ ...S.glassCard, padding: 28, width: 460, maxWidth: "95vw" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700 }}>{editingExp ? "Edit Expense" : "Add Expense"}</h3>
+              <button onClick={() => setShowExpForm(false)} style={S.btn("ghost", "sm")}><X size={18} /></button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div><label style={S.label}>Name</label><input value={expForm.name} onChange={e => setExpForm({ ...expForm, name: e.target.value })} style={S.input} placeholder="e.g. Evaluation fee" /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div><label style={S.label}>Amount</label><input type="number" value={expForm.amount} onChange={e => setExpForm({ ...expForm, amount: e.target.value })} style={S.input} placeholder="0.00" /></div>
+                <div><label style={S.label}>Date</label><input type="date" value={expForm.date} onChange={e => setExpForm({ ...expForm, date: e.target.value })} style={S.input} /></div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div><label style={S.label}>Category</label>
+                  <select value={expForm.category} onChange={e => setExpForm({ ...expForm, category: e.target.value })} style={S.input}>
+                    <option value="fee">Evaluation Fee</option><option value="subscription">Subscription</option><option value="tool">Trading Tool</option><option value="other">Other</option>
+                  </select>
+                </div>
+                <div><label style={S.label}>Firm (optional)</label><input value={expForm.firm} onChange={e => setExpForm({ ...expForm, firm: e.target.value })} style={S.input} placeholder="e.g. FTMO" /></div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 12, marginTop: 22 }}>
+              <button onClick={() => setShowExpForm(false)} style={{ ...S.btn("ghost", "md"), flex: 1 }}>Cancel</button>
+              <button onClick={saveExp} style={{ ...S.btn("primary", "md"), flex: 1 }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payout Form */}
+      {showPayoutForm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000, backdropFilter: "blur(8px)" }}>
+          <div style={{ ...S.glassCard, padding: 28, width: 460, maxWidth: "95vw" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700 }}>{editingPayout ? "Edit Payout" : "Add Payout"}</h3>
+              <button onClick={() => setShowPayoutForm(false)} style={S.btn("ghost", "sm")}><X size={18} /></button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div><label style={S.label}>Firm</label><input value={payoutForm.firm} onChange={e => setPayoutForm({ ...payoutForm, firm: e.target.value })} style={S.input} placeholder="e.g. TopStepTrader" /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div><label style={S.label}>Amount</label><input type="number" value={payoutForm.amount} onChange={e => setPayoutForm({ ...payoutForm, amount: e.target.value })} style={S.input} placeholder="0.00" /></div>
+                <div><label style={S.label}>Date</label><input type="date" value={payoutForm.date} onChange={e => setPayoutForm({ ...payoutForm, date: e.target.value })} style={S.input} /></div>
+              </div>
+              <div><label style={S.label}>Account (optional)</label><input value={payoutForm.account} onChange={e => setPayoutForm({ ...payoutForm, account: e.target.value })} style={S.input} placeholder="e.g. MNQ-12345" /></div>
+            </div>
+            <div style={{ display: "flex", gap: 12, marginTop: 22 }}>
+              <button onClick={() => setShowPayoutForm(false)} style={{ ...S.btn("ghost", "md"), flex: 1 }}>Cancel</button>
+              <button onClick={savePayout} style={{ ...S.btn("primary", "md"), flex: 1 }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Connect Modal */}
       {showConnect && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex",
-          alignItems: "center", justifyContent: "center", zIndex: 3000, backdropFilter: "blur(8px)"
-        }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000, backdropFilter: "blur(8px)" }}>
           <div style={{ ...S.glassCard, padding: 32, width: 500, maxWidth: "95vw" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
               <h3 style={{ fontSize: 20, fontWeight: 700 }}>Connect Prop Firm</h3>
               <button onClick={() => { setShowConnect(false); setConnectingFirm(null); }} style={S.btn("ghost", "sm")}><X size={18} /></button>
             </div>
-
             {!connectingFirm ? (
-              <>
-                <p style={{ color: C.textMuted, marginBottom: 20 }}>Select a prop firm to connect:</p>
+              <><p style={{ color: C.textMuted, marginBottom: 20 }}>Select a prop firm to connect:</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {propFirms.map(firm => (
-                    <button 
-                      key={firm.id}
-                      onClick={() => setConnectingFirm(firm)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 16, padding: 16,
-                        background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}`,
-                        borderRadius: 12, cursor: "pointer", transition: "all 0.2s"
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = firm.color}
-                      onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-                    >
-                      <div style={{ 
-                        width: 48, height: 48, borderRadius: 12, 
-                        background: firm.color, display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 16, fontWeight: 800, color: C.white 
-                      }}>
-                        {firm.icon}
-                      </div>
-                      <div style={{ textAlign: "left" }}>
-                        <div style={{ fontSize: 14, fontWeight: 700 }}>{firm.name}</div>
-                        <div style={{ fontSize: 12, color: C.textMuted }}>{firm.description}</div>
-                      </div>
+                    <button key={firm.id} onClick={() => setConnectingFirm(firm)} style={{ display: "flex", alignItems: "center", gap: 16, padding: 16, background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", transition: "all 0.2s" }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = firm.color} onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+                      <div style={{ width: 48, height: 48, borderRadius: 12, background: firm.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: C.white }}>{firm.icon}</div>
+                      <div style={{ textAlign: "left" }}><div style={{ fontSize: 14, fontWeight: 700 }}>{firm.name}</div><div style={{ fontSize: 12, color: C.textMuted }}>{firm.description}</div></div>
                     </button>
                   ))}
-                </div>
-              </>
+                </div></>
             ) : (
-              <>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, padding: 12, background: "rgba(0,0,0,0.3)", borderRadius: 12 }}>
-                  <div style={{ 
-                    width: 40, height: 40, borderRadius: 10, 
-                    background: connectingFirm.color, display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 14, fontWeight: 800, color: C.white 
-                  }}>
-                    {connectingFirm.icon}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{connectingFirm.name}</div>
-                    <div style={{ fontSize: 12, color: C.textMuted }}>Enter your API credentials</div>
-                  </div>
+              <><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, padding: 12, background: "rgba(0,0,0,0.3)", borderRadius: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: connectingFirm.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: C.white }}>{connectingFirm.icon}</div>
+                <div><div style={{ fontSize: 14, fontWeight: 700 }}>{connectingFirm.name}</div><div style={{ fontSize: 12, color: C.textMuted }}>Enter your API credentials</div></div>
+              </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div><label style={S.label}>API Key</label><input type="password" value={apiCredentials.apiKey} onChange={e => setApiCredentials({ ...apiCredentials, apiKey: e.target.value })} style={S.input} placeholder="Enter your API key" /></div>
+                  <div><label style={S.label}>API Secret</label><input type="password" value={apiCredentials.apiSecret} onChange={e => setApiCredentials({ ...apiCredentials, apiSecret: e.target.value })} style={S.input} placeholder="Enter your API secret" /></div>
+                  <div><label style={S.label}>Account ID (Optional)</label><input value={apiCredentials.accountId} onChange={e => setApiCredentials({ ...apiCredentials, accountId: e.target.value })} style={S.input} placeholder="Your account identifier" /></div>
                 </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <div>
-                    <label style={S.label}>API Key</label>
-                    <input 
-                      type="password" 
-                      value={apiCredentials.apiKey} 
-                      onChange={e => setApiCredentials({ ...apiCredentials, apiKey: e.target.value })}
-                      style={S.input} 
-                      placeholder="Enter your API key" 
-                    />
-                  </div>
-                  <div>
-                    <label style={S.label}>API Secret</label>
-                    <input 
-                      type="password" 
-                      value={apiCredentials.apiSecret} 
-                      onChange={e => setApiCredentials({ ...apiCredentials, apiSecret: e.target.value })}
-                      style={S.input} 
-                      placeholder="Enter your API secret" 
-                    />
-                  </div>
-                  <div>
-                    <label style={S.label}>Account ID (optional)</label>
-                    <input 
-                      value={apiCredentials.accountId} 
-                      onChange={e => setApiCredentials({ ...apiCredentials, accountId: e.target.value })}
-                      style={S.input} 
-                      placeholder="Leave blank for default" 
-                    />
-                  </div>
-                </div>
-
                 <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
-                  <button onClick={() => setConnectingFirm(null)} style={{ ...S.btn("ghost", "md"), flex: 1 }}>
-                    <ChevronLeft size={16} /> Back
-                  </button>
-                  <button onClick={() => connectToFirm(connectingFirm.id)} disabled={syncing} style={{ ...S.btn("primary", "md"), flex: 1 }}>
-                    {syncing ? (
-                      <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Connecting...</>
-                    ) : (
-                      <><Zap size={14} /> Connect</>
-                    )}
-                  </button>
-                </div>
-
-                <p style={{ fontSize: 11, color: C.textMuted, marginTop: 16, textAlign: "center" }}>
-                  Your API credentials are encrypted and stored locally.
-                </p>
-              </>
+                  <button onClick={() => { setConnectingFirm(null); setApiCredentials({ apiKey: "", apiSecret: "", accountId: "" }); }} style={{ ...S.btn("ghost", "md"), flex: 1 }}>Back</button>
+                  <button onClick={() => connectToFirm(connectingFirm.id)} disabled={syncing} style={{ ...S.btn("primary", "md"), flex: 1 }}>{syncing ? "Connecting..." : "Connect"}</button>
+                </div></>
             )}
           </div>
         </div>
       )}
 
-      {/* Add Manual Account Modal */}
+      {/* Add Account Modal */}
       {showAdd && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex",
-          alignItems: "center", justifyContent: "center", zIndex: 2000, backdropFilter: "blur(8px)"
-        }}>
-          <div style={{ ...S.glassCard, padding: 32, width: 440 }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000, backdropFilter: "blur(8px)" }}>
+          <div style={{ ...S.glassCard, padding: 32, width: 480, maxWidth: "95vw" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700 }}>Add Manual Account</h3>
+              <h3 style={{ fontSize: 20, fontWeight: 700 }}>Add Manual Account</h3>
               <button onClick={() => setShowAdd(false)} style={S.btn("ghost", "sm")}><X size={18} /></button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <Select label="Firm" value={newAccount.firm} onChange={v => setNewAccount({ ...newAccount, firm: v })} options={PROP_FIRMS} />
-              <div>
-                <label style={S.label}>Account Name</label>
-                <input value={newAccount.name} onChange={e => setNewAccount({ ...newAccount, name: e.target.value })} style={S.input} placeholder="My MNQ Account" />
-              </div>
+              <div><label style={S.label}>Account Name</label><input value={newAccount.name} onChange={e => setNewAccount({ ...newAccount, name: e.target.value })} style={S.input} placeholder="My MNQ Account" /></div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                <div>
-                  <label style={S.label}>Current Balance ($)</label>
-                  <input type="number" value={newAccount.balance} onChange={e => setNewAccount({ ...newAccount, balance: Number(e.target.value) })} style={S.input} />
-                </div>
-                <div>
-                  <label style={S.label}>Target ($)</label>
-                  <input type="number" value={newAccount.target} onChange={e => setNewAccount({ ...newAccount, target: Number(e.target.value) })} style={S.input} />
-                </div>
+                <div><label style={S.label}>Current Balance ($)</label><input type="number" value={newAccount.balance} onChange={e => setNewAccount({ ...newAccount, balance: Number(e.target.value) })} style={S.input} /></div>
+                <div><label style={S.label}>Target ($)</label><input type="number" value={newAccount.target} onChange={e => setNewAccount({ ...newAccount, target: Number(e.target.value) })} style={S.input} /></div>
               </div>
             </div>
             <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
@@ -3485,6 +3870,7 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast }) {
     </div>
   );
 }
+
 // ─── NEWS PAGE ───────────────────────────────────────────────────────────────
 function NewsPage({ showToast }) {
   const [newsBlocked, setNewsBlocked] = useState(false);
@@ -3589,20 +3975,20 @@ function NewsPage({ showToast }) {
   };
 
   const getImpactColor = (impact) => {
-    if (impact === "High") return C.red;
+    if (impact === "High") return C.amber;
     if (impact === "Medium") return C.yellow;
-    return C.green;
+    return C.emerald;
   };
 
   const getSentimentColor = (sentiment) => {
-    if (sentiment === "bullish") return C.green;
-    if (sentiment === "bearish") return C.red;
+    if (sentiment === "bullish") return C.emerald;
+    if (sentiment === "bearish") return C.amber;
     return C.yellow;
   };
 
   const getSentimentBg = (sentiment) => {
-    if (sentiment === "bullish") return `${C.green}15`;
-    if (sentiment === "bearish") return `${C.red}15`;
+    if (sentiment === "bullish") return `${C.emerald}15`;
+    if (sentiment === "bearish") return `${C.amber}15`;
     return `${C.yellow}15`;
   };
 
@@ -3742,7 +4128,7 @@ function NewsPage({ showToast }) {
                     {event.actual && (
                       <div>
                         <div style={{ fontSize: 9, color: C.textDim, marginBottom: 2 }}>ACTUAL</div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: C.green }}>{event.actual}</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.emerald }}>{event.actual}</div>
                       </div>
                     )}
                   </div>
@@ -3768,7 +4154,7 @@ function NewsPage({ showToast }) {
                 <div key={i} style={{
                   padding: 16, borderRadius: 12, textAlign: "center",
                   background: isToday ? `${C.accent}15` : "rgba(0,0,0,0.2)",
-                  border: `1px solid ${isToday ? C.accent : hasHighImpact ? C.red : C.border}`
+                  border: `1px solid ${isToday ? C.accent : hasHighImpact ? C.amber : C.border}`
                 }}>
                   <div style={{ fontSize: 11, color: C.textDim, marginBottom: 4, fontWeight: 600 }}>{day.day}</div>
                   <div style={{ fontSize: 22, fontWeight: 800, color: isToday ? C.accent : C.text, marginBottom: 8 }}>{day.date}</div>
@@ -3795,7 +4181,7 @@ function NewsPage({ showToast }) {
           {/* Legend */}
           <div style={{ display: "flex", gap: 16, marginTop: 20, justifyContent: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.red }} />
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.amber }} />
               <span style={{ fontSize: 11, color: C.textDim }}>High Impact</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -3803,7 +4189,7 @@ function NewsPage({ showToast }) {
               <span style={{ fontSize: 11, color: C.textDim }}>Medium Impact</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.green }} />
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.emerald }} />
               <span style={{ fontSize: 11, color: C.textDim }}>Low Impact</span>
             </div>
           </div>
@@ -3853,6 +4239,7 @@ function PreSessionPage({ onStartSession, setPage, spiritualMode = true }) {
   const [step, setStep] = useState(0);
   const [ardasDone, setArdasDone] = useState(false);
   const [analysis, setAnalysis] = useState({ bias: "", htf: "", mmxm: "", newsDay: "", notes: "" });
+  const [chartScreenshot, setChartScreenshot] = useState(null);
   const [rulesChecked, setRulesChecked] = useState(TRADING_RULES.map(() => false));
 
   const allRulesChecked = rulesChecked.every(Boolean);
@@ -3866,7 +4253,7 @@ function PreSessionPage({ onStartSession, setPage, spiritualMode = true }) {
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{
               width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-              background: step > i ? `linear-gradient(135deg, ${C.green}, #059669)` : step === i ? `linear-gradient(135deg, ${C.gold}, ${C.yellow})` : "rgba(0,0,0,0.4)",
+              background: step > i ? `linear-gradient(135deg, ${C.emerald}, #047857)` : step === i ? `linear-gradient(135deg, ${C.gold}, ${C.yellow})` : "rgba(0,0,0,0.4)",
               color: C.white, fontWeight: 700, fontSize: 14,
               border: step === i ? "none" : `1px solid ${C.border}`,
               boxShadow: step === i ? `0 0 30px ${C.goldGlow}` : "none",
@@ -3875,7 +4262,7 @@ function PreSessionPage({ onStartSession, setPage, spiritualMode = true }) {
               {step > i ? <Check size={18} /> : i + 1}
             </div>
             <span style={{ fontSize: 14, fontWeight: step === i ? 700 : 500, color: step === i ? C.text : C.textDim }}>{label}</span>
-            {i < 2 && <div style={{ width: 60, height: 2, background: step > i ? C.green : C.border, marginLeft: 12 }} />}
+            {i < 2 && <div style={{ width: 60, height: 2, background: step > i ? C.emerald : C.border, marginLeft: 12 }} />}
           </div>
         ))}
       </div>
@@ -3935,9 +4322,52 @@ function PreSessionPage({ onStartSession, setPage, spiritualMode = true }) {
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
             <Select label="Daily Bias" value={analysis.bias} onChange={v => setAnalysis({ ...analysis, bias: v })} options={["Bullish", "Bearish", "Neutral"]} />
-            <Select label="HTF Orderflow" value={analysis.htf} onChange={v => setAnalysis({ ...analysis, htf: v })} options={["Bullish", "Bearish", "Neutral", "Bar Code"]} />
+            <Select label="HTF Orderflow" value={analysis.htf} onChange={v => setAnalysis({ ...analysis, htf: v })} options={["Bullish", "Bearish", "Neutral", "Bar Code", "MMBM", "MMSM", "Consolidation"]} />
             <Select label="MMXM Model" value={analysis.mmxm} onChange={v => setAnalysis({ ...analysis, mmxm: v })} options={["MMBM", "MMSM"]} />
             <Select label="News Day?" value={analysis.newsDay} onChange={v => setAnalysis({ ...analysis, newsDay: v })} options={["NO", "YES", "FOMC", "NFP"]} />
+          </div>
+
+          {/* Chart Screenshot */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={S.label}>Chart Screenshot</label>
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <label style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10,
+                background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}`, cursor: "pointer",
+                fontSize: 13, color: C.textMuted, transition: "all 0.2s"
+              }}>
+                <Camera size={16} color={C.accent} />
+                <span>{chartScreenshot ? "Change Screenshot" : "Upload Screenshot"}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={e => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = ev => setChartScreenshot(ev.target.result);
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
+              {chartScreenshot && (
+                <button
+                  onClick={() => setChartScreenshot(null)}
+                  style={{
+                    padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.amber}40`,
+                    background: `${C.amber}15`, color: C.amber, fontSize: 12, cursor: "pointer"
+                  }}
+                >
+                  <X size={14} /> Remove
+                </button>
+              )}
+            </div>
+            {chartScreenshot && (
+              <div style={{ marginTop: 12, borderRadius: 12, overflow: "hidden", border: `1px solid ${C.border}`, maxWidth: 480 }}>
+                <img src={chartScreenshot} alt="Chart" style={{ width: "100%", display: "block" }} />
+              </div>
+            )}
           </div>
           <div style={{ marginBottom: 20 }}>
             <label style={S.label}>Pre-Market Notes</label>
@@ -3964,19 +4394,19 @@ function PreSessionPage({ onStartSession, setPage, spiritualMode = true }) {
             {TRADING_RULES.map((rule, i) => (
               <label key={i} style={{
                 display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 16px", borderRadius: 12,
-                background: rulesChecked[i] ? `${C.green}10` : "rgba(0,0,0,0.3)",
-                border: `1px solid ${rulesChecked[i] ? C.greenBorder : C.border}`, cursor: "pointer"
+                background: rulesChecked[i] ? `${C.emerald}10` : "rgba(0,0,0,0.3)",
+                border: `1px solid ${rulesChecked[i] ? C.emeraldBorder : C.border}`, cursor: "pointer"
               }}>
                 <input type="checkbox" checked={rulesChecked[i]}
                   onChange={e => { const c = [...rulesChecked]; c[i] = e.target.checked; setRulesChecked(c); }}
-                  style={{ width: 18, height: 18, accentColor: C.green, marginTop: 2 }} />
+                  style={{ width: 18, height: 18, accentColor: C.emerald, marginTop: 2 }} />
                 <span style={{ fontSize: 13, color: rulesChecked[i] ? C.text : C.textMuted }}>{rule}</span>
               </label>
             ))}
           </div>
           <div style={{ display: "flex", gap: 12 }}>
             <button onClick={() => setStep(1)} style={S.btn("ghost")}><ChevronLeft size={16} /> Back</button>
-            <button disabled={!allRulesChecked} onClick={() => { onStartSession(analysis); setPage("trading-floor"); }}
+            <button disabled={!allRulesChecked} onClick={() => { onStartSession({ ...analysis, chartScreenshot }); setPage("trading-floor"); }}
               style={{ ...S.btn("success", "lg"), flex: 1, justifyContent: "center", opacity: allRulesChecked ? 1 : 0.4, cursor: allRulesChecked ? "pointer" : "not-allowed" }}>
               <Play size={18} /> Begin Trading
             </button>
@@ -4082,7 +4512,7 @@ function JournalPage({ trades, onDeleteTrade, onUpdateTrade, showToast }) {
                   style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", cursor: isEditing ? "default" : "pointer" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                     <div style={{ width: 40, height: 40, borderRadius: 12, background: pnlBg(t.pnl), display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {t.direction === "Long" ? <ArrowUpRight size={18} color={C.green} /> : <ArrowDownRight size={18} color={C.red} />}
+                      {t.direction === "Long" ? <ArrowUpRight size={18} color={C.emerald} /> : <ArrowDownRight size={18} color={C.amber} />}
                     </div>
                     <div>
                       <div style={{ fontSize: 15, fontWeight: 700 }}>{t.ticker} — {t.direction}</div>
@@ -4121,7 +4551,7 @@ function JournalPage({ trades, onDeleteTrade, onUpdateTrade, showToast }) {
                       <div><div style={S.label}>Contracts</div><div style={{ fontSize: 14, fontWeight: 600 }}>{t.contracts || "—"}</div></div>
                       <div><div style={S.label}>Grade</div><div style={{ fontSize: 14, fontWeight: 600, color: gradeColor(t.grade) }}>{t.grade || "—"}</div></div>
                       <div><div style={S.label}>Entry Model</div><div style={{ fontSize: 14, fontWeight: 600 }}>{t.entryModel || "—"}</div></div>
-                      <div><div style={S.label}>Mistake</div><div style={{ fontSize: 14, fontWeight: 600, color: t.mistake ? C.red : C.textMuted }}>{t.mistake || "None"}</div></div>
+                      <div><div style={S.label}>Mistake</div><div style={{ fontSize: 14, fontWeight: 600, color: t.mistake ? C.amber : C.textMuted }}>{t.mistake || "None"}</div></div>
                     </div>
                     {t.notes && (
                       <div style={{ marginTop: 12, padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 8 }}>
@@ -4141,24 +4571,18 @@ function JournalPage({ trades, onDeleteTrade, onUpdateTrade, showToast }) {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, padding: "16px 0" }}>
                       <div>
                         <label style={S.label}>Grade</label>
-                        <select value={editData.grade || ""} onChange={e => setEditData({ ...editData, grade: e.target.value })} style={S.input}>
-                          <option value="">Select...</option>
-                          {SETUP_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
-                        </select>
+                        <input list="grade-options" value={editData.grade || ""} onChange={e => setEditData({ ...editData, grade: e.target.value })} style={S.input} placeholder="Select or type..." />
+                        <datalist id="grade-options">{SETUP_GRADES.map(g => <option key={g} value={g} />)}</datalist>
                       </div>
                       <div>
                         <label style={S.label}>Entry Model</label>
-                        <select value={editData.entryModel || ""} onChange={e => setEditData({ ...editData, entryModel: e.target.value })} style={S.input}>
-                          <option value="">Select...</option>
-                          {ENTRY_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
+                        <input list="entrymodel-options" value={editData.entryModel || ""} onChange={e => setEditData({ ...editData, entryModel: e.target.value })} style={S.input} placeholder="Select or type..." />
+                        <datalist id="entrymodel-options">{ENTRY_MODELS.map(m => <option key={m} value={m} />)}</datalist>
                       </div>
                       <div>
                         <label style={S.label}>Mistake (if any)</label>
-                        <select value={editData.mistake || ""} onChange={e => setEditData({ ...editData, mistake: e.target.value })} style={S.input}>
-                          <option value="">None</option>
-                          {MISTAKES.map(m => <option key={m} value={m}>{m}</option>)}
-                        </select>
+                        <input list="mistake-options" value={editData.mistake || ""} onChange={e => setEditData({ ...editData, mistake: e.target.value })} style={S.input} placeholder="Select or type..." />
+                        <datalist id="mistake-options">{MISTAKES.map(m => <option key={m} value={m} />)}</datalist>
                       </div>
                     </div>
                     <div style={{ marginTop: 12 }}>
@@ -4201,14 +4625,14 @@ function AICoachPage({ trades }) {
 
     // Win Rate Insight
     results.push({
-      icon: Target, color: wr >= 50 ? C.green : C.red,
+      icon: Target, color: wr >= 50 ? C.emerald : C.amber,
       title: wr >= 50 ? "Solid Win Rate" : "Win Rate Needs Work",
       text: `Your win rate is ${wr.toFixed(1)}%. ${wr >= 50 ? "Keep filtering for A+ setups." : "Focus on quality over quantity."}`
     });
 
     // Risk/Reward Insight
     results.push({
-      icon: TrendingUp, color: Number(rr) >= 2 ? C.green : C.yellow,
+      icon: TrendingUp, color: Number(rr) >= 2 ? C.emerald : C.yellow,
       title: Number(rr) >= 2 ? "Good Risk/Reward" : "Improve R:R Ratio",
       text: `Average R:R is 1:${rr}. ${Number(rr) >= 2 ? "Great job letting winners run!" : "Try to target at least 1:2."}`
     });
@@ -4221,7 +4645,7 @@ function AICoachPage({ trades }) {
     if (Object.keys(mistakeCount).length > 0) {
       const topMistake = Object.entries(mistakeCount).sort((a, b) => b[1] - a[1])[0];
       results.push({
-        icon: AlertTriangle, color: C.orange,
+        icon: AlertTriangle, color: C.amber,
         title: "Watch Out For",
         text: `"${topMistake[0]}" is your most common mistake (${topMistake[1]} times). Focus on avoiding this.`
       });
@@ -4232,7 +4656,7 @@ function AICoachPage({ trades }) {
     if (tradeDays > 0) {
       const avgTradesPerDay = (trades.length / tradeDays).toFixed(1);
       results.push({
-        icon: Activity, color: Number(avgTradesPerDay) <= 2 ? C.green : C.yellow,
+        icon: Activity, color: Number(avgTradesPerDay) <= 2 ? C.emerald : C.yellow,
         title: "Trading Frequency",
         text: `You average ${avgTradesPerDay} trades per day. ${Number(avgTradesPerDay) <= 2 ? "Good discipline!" : "Consider being more selective."}`
       });
@@ -4267,6 +4691,81 @@ function AICoachPage({ trades }) {
   );
 }
 
+// ─── ANALYTICS CHARTS (embedded in dashboard) ───────────────────────────────
+function AnalyticsCharts({ trades }) {
+  const winLossData = [
+    { name: "Wins", value: trades.filter(t => t.pnl > 0).length, color: C.emerald },
+    { name: "Losses", value: trades.filter(t => t.pnl < 0).length, color: C.amber }
+  ];
+  const pnlByTicker = TICKERS.map(ticker => ({
+    ticker,
+    pnl: trades.filter(t => t.ticker === ticker).reduce((s, t) => s + t.pnl, 0)
+  })).filter(d => trades.some(t => t.ticker === d.ticker));
+
+  return (
+    <div style={{ marginTop: 24 }}>
+      <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: C.text }}>
+        Performance Breakdown
+      </h2>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        {/* Win/Loss Donut */}
+        <div style={{ ...S.glassCard, padding: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: C.text }}>Win Rate</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <RePieChart>
+              <Pie
+                data={winLossData}
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={85}
+                paddingAngle={5}
+                dataKey="value"
+              >
+                {winLossData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </RePieChart>
+          </ResponsiveContainer>
+          <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.emerald }} />
+              <span style={{ fontSize: 12, color: C.textMuted }}>Wins ({winLossData[0].value})</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.amber }} />
+              <span style={{ fontSize: 12, color: C.textMuted }}>Losses ({winLossData[1].value})</span>
+            </div>
+          </div>
+        </div>
+
+        {/* P&L by Ticker */}
+        <div style={{ ...S.glassCard, padding: 20 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: C.text }}>P&L by Ticker</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={pnlByTicker}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+              <XAxis dataKey="ticker" stroke={C.textDim} fontSize={12} />
+              <YAxis stroke={C.textDim} fontSize={11} tickFormatter={v => `$${v}`} />
+              <Tooltip
+                contentStyle={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8 }}
+                formatter={(val) => [`$${Number(val).toLocaleString()}`, "P&L"]}
+              />
+              <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
+                {pnlByTicker.map((entry, i) => (
+                  <Cell key={i} fill={entry.pnl >= 0 ? C.emerald : C.amber} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ANALYTICS PAGE ────────────────────────────────────────────────────────
 function AnalyticsPage({ trades }) {
   // Calculate chart data
@@ -4288,8 +4787,8 @@ function AnalyticsPage({ trades }) {
   }, []);
 
   const winLossData = [
-    { name: "Wins", value: trades.filter(t => t.pnl > 0).length, color: C.green },
-    { name: "Losses", value: trades.filter(t => t.pnl < 0).length, color: C.red }
+    { name: "Wins", value: trades.filter(t => t.pnl > 0).length, color: C.emerald },
+    { name: "Losses", value: trades.filter(t => t.pnl < 0).length, color: C.amber }
   ];
 
   const pnlByTicker = TICKERS.map(ticker => ({
@@ -4325,11 +4824,11 @@ function AnalyticsPage({ trades }) {
       {/* Stats Overview */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 16, marginBottom: 24 }}>
         <MiniStat icon={DollarSign} label="Total P&L" value={fmt(stats.total)} color={pnlColor(stats.total)} />
-        <MiniStat icon={Target} label="Win Rate" value={`${stats.wr}%`} color={Number(stats.wr) >= 50 ? C.green : C.red} />
-        <MiniStat icon={TrendingUp} label="Avg Win" value={fmt(stats.avgWin)} color={C.green} />
-        <MiniStat icon={TrendingDown} label="Avg Loss" value={fmt(-stats.avgLoss)} color={C.red} />
+        <MiniStat icon={Target} label="Win Rate" value={`${stats.wr}%`} color={Number(stats.wr) >= 50 ? C.emerald : C.amber} />
+        <MiniStat icon={TrendingUp} label="Avg Win" value={fmt(stats.avgWin)} color={C.emerald} />
+        <MiniStat icon={TrendingDown} label="Avg Loss" value={fmt(-stats.avgLoss)} color={C.amber} />
         <MiniStat icon={Award} label="Best Trade" value={fmt(stats.best)} color={C.gold} />
-        <MiniStat icon={AlertTriangle} label="Worst Trade" value={fmt(stats.worst)} color={C.red} />
+        <MiniStat icon={AlertTriangle} label="Worst Trade" value={fmt(stats.worst)} color={C.amber} />
       </div>
 
       {/* Charts Row */}
@@ -4374,11 +4873,11 @@ function AnalyticsPage({ trades }) {
           </ResponsiveContainer>
           <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.green }} />
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.emerald }} />
               <span style={{ fontSize: 13, color: C.textMuted }}>Wins ({winLossData[0].value})</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.red }} />
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: C.amber }} />
               <span style={{ fontSize: 13, color: C.textMuted }}>Losses ({winLossData[1].value})</span>
             </div>
           </div>
@@ -4398,7 +4897,7 @@ function AnalyticsPage({ trades }) {
             />
             <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
               {pnlByTicker.map((entry, i) => (
-                <Cell key={i} fill={entry.pnl >= 0 ? C.green : C.red} />
+                <Cell key={i} fill={entry.pnl >= 0 ? C.emerald : C.amber} />
               ))}
             </Bar>
           </BarChart>
@@ -4439,6 +4938,155 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
     a.click();
     showToast("Full backup exported successfully!", "success");
   };
+
+  // ── CSV Import ──────────────────────────────────────────────────────────────
+  // Parses "30 Trades to Freedom" journal CSVs into app trade format
+  const importCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        let raw = event.target.result;
+        // Strip BOM
+        if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+        const lines = raw.split(/\r?\n/).filter(l => l.trim());
+
+        if (lines.length < 2) {
+          showToast("CSV file is empty or invalid", "error");
+          return;
+        }
+
+        // Parse header — normalize column names
+        const headers = parseCSVLine(lines[0]).map(h => h.trim().replace(/^"|"$/g, "").toLowerCase());
+        // Column index map (case-insensitive lookup)
+        const col = {};
+        headers.forEach((h, i) => { col[h] = i; });
+
+        const parseDate = (str) => {
+          if (!str || !str.trim()) return null;
+          const cleaned = str.trim().replace(/^"|"$/g, "").trim();
+          // Handle "April 2, 2026" format
+          const months = { january: 0, february: 1, march: 2, april: 3, may: 4, june: 5, july: 6, august: 7, september: 8, october: 9, november: 10, december: 11 };
+          const match = cleaned.match(/^([A-Za-z]+)\s+(\d+),?\s+(\d{4})$/);
+          if (match) {
+            const m = months[match[1].toLowerCase()];
+            if (m !== undefined) {
+              const d = new Date(Number(match[3]), m, Number(match[2]));
+              return d.toISOString().split("T")[0];
+            }
+          }
+          // Fallback: try native Date parsing
+          const fallback = new Date(cleaned);
+          return isNaN(fallback) ? null : fallback.toISOString().split("T")[0];
+        };
+
+        const toNum = (str) => {
+          if (!str || !str.trim()) return null;
+          const cleaned = str.trim().replace(/^"|"$/g, "").replace(/[$,]/g, "").trim();
+          const n = parseFloat(cleaned);
+          return isNaN(n) ? null : n;
+        };
+
+        const toArray = (str) => {
+          if (!str || !str.trim()) return [];
+          return str.split(",").map(s => s.trim()).filter(Boolean);
+        };
+
+        const get = (row, key) => {
+          const idx = col[key];
+          if (idx === undefined || idx >= row.length) return "";
+          return (row[idx] || "").trim().replace(/^"|"$/g, "");
+        };
+
+        const trades = [];
+        for (let i = 1; i < lines.length; i++) {
+          const row = parseCSVLine(lines[i]);
+          if (row.length < 3) continue;
+
+          // Skip "NO Trade" rows
+          const name = get(row, "name");
+          if (name && name.toLowerCase().includes("no trade")) continue;
+
+          const pnl = toNum(get(row, "profit/loss") || get(row, "pnl"));
+          if (pnl === null) continue; // Skip rows without P&L
+
+          const gradeRaw = get(row, "trade setup") || get(row, "grade");
+          const grade = gradeRaw ? gradeRaw.split(",")[0].trim() : "";
+
+          const trade = {
+            id: `import_${Date.now()}_${i}`,
+            date: parseDate(get(row, "date")) || new Date().toISOString().split("T")[0],
+            ticker: get(row, "ticker") || "MNQ",
+            pnl,
+            contracts: toNum(get(row, "contract size")) || 1,
+            direction: "",
+            entryModel: toArray(get(row, "entry model") || get(row, "entrymodel")).join(", "),
+            grade,
+            htfOrderflow: toArray(get(row, "htf orderflow") || get(row, "htforderflow")),
+            mmxm: toArray(get(row, "mmxm")),
+            smr: toArray(get(row, "smr time") || get(row, "smrtime")),
+            smrTime: get(row, "smr time") || get(row, "smrtime"),
+            liquidity: toArray(get(row, "liquidity")),
+            poi: get(row, "poi"),
+            toi: get(row, "toi"),
+            smt: get(row, "smt"),
+            newsDay: get(row, "news day") || get(row, "newsday"),
+            mistake: get(row, "trade took") || get(row, "tradetook"),
+            notes: get(row, "summry") || get(row, "learnings") || get(row, "summary") || get(row, "notes") || "",
+          };
+
+          trades.push(trade);
+        }
+
+        if (trades.length === 0) {
+          showToast("No valid trades found in CSV", "error");
+          return;
+        }
+
+        // Merge with existing trades (dedupe by date + ticker + pnl)
+        setTrades(prev => {
+          const merged = [...prev];
+          trades.forEach(t => {
+            // Simple dedupe: skip if same date + ticker + pnl already exists
+            const dup = merged.find(m => m.date === t.date && m.ticker === t.ticker && m.pnl === t.pnl);
+            if (!dup) merged.push(t);
+          });
+          return merged;
+        });
+        showToast(`Imported ${trades.length} trade${trades.length !== 1 ? "s" : ""}!`, "success");
+      } catch (err) {
+        console.error("CSV import error:", err);
+        showToast("Failed to parse CSV: " + err.message, "error");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // ── Robust CSV line parser (handles quoted commas) ──────────────────────────
+  function parseCSVLine(line) {
+    const result = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === "," && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  }
 
   const importJSON = (e) => {
     const file = e.target.files[0];
@@ -4594,11 +5242,17 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
             <Upload size={20} color={C.gold} /> Import Data
           </h3>
-          <p style={{ color: C.textMuted, marginBottom: 18, fontSize: 13 }}>Restore from a JSON backup file.</p>
-          <label style={{ ...S.btn("glass"), cursor: "pointer" }}>
-            <Upload size={16} /> Choose Backup File
-            <input type="file" accept=".json" onChange={importJSON} style={{ display: "none" }} />
-          </label>
+          <p style={{ color: C.textMuted, marginBottom: 14, fontSize: 13 }}>Restore from a JSON backup or import trades from a CSV journal.</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <label style={{ ...S.btn("glass"), cursor: "pointer" }}>
+              <Upload size={16} /> Import from CSV (Journal)
+              <input type="file" accept=".csv" onChange={importCSV} style={{ display: "none" }} />
+            </label>
+            <label style={{ ...S.btn("glass"), cursor: "pointer" }}>
+              <Upload size={16} /> Restore JSON Backup
+              <input type="file" accept=".json" onChange={importJSON} style={{ display: "none" }} />
+            </label>
+          </div>
         </div>
 
         {/* About */}
@@ -4617,6 +5271,620 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── MILESTONE HELPERS ─────────────────────────────────────────────────────
+
+// Pure function: given current data + existing milestones, returns updated milestones
+function checkMilestones({ trades, propAccounts, payouts, weeklyReviews, existingMilestones }) {
+  try {
+    const now = new Date().toISOString();
+    const existing = existingMilestones || [];
+    const getOrCreate = (id, def) => existing.find(m => m.id === id) || { id, ...def, achievedAt: null, current: 0 };
+
+    // Compute trade stats
+    const wins = trades.filter(t => t.pnl > 0);
+    const winRate = trades.length ? (wins.length / trades.length) * 100 : 0;
+    const bestTrade = trades.length ? Math.max(...trades.map(t => t.pnl)) : 0;
+    const dailyPnl = {};
+    trades.forEach(t => { dailyPnl[t.date] = (dailyPnl[t.date] || 0) + t.pnl; });
+    const sortedDates = Object.keys(dailyPnl).sort();
+    const weeklyPnl = {};
+    sortedDates.forEach(d => {
+      const weekStart = getWeekStart(new Date(d));
+      weeklyPnl[weekStart] = (weeklyPnl[weekStart] || 0) + dailyPnl[d];
+    });
+    const monthlyPnl = {};
+    sortedDates.forEach(d => {
+      const month = d.substring(0, 7);
+      monthlyPnl[month] = (monthlyPnl[month] || 0) + dailyPnl[d];
+    });
+    // Streak: consecutive profitable days ending on most recent date
+    let greenStreak = 0;
+    for (let i = sortedDates.length - 1; i >= 0; i--) {
+      if (dailyPnl[sortedDates[i]] > 0) greenStreak++;
+      else break;
+    }
+    // Journal streak: consecutive days with at least one trade
+    const tradeDates = [...new Set(trades.map(t => t.date))].sort();
+    let journalStreak = 0;
+    const today = new Date().toISOString().split("T")[0];
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = yesterday.toISOString().split("T")[0];
+    if (tradeDates.includes(today) || tradeDates.includes(yStr)) {
+      for (let i = tradeDates.length - 1; i >= 0; i--) {
+        const prev = tradeDates[i];
+        const prevDate = new Date(prev);
+        const expected = new Date(tradeDates[i + 1] || prev);
+        expected.setDate(expected.getDate() + 1);
+        if (prev === expected.toISOString().split("T")[0] || i === tradeDates.length - 1) journalStreak++;
+        else break;
+      }
+    }
+
+    // Prop firm stats
+    const fundedCount = propAccounts.filter(a => a.status === "funded").length;
+    const totalPayouts = payouts.reduce((s, p) => s + (p.amount || 0), 0);
+    const netProfit = totalPayouts - (propAccounts.reduce((s, a) => s + (a.balance || 0), 0) * 0.01);
+
+    // Week start helper
+    function getWeekStart(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = (day === 0 ? -6 : 1 - day);
+      d.setDate(d.getDate() + diff);
+      return d.toISOString().split("T")[0];
+    }
+    const thisWeekStart = getWeekStart(new Date());
+    const thisMonth = new Date().toISOString().substring(0, 7);
+
+    const updated = [
+      // ── Trading ──────────────────────────────────────────────
+      { ...getOrCreate("T1", { type: "trading", label: "First Green Day", description: "Closed a profitable day", target: 1, icon: "🌱", category: "Trading" }),
+        current: wins.length },
+      { ...getOrCreate("T2", { type: "trading", label: "3-Day Green Streak", description: "3 consecutive profitable days", target: 3, icon: "🔥", category: "Trading" }),
+        current: Math.min(greenStreak, 3) },
+      { ...getOrCreate("T3", { type: "trading", label: "5-Day Green Streak", description: "5 consecutive profitable days", target: 5, icon: "💎", category: "Trading" }),
+        current: Math.min(greenStreak, 5) },
+      { ...getOrCreate("T4", { type: "trading", label: "10-Day Green Streak", description: "10 consecutive profitable days", target: 10, icon: "👑", category: "Trading" }),
+        current: Math.min(greenStreak, 10) },
+      { ...getOrCreate("T5", { type: "trading", label: "50% Win Rate", description: "Hit 50% win rate", target: 50, icon: "📊", category: "Trading" }),
+        current: Math.round(winRate) },
+      { ...getOrCreate("T6", { type: "trading", label: "60% Win Rate", description: "Hit 60% win rate", target: 60, icon: "📈", category: "Trading" }),
+        current: Math.round(winRate) },
+      { ...getOrCreate("T7", { type: "trading", label: "70% Win Rate", description: "Hit 70% win rate", target: 70, icon: "🚀", category: "Trading" }),
+        current: Math.round(winRate) },
+      { ...getOrCreate("T8", { type: "trading", label: "First A+ Trade", description: "First A+ graded trade", target: 1, icon: "⭐", category: "Trading" }),
+        current: trades.filter(t => t.grade === "A+").length },
+      { ...getOrCreate("T9", { type: "trading", label: "Best Trade", description: "Beat your all-time best", target: 1, icon: "🏅", category: "Trading" }),
+        current: bestTrade },
+      { ...getOrCreate("T10", { type: "trading", label: "$1K Profitable Week", description: "$1,000+ profit in a week", target: 1000, icon: "💰", category: "Trading" }),
+        current: Math.max(...Object.values(weeklyPnl), 0) },
+      { ...getOrCreate("T11", { type: "trading", label: "$5K Profitable Month", description: "$5,000+ profit in a month", target: 5000, icon: "📊", category: "Trading" }),
+        current: Math.max(...Object.values(monthlyPnl), 0) },
+      { ...getOrCreate("T12", { type: "trading", label: "$10K Profitable Month", description: "$10,000+ profit in a month", target: 10000, icon: "🏆", category: "Trading" }),
+        current: Math.max(...Object.values(monthlyPnl), 0) },
+      { ...getOrCreate("T13", { type: "trading", label: "100 Trades Logged", description: "100 trades in journal", target: 100, icon: "📓", category: "Trading" }),
+        current: trades.length },
+      { ...getOrCreate("T14", { type: "trading", label: "500 Trades Logged", description: "500 trades in journal", target: 500, icon: "📚", category: "Trading" }),
+        current: trades.length },
+      { ...getOrCreate("T15", { type: "trading", label: "Journal Streak 7", description: "Journaled 7 days in a row", target: 7, icon: "✍️", category: "Trading" }),
+        current: journalStreak },
+      { ...getOrCreate("T16", { type: "trading", label: "Journal Streak 30", description: "Journaled 30 days in a row", target: 30, icon: "📅", category: "Trading" }),
+        current: journalStreak },
+      // ── Prop Firm ───────────────────────────────────────────
+      { ...getOrCreate("P1", { type: "propfirm", label: "First Evaluation", description: "Added first evaluation account", target: 1, icon: "🏦", category: "Prop Firm" }),
+        current: propAccounts.length },
+      { ...getOrCreate("P2", { type: "propfirm", label: "First Funded", description: "First account became funded", target: 1, icon: "✅", category: "Prop Firm" }),
+        current: fundedCount },
+      { ...getOrCreate("P3", { type: "propfirm", label: "3 Funded Accounts", description: "3 simultaneous funded accounts", target: 3, icon: "🌟", category: "Prop Firm" }),
+        current: fundedCount },
+      { ...getOrCreate("P4", { type: "propfirm", label: "First Payout", description: "Received first payout", target: 1, icon: "💸", category: "Prop Firm" }),
+        current: payouts.length },
+      { ...getOrCreate("P5", { type: "propfirm", label: "$1K Total Payouts", description: "$1,000 in total payouts", target: 1000, icon: "💵", category: "Prop Firm" }),
+        current: totalPayouts },
+      { ...getOrCreate("P6", { type: "propfirm", label: "$5K Total Payouts", description: "$5,000 in total payouts", target: 5000, icon: "💴", category: "Prop Firm" }),
+        current: totalPayouts },
+      { ...getOrCreate("P7", { type: "propfirm", label: "$10K Total Payouts", description: "$10,000 in total payouts", target: 10000, icon: "💰", category: "Prop Firm" }),
+        current: totalPayouts },
+      { ...getOrCreate("P8", { type: "propfirm", label: "Net Profit Positive", description: "Net profit goes positive", target: 1, icon: "📈", category: "Prop Firm" }),
+        current: netProfit > 0 ? 1 : 0 },
+      // ── Habit ────────────────────────────────────────────────
+      { ...getOrCreate("H1", { type: "habit", label: "Pre-Session Planner", description: "First pre-session plan written", target: 1, icon: "🧘", category: "Habit" }),
+        current: propAccounts.length > 0 || trades.length > 0 ? 1 : 0 },
+      { ...getOrCreate("H2", { type: "habit", label: "7-Day Journal Streak", description: "Logged trades 7 days straight", target: 7, icon: "📆", category: "Habit" }),
+        current: journalStreak },
+      { ...getOrCreate("H3", { type: "habit", label: "30-Day Journal Streak", description: "Logged trades 30 days straight", target: 30, icon: "🗓️", category: "Habit" }),
+        current: journalStreak },
+      { ...getOrCreate("H4", { type: "habit", label: "90-Day Journal Streak", description: "Logged trades 90 days straight", target: 90, icon: "🏅", category: "Habit" }),
+        current: journalStreak },
+      { ...getOrCreate("H5", { type: "habit", label: "Week Review Done", description: "Completed first weekly review", target: 1, icon: "📝", category: "Habit" }),
+        current: weeklyReviews.length },
+      { ...getOrCreate("H6", { type: "habit", label: "4 Weeks Reviewed", description: "Completed 4 weekly reviews", target: 4, icon: "📖", category: "Habit" }),
+        current: weeklyReviews.length },
+      { ...getOrCreate("H7", { type: "habit", label: "12 Weeks Reviewed", description: "Completed 12 weekly reviews", target: 12, icon: "🎓", category: "Habit" }),
+        current: weeklyReviews.length },
+      { ...getOrCreate("H8", { type: "habit", label: "Zero B Trades", description: "A whole week with no B trades", target: 1, icon: "🎯", category: "Habit" }),
+        current: 0 },
+    ];
+
+    // Mark achievements
+    return updated.map(m => {
+      const wasAchieved = !!existing.find(e => e.id === m.id && e.achievedAt);
+      const isAchieved = m.target !== null && m.current >= m.target;
+      if (isAchieved && !wasAchieved) {
+        return { ...m, achievedAt: now };
+      }
+      return m;
+    });
+  } catch (e) {
+    return existingMilestones || [];
+  }
+}
+
+// ─── MILESTONE STRIP ────────────────────────────────────────────────────────
+function MilestoneStrip({ milestones = [], onViewAll }) {
+  if (!milestones || milestones.length === 0) return null;
+  const achieved = milestones.filter(m => m.achievedAt);
+  const top = milestones.slice(0, 6);
+  return (
+    <div style={{ ...S.glassCard, padding: 16, marginTop: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Trophy size={16} color={C.yellow} />
+          <span style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Milestones
+          </span>
+          <span style={{ fontSize: 10, color: C.textDim }}>{achieved.length}/{milestones.length}</span>
+        </div>
+        <button onClick={onViewAll} style={{ background: "none", border: "none", cursor: "pointer", color: C.accentLight, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+          View All <ChevronRight size={12} />
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+        {top.map(m => {
+          const done = !!m.achievedAt;
+          const pct = m.target ? Math.min(100, Math.round((m.current / m.target) * 100)) : 0;
+          return (
+            <div key={m.id} style={{
+              flexShrink: 0, minWidth: 120,
+              padding: "10px 12px", borderRadius: 12,
+              border: `1px solid ${done ? C.yellow + "60" : C.border}`,
+              background: done ? `${C.yellow}10` : "rgba(0,0,0,0.2)",
+              boxShadow: done ? `0 0 12px ${C.yellow}30` : "none",
+            }}>
+              <div style={{ fontSize: 16, marginBottom: 4 }}>{m.icon}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: done ? C.yellow : C.textMuted, marginBottom: done ? 4 : 6, lineHeight: 1.2 }}>
+                {m.label}
+              </div>
+              {done ? (
+                <div style={{ fontSize: 9, color: C.emerald }}>✓ Achieved</div>
+              ) : (
+                <>
+                  <div style={{ height: 3, borderRadius: 2, background: C.border, overflow: "hidden", marginBottom: 3 }}>
+                    <div style={{ height: "100%", width: `${pct}%`, background: C.accent, borderRadius: 2, transition: "width 0.3s ease" }} />
+                  </div>
+                  <div style={{ fontSize: 9, color: C.textDim }}>{pct}%</div>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── MILESTONES PAGE ─────────────────────────────────────────────────────────
+function MilestonesPage({ milestones = [], trades, propAccounts, payouts, weeklyReviews, setPage }) {
+  const categories = ["Trading", "Prop Firm", "Habit"];
+  const grouped = categories.map(cat => ({
+    cat,
+    items: (milestones || []).filter(m => m.category === cat)
+  }));
+
+  return (
+    <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+        <div>
+          <h1 style={{ fontSize: 26, fontWeight: 800 }}>🏆 Your Achievements</h1>
+          <p style={{ fontSize: 13, color: C.textMuted, marginTop: 4 }}>
+            {milestones.filter(m => m.achievedAt).length} of {milestones.length} milestones unlocked
+          </p>
+        </div>
+        <button onClick={() => setPage("dashboard")} style={{ ...S.btn("ghost", "sm") }}>
+          ← Back
+        </button>
+      </div>
+
+      {grouped.map(({ cat, items }) => (
+        <div key={cat} style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>
+            {cat}
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+            {items.map(m => {
+              const done = !!m.achievedAt;
+              const pct = m.target ? Math.min(100, Math.round((m.current / m.target) * 100)) : 0;
+              return (
+                <div key={m.id} style={{
+                  ...S.glassCard, padding: 20,
+                  border: done ? `1px solid ${C.yellow}50` : `1px solid ${C.border}`,
+                  boxShadow: done ? `0 0 20px ${C.yellow}20` : "none",
+                  transition: "all 0.3s ease"
+                }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 12,
+                      background: done ? `${C.yellow}20` : C.bgCardAlt,
+                      border: done ? `1px solid ${C.yellow}50` : `1px solid ${C.border}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 22, flexShrink: 0,
+                      boxShadow: done ? `0 0 16px ${C.yellow}40` : "none"
+                    }}>
+                      {done ? <Trophy size={20} color={C.yellow} /> : m.icon}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: done ? C.yellow : C.text, marginBottom: 4 }}>
+                        {m.label}
+                      </div>
+                      <div style={{ fontSize: 11, color: C.textDim, lineHeight: 1.4 }}>
+                        {m.description}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 14 }}>
+                    {done ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.emerald }} />
+                        <span style={{ fontSize: 11, color: C.emerald, fontWeight: 600 }}>
+                          Achieved {m.achievedAt ? new Date(m.achievedAt).toLocaleDateString() : ""}
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ height: 4, borderRadius: 2, background: C.border, overflow: "hidden", marginBottom: 6 }}>
+                          <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${C.accent}, ${C.purple})`, borderRadius: 2, transition: "width 0.4s ease" }} />
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span style={{ fontSize: 10, color: C.textDim }}>
+                            {typeof m.current === "number" && m.target > 1 ? `${m.current} / ${m.target}` : `${pct}%`}
+                          </span>
+                          <span style={{ fontSize: 10, color: C.textDim }}>
+                            {typeof m.current === "number" && m.target > 1 ? `${pct}%` : ""}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── WEEKLY REVIEW MODAL ─────────────────────────────────────────────────────
+function WeeklyReviewModal({ trades, milestones, weeklyReviews, onClose, onSubmit }) {
+  const [grade, setGrade] = useState("");
+  const [wentWell, setWentWell] = useState("");
+  const [improve, setImprove] = useState("");
+  const [nextGoal, setNextGoal] = useState("");
+  const [nextAvoid, setNextAvoid] = useState("");
+
+  // Compute week range
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+  const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+  const fmt = d => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const weekRange = `${fmt(monday)}–${fmt(sunday)}, ${today.getFullYear()}`;
+
+  // Week stats
+  const weekTrades = trades.filter(t => {
+    const d = new Date(t.date);
+    return d >= monday && d <= today;
+  });
+  const weekPnl = weekTrades.reduce((s, t) => s + t.pnl, 0);
+  const weekWr = weekTrades.length ? ((weekTrades.filter(t => t.pnl > 0).length / weekTrades.length) * 100).toFixed(0) : 0;
+  const weekBest = weekTrades.length ? Math.max(...weekTrades.map(t => t.pnl)) : 0;
+  const weekWorst = weekTrades.length ? Math.min(...weekTrades.map(t => t.pnl)) : 0;
+
+  // Milestones this week
+  const thisWeekStart = monday.toISOString().split("T")[0];
+  const milestonesThisWeek = (milestones || []).filter(m => m.achievedAt && m.achievedAt >= thisWeekStart);
+
+  const gradeInfo = { A: { color: C.emerald, label: "Excellent" }, B: { color: C.accent, label: "Good" }, C: { color: C.yellow, label: "Average" }, D: { color: C.amber, label: "Poor" }, F: { color: C.amber, label: "Failed" } };
+
+  const handleSubmit = () => {
+    if (!grade) return;
+    onSubmit({
+      id: Date.now(),
+      weekStart: thisWeekStart,
+      grade,
+      wentWell,
+      improve,
+      nextWeekGoal: nextGoal,
+      nextWeekAvoid: nextAvoid,
+      milestonesHit: milestonesThisWeek.map(m => m.id),
+      weekPnl, weekWr, weekTrades: weekTrades.length
+    });
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+      padding: 16, animation: "fadeIn 0.3s ease-out"
+    }}>
+      <div style={{
+        width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto",
+        background: C.bgCard, borderRadius: 24, border: `1px solid ${C.border}`,
+        padding: 32, boxShadow: `0 24px 64px rgba(0,0,0,0.6)`
+      }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>📋 Week in Review</h2>
+            <p style={{ fontSize: 13, color: C.textMuted }}>{weekRange}</p>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: C.textDim, padding: 4 }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Week Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 24, padding: 16, borderRadius: 14, background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}` }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: weekPnl >= 0 ? C.emerald : C.amber }}>{weekTrades.length}</div>
+            <div style={{ fontSize: 10, color: C.textDim }}>Trades</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: weekPnl >= 0 ? C.emerald : C.amber }}>{weekWr}%</div>
+            <div style={{ fontSize: 10, color: C.textDim }}>Win Rate</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: weekPnl >= 0 ? C.emerald : C.amber }}>
+              {weekPnl >= 0 ? "+" : ""}{weekPnl.toLocaleString()}
+            </div>
+            <div style={{ fontSize: 10, color: C.textDim }}>P&L</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: C.yellow }}>{weekBest > 0 ? "+" : ""}{weekBest}</div>
+            <div style={{ fontSize: 10, color: C.textDim }}>Best Trade</div>
+          </div>
+        </div>
+
+        {/* Grade */}
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 10 }}>
+            Grade the Week
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {["A", "B", "C", "D", "F"].map(g => {
+              const info = gradeInfo[g];
+              const active = grade === g;
+              return (
+                <button key={g} onClick={() => setGrade(g)} style={{
+                  flex: 1, padding: "12px 8px", borderRadius: 12, border: `2px solid ${active ? info.color : C.border}`,
+                  background: active ? `${info.color}20` : "transparent", cursor: "pointer",
+                  transition: "all 0.2s ease", boxShadow: active ? `0 0 16px ${info.color}40` : "none"
+                }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: active ? info.color : C.textDim }}>{g}</div>
+                  <div style={{ fontSize: 9, color: active ? info.color : C.textDim, marginTop: 2 }}>{info.label}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Went Well */}
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 8 }}>
+            What Went Well
+          </label>
+          <textarea value={wentWell} onChange={e => setWentWell(e.target.value)} rows={3} style={{
+            ...S.input, resize: "none", lineHeight: 1.6
+          }} placeholder="The pre-session planning really helped today..." />
+        </div>
+
+        {/* Improve */}
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 8 }}>
+            What to Improve
+          </label>
+          <textarea value={improve} onChange={e => setImprove(e.target.value)} rows={3} style={{
+            ...S.input, resize: "none", lineHeight: 1.6
+          }} placeholder="I let one trade run too long and got emotional..." />
+        </div>
+
+        {/* Next Week */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 8 }}>
+              Next Week's Goal
+            </label>
+            <input value={nextGoal} onChange={e => setNextGoal(e.target.value)} style={S.input} placeholder="Stick to my 2-trade rule" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 8 }}>
+              What to Avoid
+            </label>
+            <input value={nextAvoid} onChange={e => setNextAvoid(e.target.value)} style={S.input} placeholder="Adding to losing trades" />
+          </div>
+        </div>
+
+        {/* Milestone Moment */}
+        {milestonesThisWeek.length > 0 ? (
+          <div style={{ padding: 16, borderRadius: 14, background: `${C.yellow}10`, border: `1px solid ${C.yellow}40`, marginBottom: 24 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.yellow, marginBottom: 8 }}>
+              🎉 {milestonesThisWeek.length} milestone{milestonesThisWeek.length > 1 ? "s" : ""} hit this week!
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {milestonesThisWeek.map(m => (
+                <span key={m.id} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 20, background: `${C.yellow}20`, color: C.yellow }}>
+                  {m.icon} {m.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: 16, borderRadius: 14, background: C.bgCardAlt, border: `1px solid ${C.border}`, marginBottom: 24, textAlign: "center" }}>
+            <p style={{ fontSize: 12, color: C.textDim }}>Keep pushing — you're building something real.</p>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: "flex", gap: 12 }}>
+          <button onClick={onClose} style={{ ...S.btn("ghost"), flex: 1 }}>
+            Skip for now
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!grade}
+            style={{
+              ...S.btn("primary"), flex: 2, opacity: grade ? 1 : 0.5,
+              cursor: grade ? "pointer" : "not-allowed"
+            }}
+          >
+            Submit Review →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── WEEKLY REVIEW PAGE ──────────────────────────────────────────────────────
+function WeeklyReviewPage({ trades, weeklyReviews, setPage }) {
+  const gradeColors = { A: C.emerald, B: C.accent, C: C.yellow, D: C.amber, F: C.amber };
+  const recent = [...(weeklyReviews || [])].reverse().slice(0, 12);
+  const [expanded, setExpanded] = useState(null);
+
+  // Weekly P&L from trades
+  const weeklyData = useMemo(() => {
+    const byWeek = {};
+    trades.forEach(t => {
+      const d = new Date(t.date);
+      const day = d.getDay();
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - ((day + 6) % 7));
+      const key = monday.toISOString().split("T")[0];
+      byWeek[key] = (byWeek[key] || 0) + t.pnl;
+    });
+    return Object.entries(byWeek)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-8)
+      .map(([week, pnl]) => ({ week: week.substring(5), pnl }));
+  }, [trades]);
+
+  return (
+    <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+        <div>
+          <h1 style={{ fontSize: 26, fontWeight: 800 }}>📅 Weekly Reviews</h1>
+          <p style={{ fontSize: 13, color: C.textMuted, marginTop: 4 }}>
+            {weeklyReviews.length} review{weeklyReviews.length !== 1 ? "s" : ""} completed
+          </p>
+        </div>
+        <button onClick={() => setPage("dashboard")} style={{ ...S.btn("ghost", "sm") }}>
+          ← Back
+        </button>
+      </div>
+
+      {/* Weekly P&L Chart */}
+      {weeklyData.length > 0 && (
+        <div style={{ ...S.glassCard, marginBottom: 28 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>Weekly P&L</h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={weeklyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+              <XAxis dataKey="week" stroke={C.textDim} fontSize={11} />
+              <YAxis stroke={C.textDim} fontSize={11} />
+              <Tooltip contentStyle={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8 }} labelStyle={{ color: C.text }} />
+              <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
+                {weeklyData.map((d, i) => (
+                  <Cell key={i} fill={d.pnl >= 0 ? C.emerald : C.amber} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Review Grid */}
+      {recent.length === 0 ? (
+        <div style={{ ...S.glassCard, textAlign: "center", padding: 60, color: C.textDim }}>
+          <Calendar size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
+          <p style={{ fontSize: 14 }}>No reviews yet. Complete your first weekly review!</p>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+          {recent.map(r => {
+            const isOpen = expanded === r.id;
+            const weekStart = r.weekStart ? new Date(r.weekStart) : null;
+            const weekEnd = weekStart ? new Date(weekStart) : null;
+            if (weekEnd) weekEnd.setDate(weekEnd.getDate() + 6);
+            const dateRange = weekStart ? `${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${weekEnd ? weekEnd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}` : "";
+            return (
+              <div key={r.id} style={{ ...S.glassCard, padding: 20, cursor: "pointer", transition: "all 0.2s ease" }} onClick={() => setExpanded(isOpen ? null : r.id)}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
+                      background: `${gradeColors[r.grade]}20`, border: `1px solid ${gradeColors[r.grade]}50`,
+                      fontSize: 16, fontWeight: 900, color: gradeColors[r.grade]
+                    }}>
+                      {r.grade}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, color: C.textDim }}>{dateRange}</div>
+                      {r.weekTrades !== undefined && (
+                        <div style={{ fontSize: 10, color: C.textDim }}>{r.weekTrades} trades · {r.weekWr}% WR · {r.weekPnl >= 0 ? "+" : ""}{r.weekPnl?.toLocaleString()}</div>
+                      )}
+                    </div>
+                  </div>
+                  {isOpen ? <ChevronDown size={14} color={C.textDim} /> : <ChevronUp size={14} color={C.textDim} />}
+                </div>
+                {isOpen && (
+                  <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10, animation: "slideDownExpand 0.2s ease-out" }}>
+                    {r.wentWell && (
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: C.emerald, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>What Went Well</div>
+                        <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>{r.wentWell}</div>
+                      </div>
+                    )}
+                    {r.improve && (
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: C.amber, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>To Improve</div>
+                        <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>{r.improve}</div>
+                      </div>
+                    )}
+                    {r.nextWeekGoal && (
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Next Goal</div>
+                        <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>{r.nextWeekGoal}</div>
+                      </div>
+                    )}
+                    {r.nextWeekAvoid && (
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: C.amber, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Avoid</div>
+                        <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>{r.nextWeekAvoid}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -4660,6 +5928,12 @@ export default function App() {
     } catch(e) {}
     return 250;
   });
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [payouts, setPayouts] = useState([]);
+  const [milestones, setMilestones] = useState([]);
+  const [weeklyReviews, setWeeklyReviews] = useState([]);
+  const [showWeeklyReview, setShowWeeklyReview] = useState(false);
 
   // Toast helper - defined first to avoid closure issues
   const showToast = (message, type = "info") => {
@@ -4681,14 +5955,53 @@ export default function App() {
         if (data.weeklyGoal) setWeeklyGoal(data.weeklyGoal);
         if (data.monthlyGoal) setMonthlyGoal(data.monthlyGoal);
         if (data.dailyLossLimit) setDailyLossLimit(data.dailyLossLimit);
+        if (data.subscriptions) setSubscriptions(data.subscriptions);
+        if (data.expenses) setExpenses(data.expenses);
+        if (data.payouts) setPayouts(data.payouts);
+        if (data.milestones) setMilestones(data.milestones);
+        if (data.weeklyReviews) setWeeklyReviews(data.weeklyReviews);
+        if (data.weeklyReviews && data.weeklyReviews.length > 0) {
+          const last = data.weeklyReviews[data.weeklyReviews.length - 1];
+          const lastWeekStart = last.weekStart ? new Date(last.weekStart) : null;
+          const today = new Date();
+          const dayOfWeek = today.getDay();
+          const isMonday = dayOfWeek === 1;
+          const lastWeekMonday = new Date(today);
+          lastWeekMonday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+          lastWeekMonday.setHours(0,0,0,0);
+          if (isMonday && (!lastWeekStart || new Date(lastWeekStart) < lastWeekMonday)) {
+            setShowWeeklyReview(true);
+          }
+        }
       }
     } catch (e) {}
   }, []);
 
   // Save to localStorage
   useEffect(() => {
-    localStorage.setItem("87capital_v4", JSON.stringify({ trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit }));
-  }, [trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit]);
+    localStorage.setItem("87capital_v4", JSON.stringify({ trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, subscriptions, expenses, payouts, milestones, weeklyReviews }));
+  }, [trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, subscriptions, expenses, payouts, milestones, weeklyReviews]);
+
+  // ── Initialize + detect milestones — runs whenever data changes ─────────────────
+  useEffect(() => {
+    // checkMilestones is a pure function that handles init (empty existing) and update
+    const updated = checkMilestones({ trades, propAccounts, payouts, weeklyReviews, existingMilestones: milestones });
+    const newOnes = updated.filter(u => {
+      const old = milestones.find(m => m.id === u.id);
+      return u.achievedAt && (!old || !old.achievedAt);
+    });
+    if (newOnes.length > 0) {
+      setMilestones(updated);
+      newOnes.forEach(m => showToast(`🏆 Milestone unlocked: ${m.label}`, "success"));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trades.length, propAccounts.length, payouts.length, weeklyReviews.length]);
+
+  const onWeeklyReviewSubmit = useCallback((review) => {
+    setWeeklyReviews(prev => [...prev, review]);
+    setShowWeeklyReview(false);
+    showToast("Week reviewed. Onward to next week.", "success");
+  }, []);
 
   const onStartSession = (analysis) => {
     setSession({ active: true, startTime: Date.now(), trades: 0, analysis });
@@ -4721,8 +6034,8 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case "trading-floor": return <TradingFloorPage session={session} onAddTrade={onAddTrade} setPage={setPage} showToast={showToast} trades={trades} />;
-      case "dashboard": return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} dailyLossLimit={dailyLossLimit} />;
-      case "prop-firms": return <PropFirmsPage propAccounts={propAccounts} setPropAccounts={setPropAccounts} showToast={showToast} />;
+      case "dashboard": return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} dailyLossLimit={dailyLossLimit} milestones={milestones} weeklyReviews={weeklyReviews} />;
+      case "prop-firms": return <PropFirmsPage propAccounts={propAccounts} setPropAccounts={setPropAccounts} showToast={showToast} subscriptions={subscriptions} setSubscriptions={setSubscriptions} expenses={expenses} setExpenses={setExpenses} payouts={payouts} setPayouts={setPayouts} />;
       case "news": return <NewsPage showToast={showToast} />;
       case "presession": return <PreSessionPage onStartSession={onStartSession} setPage={setPage} spiritualMode={spiritualMode} />;
       case "postsession": return <PostSessionPage setPage={setPage} showToast={showToast} trades={trades} onAddTrade={onAddTrade} spiritualMode={spiritualMode} />;
@@ -4730,14 +6043,16 @@ export default function App() {
       case "analytics": return <AnalyticsPage trades={trades} />;
       case "ai": return <AICoachPage trades={trades} />;
       case "settings": return <SettingsPage trades={trades} setTrades={setTrades} propAccounts={propAccounts} showToast={showToast} spiritualMode={spiritualMode} setSpiritualMode={setSpiritualMode} dailyGoal={dailyGoal} setDailyGoal={setDailyGoal} weeklyGoal={weeklyGoal} setWeeklyGoal={setWeeklyGoal} monthlyGoal={monthlyGoal} setMonthlyGoal={setMonthlyGoal} dailyLossLimit={dailyLossLimit} setDailyLossLimit={setDailyLossLimit} />;
-      default: return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} dailyLossLimit={dailyLossLimit} />;
+      case "milestones": return <MilestonesPage milestones={milestones} trades={trades} propAccounts={propAccounts} payouts={payouts} weeklyReviews={weeklyReviews} setPage={setPage} />;
+      case "weekly-review": return <WeeklyReviewPage trades={trades} weeklyReviews={weeklyReviews} setPage={setPage} />;
+      default: return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} dailyLossLimit={dailyLossLimit} milestones={milestones} weeklyReviews={weeklyReviews} />;
     }
   };
 
   return (
     <div style={{
       background: C.bg, color: C.text, fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif", minHeight: "100vh",
-      backgroundImage: `radial-gradient(circle at 0% 0%, ${C.accentGlow} 0%, transparent 50%), radial-gradient(circle at 100% 100%, ${C.purpleGlow} 0%, transparent 50%)`
+      backgroundImage: `radial-gradient(circle at 0% 0%, ${C.accentGlow} 0%, transparent 60%), radial-gradient(circle at 100% 100%, ${C.purpleGlow} 0%, transparent 60%)`
     }}>
       <TopBar session={session} />
       <Sidebar 
@@ -4776,6 +6091,17 @@ export default function App() {
       
       {/* Toast */}
       <Toast toast={toast} onDismiss={() => setToast(null)} />
+
+      {/* Weekly Review Modal */}
+      {showWeeklyReview && (
+        <WeeklyReviewModal
+          trades={trades}
+          milestones={milestones}
+          weeklyReviews={weeklyReviews}
+          onClose={() => setShowWeeklyReview(false)}
+          onSubmit={onWeeklyReviewSubmit}
+        />
+      )}
       
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

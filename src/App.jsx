@@ -5839,6 +5839,155 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
     showToast(`Exported ${trades.length} trades to CSV`, "success");
   };
 
+  const exportPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const stats = computeStats(trades);
+      const pageW = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      let y = 20;
+
+      // Title
+      doc.setFontSize(22);
+      doc.setTextColor(59, 130, 246);
+      doc.text("87Capital | Trading OS V4.5", margin, y);
+      y += 8;
+      doc.setFontSize(10);
+      doc.setTextColor(120, 113, 108);
+      doc.text(`Report generated: ${new Date().toLocaleDateString()} | ${trades.length} trades analyzed`, margin, y);
+      y += 16;
+
+      // Performance Summary
+      doc.setFontSize(14);
+      doc.setTextColor(59, 130, 246);
+      doc.text("Performance Summary", margin, y);
+      y += 8;
+      doc.setDrawColor(59, 130, 246);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pageW - margin, y);
+      y += 8;
+
+      const metrics = [
+        ["Total P&L", fmt(stats.totalPnl), stats.totalPnl >= 0 ? "green" : "amber"],
+        ["Win Rate", `${stats.winRate.toFixed(0)}%`, stats.winRate >= 50 ? "green" : "amber"],
+        ["Profit Factor", stats.profitFactor.toFixed(2), stats.profitFactor >= 1.5 ? "green" : "amber"],
+        ["Sharpe Ratio", stats.sharpeRatio.toFixed(2), stats.sharpeRatio >= 1 ? "green" : "amber"],
+        ["Sortino Ratio", stats.sortinoRatio.toFixed(2), stats.sortinoRatio >= 1 ? "green" : "amber"],
+        ["Total Trades", `${trades.length}`, "blue"],
+        ["Avg Winner", fmt(stats.avgWinner), "green"],
+        ["Avg Loser", fmt(stats.avgLoser), "amber"],
+        ["Best Trade", fmt(stats.bestTrade), "green"],
+        ["Worst Trade", fmt(stats.worstTrade), "amber"],
+        ["Max Drawdown", `${fmtUsd(stats.maxDrawdown)} (${stats.maxDrawdownPercent.toFixed(0)}%)`, "amber"],
+        ["Win/Loss Ratio", `1:${stats.avgRR.toFixed(2)}`, stats.avgRR >= 2 ? "green" : "amber"],
+        ["Expectancy", fmt(stats.expectancy), stats.expectancy >= 0 ? "green" : "amber"],
+        ["Current Streak", `${stats.currentStreak} ${stats.currentStreak === 1 ? "day" : "days"}`, stats.currentStreak > 0 ? "green" : "amber"],
+        ["Profit Days", `${stats.profitDays}/${stats.totalDays} (${stats.profitDayPercent.toFixed(0)}%)`, stats.profitDayPercent >= 50 ? "green" : "amber"],
+      ];
+
+      doc.setFontSize(8);
+      // Two-column layout
+      const col1 = metrics.slice(0, 8);
+      const col2 = metrics.slice(8);
+      col1.forEach((m, i) => {
+        const x = margin;
+        const rowY = y + i * 6;
+        doc.setTextColor(120, 113, 108);
+        doc.text(m[0], x, rowY);
+        doc.setTextColor(m[2] === "green" ? 16 : m[2] === "amber" ? 217 : 59, m[2] === "green" ? 185 : m[2] === "amber" ? 119 : 130, m[2] === "green" ? 129 : m[2] === "amber" ? 6 : 246);
+        doc.text(m[1], x + 75, rowY);
+      });
+      col2.forEach((m, i) => {
+        const x = pageW / 2 + 10;
+        const rowY = y + i * 6;
+        doc.setTextColor(120, 113, 108);
+        doc.text(m[0], x, rowY);
+        doc.setTextColor(m[2] === "green" ? 16 : m[2] === "amber" ? 217 : 59, m[2] === "green" ? 185 : m[2] === "amber" ? 119 : 130, m[2] === "green" ? 129 : m[2] === "amber" ? 6 : 246);
+        doc.text(m[1], x + 75, rowY);
+      });
+      y += Math.max(col1.length, col2.length) * 6 + 12;
+
+      // Best Setup
+      if (stats.setupPerformance?.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor(59, 130, 246);
+        doc.text("Setup Performance", margin, y);
+        y += 8;
+        doc.setDrawColor(59, 130, 246);
+        doc.line(margin, y, pageW - margin, y);
+        y += 8;
+        doc.setFontSize(9);
+        stats.setupPerformance.slice(0, 5).forEach((s, i) => {
+          doc.setTextColor(120, 113, 108);
+          doc.text(`${i + 1}. ${s.name}`, margin, y);
+          doc.setTextColor(s.totalPnl >= 0 ? 16 : 217, s.totalPnl >= 0 ? 185 : 119, s.totalPnl >= 0 ? 129 : 6);
+          doc.text(`${fmt(s.totalPln || s.totalPnl)} (${s.winRate.toFixed(0)}% WR, ${s.count} trades)`, margin + 80, y);
+          y += 6;
+        });
+        y += 8;
+      }
+
+      // Top Mistakes
+      const mistakeCount = {};
+      trades.forEach(t => { if (t.mistake) mistakeCount[t.mistake] = (mistakeCount[t.mistake] || 0) + 1; });
+      if (Object.keys(mistakeCount).length > 0) {
+        const mistakePnl = {};
+        trades.forEach(t => { if (t.mistake) mistakePnl[t.mistake] = (mistakePnl[t.mistake] || 0) + (t.pnl || 0); });
+        if (y > 240) { doc.addPage(); y = 20; }
+        doc.setFontSize(14);
+        doc.setTextColor(217, 119, 6);
+        doc.text("Areas to Improve", margin, y);
+        y += 8;
+        doc.setDrawColor(217, 119, 6);
+        doc.line(margin, y, pageW - margin, y);
+        y += 8;
+        doc.setFontSize(9);
+        Object.entries(mistakeCount).sort((a, b) => b[1] - a[1]).slice(0, 5).forEach(([m, c]) => {
+          doc.setTextColor(120, 113, 108);
+          doc.text(`• ${m}`, margin, y);
+          doc.setTextColor(217, 119, 6);
+          doc.text(`${c}${c > 1 ? " times" : " time"}`, margin + 80, y);
+          y += 6;
+        });
+        y += 8;
+      }
+
+      // Day of Week Performance
+      if (y > 240) { doc.addPage(); y = 20; }
+      doc.setFontSize(14);
+      doc.setTextColor(59, 130, 246);
+      doc.text("Day of Week Performance", margin, y);
+      y += 8;
+      doc.setDrawColor(59, 130, 246);
+      doc.line(margin, y, pageW - margin, y);
+      y += 8;
+      doc.setFontSize(9);
+      ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].forEach(day => {
+        const d = stats.pnlByDayOfWeek?.[day];
+        if (d && d.count > 0) {
+          doc.setTextColor(120, 113, 108);
+          doc.text(day, margin, y);
+          doc.setTextColor(d.pnl >= 0 ? 16 : 217, d.pnl >= 0 ? 185 : 119, d.pnl >= 0 ? 129 : 6);
+          doc.text(`${fmt(d.pnl)} (${d.count} trades)`, margin + 60, y);
+          y += 6;
+        }
+      });
+
+      // Footer
+      y = Math.max(y, doc.internal.pageSize.getHeight() - 20);
+      doc.setFontSize(8);
+      doc.setTextColor(168, 162, 158);
+      doc.text("Generated by 87Capital Trading OS V4.5", margin, y);
+
+      doc.save(`87capital-report-${new Date().toISOString().split("T")[0]}.pdf`);
+      showToast("PDF report downloaded!", "success");
+    } catch (e) {
+      console.error("PDF error:", e);
+      showToast("Error generating PDF", "error");
+    }
+  };
+
+  // Export JSON backup
   const exportJSON = () => {
     const data = {
       version: "4.0",
@@ -6145,6 +6294,9 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
           </h3>
           <p style={{ color: C.textMuted, marginBottom: 18, fontSize: 13 }}>Download your trading data for backup or analysis.</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <button onClick={exportPDF} style={S.btn("success")}>
+              <FileText size={16} /> Generate PDF Performance Report
+            </button>
             <button onClick={exportCSV} style={S.btn("primary")}>
               <Download size={16} /> Export Trades (CSV)
             </button>

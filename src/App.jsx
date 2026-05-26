@@ -4729,82 +4729,273 @@ function JournalPage({ trades, onDeleteTrade, onUpdateTrade, showToast }) {
 
 // ─── AI COACH PAGE ─────────────────────────────────────────────────────────
 function AICoachPage({ trades }) {
-  const insights = trades.length < 3 ? [
-    { icon: Brain, title: "Need More Data", text: "Log at least 3 trades for AI insights.", color: C.gold }
-  ] : (() => {
+  const stats = useMemo(() => trades.length >= 3 ? computeStats(trades) : null, [trades]);
+
+  const insights = useMemo(() => {
+    if (!stats || trades.length < 3) {
+      return [{
+        icon: Brain, title: "Need More Data", text: "Log at least 3 trades for AI insights.",
+        color: C.gold, tip: "Start journaling your trades to unlock personalized coaching."
+      }];
+    }
+
     const wins = trades.filter(t => t.pnl > 0);
     const losses = trades.filter(t => t.pnl < 0);
-    const wr = (wins.length / trades.length) * 100;
-    const avgWin = wins.length ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
-    const avgLoss = losses.length ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0;
+    const wr = stats.winRate;
+    const avgWin = stats.avgWinner;
+    const avgLoss = stats.avgLoser;
     const rr = avgLoss > 0 ? (avgWin / avgLoss).toFixed(2) : "—";
-    
     const results = [];
 
-    // Win Rate Insight
+    // 1. Win Rate & Profit Factor
     results.push({
-      icon: Target, color: wr >= 50 ? C.emerald : C.amber,
-      title: wr >= 50 ? "Solid Win Rate" : "Win Rate Needs Work",
-      text: `Your win rate is ${wr.toFixed(1)}%. ${wr >= 50 ? "Keep filtering for A+ setups." : "Focus on quality over quantity."}`
+      icon: Target,
+      color: wr >= 50 ? C.emerald : C.amber,
+      title: wr >= 50 ? `Solid ${wr.toFixed(0)}% Win Rate` : `${wr.toFixed(0)}% Win Rate — Can Improve`,
+      text: `You've won ${wins.length}/${trades.length} trades. Profit factor: ${stats.profitFactor.toFixed(2)}. ${wr >= 50 ? "Great consistency!" : "Focus on higher-probability setups."}`,
+      metric: `${wr.toFixed(0)}%`,
+      tip: wr >= 50 ? "You're winning more than you lose. Now work on increasing winner size." : "Try filtering for only A+ setups with 3+ confluences."
     });
 
-    // Risk/Reward Insight
+    // 2. Risk/Reward
     results.push({
-      icon: TrendingUp, color: Number(rr) >= 2 ? C.emerald : C.yellow,
-      title: Number(rr) >= 2 ? "Good Risk/Reward" : "Improve R:R Ratio",
-      text: `Average R:R is 1:${rr}. ${Number(rr) >= 2 ? "Great job letting winners run!" : "Try to target at least 1:2."}`
+      icon: TrendingUp,
+      color: Number(rr) >= 2 ? C.emerald : Number(rr) >= 1 ? C.yellow : C.amber,
+      title: Number(rr) >= 2 ? `1:${rr} Avg R:R — Excellent` : `1:${rr} Avg R:R — Needs Work`,
+      text: `Your average win is ${fmt(avgWin)} vs average loss of ${fmt(avgLoss)}. ${Number(rr) >= 2 ? "You're letting winners run!" : "Target at least 1:2 risk-to-reward."}`,
+      metric: `1:${rr}`,
+      tip: Number(rr) >= 2 ? "Great! Now maintain this discipline across all trades." : "Set a minimum 1:2 R:R before entry. Use hard take-profit levels."
     });
 
-    // Mistake Pattern
+    // 3. Sharpe Ratio
+    if (stats.sharpeRatio !== 0) {
+      results.push({
+        icon: Gauge,
+        color: stats.sharpeRatio >= 1 ? C.emerald : stats.sharpeRatio > 0 ? C.yellow : C.amber,
+        title: stats.sharpeRatio >= 1 ? `${stats.sharpeRatio.toFixed(2)} Sharpe — Strong` : `${stats.sharpeRatio.toFixed(2)} Sharpe`,
+        text: `Risk-adjusted returns. ${stats.sharpeRatio >= 1 ? "Above 1.0 is professional grade. Keep it up!" : "Below 1.0 means returns aren't compensating risk well."}`,
+        metric: stats.sharpeRatio.toFixed(2),
+        tip: stats.sharpeRatio < 1 ? "Cut losses faster and avoid oversized positions to improve risk-adjusted returns." : "Excellent — you're being compensated for the risk you take."
+      });
+    }
+
+    // 4. Best/Worst Day of Week
+    const dayPnl = { Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0, Friday: 0 };
+    const dayCount = { Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0, Friday: 0 };
+    trades.forEach(t => {
+      if (t.date) {
+        const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date(t.date).getDay()];
+        if (dayPnl[dayName] !== undefined) {
+          dayPnl[dayName] += t.pnl || 0;
+          dayCount[dayName]++;
+        }
+      }
+    });
+    const bestDay = Object.entries(dayPnl).filter(([_, v]) => dayCount[_] > 0).sort((a, b) => b[1] - a[1])[0];
+    const worstDay = Object.entries(dayPnl).filter(([_, v]) => dayCount[_] > 0).sort((a, b) => a[1] - b[1])[0];
+    if (bestDay) {
+      results.push({
+        icon: Calendar,
+        color: C.emerald,
+        title: `Best Day: ${bestDay[0]}`,
+        text: `You've made ${fmt(bestDay[1])} on ${bestDay[0]}s across ${dayCount[bestDay[0]]} sessions. ${worstDay ? `Avoid heavy trading on ${worstDay[0]}s (${fmt(worstDay[1])}).` : ""}`,
+        metric: fmt(bestDay[1]),
+        tip: `Focus your best setups on ${bestDay[0]}s. If ${worstDay && worstDay[0]} is bad, consider lighter sizing.`
+      });
+    }
+
+    // 5. Mistake Pattern
     const mistakeCount = {};
     trades.forEach(t => {
       if (t.mistake) mistakeCount[t.mistake] = (mistakeCount[t.mistake] || 0) + 1;
     });
     if (Object.keys(mistakeCount).length > 0) {
-      const topMistake = Object.entries(mistakeCount).sort((a, b) => b[1] - a[1])[0];
+      const sortedMistakes = Object.entries(mistakeCount).sort((a, b) => b[1] - a[1]);
+      const topMistake = sortedMistakes[0];
+      const mistakePnl = {};
+      trades.forEach(t => {
+        if (t.mistake) mistakePnl[t.mistake] = (mistakePnl[t.mistake] || 0) + (t.pnl || 0);
+      });
       results.push({
-        icon: AlertTriangle, color: C.amber,
-        title: "Watch Out For",
-        text: `"${topMistake[0]}" is your most common mistake (${topMistake[1]} times). Focus on avoiding this.`
+        icon: AlertTriangle,
+        color: C.amber,
+        title: `Top Mistake: "${topMistake[0]}" (${topMistake[1]}x)`,
+        text: `This mistake cost you ~${fmt(Math.abs(mistakePnl[topMistake[0]] || 0))} total. ${sortedMistakes.length > 1 ? `Also watch: ${sortedMistakes.slice(1, 3).map(([m, c]) => `${m} (${c}x)`).join(", ")}.` : ""}`,
+        metric: `${topMistake[1]}x`,
+        tip: `Set a rule: if you catch yourself "${topMistake[0]}", close the terminal for 30 min. Pre-commit to this.`
       });
     }
 
-    // Session Count
-    const tradeDays = [...new Set(trades.map(t => t.date))].length;
-    if (tradeDays > 0) {
-      const avgTradesPerDay = (trades.length / tradeDays).toFixed(1);
+    // 6. Best Setup Performance
+    const bestSetup = stats.setupPerformance?.[0];
+    if (bestSetup && bestSetup.count >= 2) {
       results.push({
-        icon: Activity, color: Number(avgTradesPerDay) <= 2 ? C.emerald : C.yellow,
-        title: "Trading Frequency",
-        text: `You average ${avgTradesPerDay} trades per day. ${Number(avgTradesPerDay) <= 2 ? "Good discipline!" : "Consider being more selective."}`
+        icon: Crosshair,
+        color: bestSetup.totalPnl >= 0 ? C.emerald : C.amber,
+        title: `Top Setup: ${bestSetup.name}`,
+        text: `${bestSetup.name}: ${bestSetup.count} trades, ${fmt(bestSetup.totalPnl)} total, ${bestSetup.winRate.toFixed(0)}% WR. ${bestSetup.totalPnl > 0 ? "Keep running this setup!" : "Consider avoiding this setup."}`,
+        metric: fmt(bestSetup.totalPnl),
+        tip: bestSetup.totalPnl > 0 ? `Double down on ${bestSetup.name} — it's your edge.` : `Re-evaluate your ${bestSetup.name} criteria or stop taking it.`
+      });
+    }
+
+    // 7. Most Profitable Hour
+    const hourlyEntries = Object.entries(stats.pnlByHour || {}).filter(([_, d]) => d.count > 0);
+    if (hourlyEntries.length > 0) {
+      const bestHour = hourlyEntries.sort((a, b) => b[1].pnl - a[1].pnl)[0];
+      results.push({
+        icon: Clock,
+        color: bestHour[1].pnl >= 0 ? C.emerald : C.amber,
+        title: `Best Hour: ${bestHour[0]}:00`,
+        text: `${bestHour[0]}:00 — ${fmt(bestHour[1].pnl)} from ${bestHour[1].count} trades (${bestHour[1].wins}W / ${bestHour[1].losses}L).`,
+        metric: fmt(bestHour[1].pnl),
+        tip: `Prioritize trading during ${bestHour[0]}:00–${Number(bestHour[0]) + 1}:00. That's your edge window.`
+      });
+    }
+
+    // 8. Drawdown Warning
+    if (stats.maxDrawdownPercent > 15) {
+      results.push({
+        icon: TrendingDown,
+        color: C.amber,
+        title: `${stats.maxDrawdownPercent.toFixed(0)}% Max Drawdown — Warning`,
+        text: `Your account has drawn down ${stats.maxDrawdownPercent.toFixed(0)}% from peak (${fmtUsd(stats.maxDrawdown)}). ${stats.maxDrawdownPercent > 25 ? "This is critical. Consider reducing position size." : "Keep an eye on this."}`,
+        metric: `${stats.maxDrawdownPercent.toFixed(0)}%`,
+        tip: "Set a hard daily loss limit. If you hit it, walk away. No exceptions."
       });
     }
 
     return results;
-  })();
+  }, [trades, stats]);
+
+  const [activeTab, setActiveTab] = useState("insights");
+  const [customQuestion, setCustomQuestion] = useState("");
+  const [aiResponse, setAiResponse] = useState("");
+
+  const askAI = () => {
+    if (!customQuestion.trim()) return;
+    const stats = computeStats(trades);
+    const context = `Trading stats: ${trades.length} trades, ${fmt(stats.totalPnl)} total P&L, ${stats.winRate.toFixed(0)}% WR, ${fmt(stats.avgWinner)} avg win, ${fmt(stats.avgLoser)} avg loss, ${stats.sharpeRatio.toFixed(2)} Sharpe, ${stats.maxDrawdownPercent.toFixed(0)}% max DD, ${stats.profitFactor.toFixed(2)} PF. Best hour: ${Object.entries(stats.pnlByHour).filter(([_, d]) => d.count > 0).sort((a, b) => b[1].pnl - a[1].pnl)[0]?.[0] || "N/A"}:00.`;
+    
+    // Generate response based on common questions
+    const q = customQuestion.toLowerCase();
+    if (q.includes("improve") || q.includes("better")) {
+      setAiResponse(`Based on your ${trades.length} trades:\n\n• Your top mistake is "${Object.entries(trades.reduce((a, t) => (t.mistake ? {...a, [t.mistake]: (a[t.mistake]||0)+1} : a), {})).sort((a, b) => b[1] - a[1])[0]?.[0] || "none"}". Fix this first.\n• Your win rate is ${stats.winRate.toFixed(0)}%. Target 60%+ by being more selective.\n• Your avg R:R is 1:${stats.avgRR.toFixed(2)}. Target 1:2+.\n• Your Sharpe is ${stats.sharpeRatio.toFixed(2)} (1.0+ is professional).\n\nFocus on eliminating your top mistake and only taking setups with 3+ confluences.`);
+    } else if (q.includes("mistake") || q.includes("wrong")) {
+      const mistakeData = Object.entries(trades.reduce((a, t) => (t.mistake ? {...a, [t.mistake]: (a[t.mistake]||0)+1} : a), {})).sort((a, b) => b[1] - a[1]);
+      setAiResponse(`Your mistake breakdown:\n${mistakeData.map(([m, c]) => `• ${m}: ${c} times (${(c/trades.length*100).toFixed(0)}% of trades)`).join("\n")}\n\nTip: Pick ONE mistake to eliminate this week. Track it daily.`);
+    } else if (q.includes("best") || q.includes("setup") || q.includes("strategy")) {
+      const bestSetup = stats.setupPerformance?.[0];
+      if (bestSetup) {
+        setAiResponse(`Your most profitable setup is "${bestSetup.name}":\n• ${bestSetup.count} trades\n• ${fmt(bestSetup.totalPnl)} total P&L\n• ${bestSetup.winRate.toFixed(0)}% win rate\n• ${fmt(bestSetup.avgPnl)} avg per trade\n\nConsider focusing exclusively on this setup for the next 10 trades.`);
+      } else {
+        setAiResponse("You haven't logged enough setup data yet. Start tagging your trades with entry models for personalized insights.");
+      }
+    } else if (q.includes("session") || q.includes("day") || q.includes("time")) {
+      const bestHour = Object.entries(stats.pnlByHour).filter(([_, d]) => d.count > 0).sort((a, b) => b[1].pnl - a[1].pnl)[0];
+      const dayPnl = {Monday: 0, Tuesday: 0, Wednesday: 0, Thursday: 0, Friday: 0};
+      trades.forEach(t => { if (t.date) { const d = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date(t.date).getDay()]; if (dayPnl[d] !== undefined) dayPnl[d] += t.pnl||0; }});
+      const bestDay = Object.entries(dayPnl).filter(([_, v]) => v !== 0).sort((a, b) => b[1] - a[1])[0];
+      setAiResponse(`Best trading hour: ${bestHour?.[0] || "N/A"}:00 (${fmt(bestHour?.[1].pnl || 0)})\nBest day of week: ${bestDay?.[0] || "N/A"} (${fmt(bestDay?.[1] || 0)})\n\nSchedule your most important trades during these peak windows.`);
+    } else {
+      setAiResponse(`Here's your snapshot:\n\n📊 ${trades.length} total trades\n💰 ${fmt(stats.totalPnl)} total P&L\n🎯 ${stats.winRate.toFixed(0)}% win rate\n📈 ${stats.sharpeRatio.toFixed(2)} Sharpe ratio\n⬇️ ${stats.maxDrawdownPercent.toFixed(0)}% max drawdown\n💡 Best setup: ${stats.setupPerformance?.[0]?.name || "N/A"}\n⏰ Best hour: ${Object.entries(stats.pnlByHour).filter(([_, d]) => d.count > 0).sort((a, b) => b[1].pnl - a[1].pnl)[0]?.[0] || "N/A"}:00`);
+    }
+  };
 
   return (
     <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
       <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8 }}>AI Coach</h1>
-      <p style={{ color: C.textMuted, marginBottom: 28 }}>Data-driven insights from your trading journal.</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {insights.map((ins, i) => (
-          <div key={i} style={{ ...S.glassCard, borderLeft: `4px solid ${ins.color}` }}>
-            <div style={{ display: "flex", gap: 16 }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: 12, background: `${ins.color}15`,
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
-              }}>
-                <ins.icon size={24} color={ins.color} />
-              </div>
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{ins.title}</h3>
-                <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6 }}>{ins.text}</p>
-              </div>
-            </div>
-          </div>
+      <p style={{ color: C.textMuted, marginBottom: 28 }}>Actionable insights from your trading data. Ask questions, find patterns, improve.</p>
+
+      {/* Tab Bar */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "rgba(0,0,0,0.3)", padding: 4, borderRadius: C.radiusBtn, width: "fit-content" }}>
+        {["insights", "ask"].map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)} style={{
+            padding: "10px 20px", borderRadius: 8, border: "none", cursor: "pointer",
+            background: activeTab === tab ? C.accent : "transparent",
+            color: activeTab === tab ? "#fff" : C.textMuted, fontWeight: 600, fontSize: 13,
+            fontFamily: "Inter", transition: "all 0.2s"
+          }}>
+            {tab === "insights" ? "🎯 Auto Insights" : "💬 Ask AI"}
+          </button>
         ))}
       </div>
+
+      {activeTab === "insights" ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Summary Banner */}
+          {trades.length >= 3 && (
+            <div style={{ ...S.glassCard, padding: 20, background: `linear-gradient(135deg, ${C.accent}08, ${C.accentDark}05)`, borderLeft: `3px solid ${C.accent}` }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 4 }}>Performance Summary</div>
+                  <div style={{ fontSize: 20, fontWeight: 800 }}>{fmt(stats.totalPnl)} <span style={{ fontSize: 13, fontWeight: 600, color: C.textMuted }}>across {trades.length} trades</span></div>
+                </div>
+                <div style={{ display: "flex", gap: 20 }}>
+                  {[
+                    { label: "Win Rate", value: `${stats.winRate.toFixed(0)}%`, color: stats.winRate >= 50 ? C.emerald : C.amber },
+                    { label: "Sharpe", value: stats.sharpeRatio.toFixed(2), color: stats.sharpeRatio >= 1 ? C.emerald : C.amber },
+                    { label: "Profit Factor", value: stats.profitFactor.toFixed(2), color: stats.profitFactor >= 1.5 ? C.emerald : C.amber },
+                    { label: "Max DD", value: `${stats.maxDrawdownPercent.toFixed(0)}%`, color: stats.maxDrawdownPercent > 20 ? C.amber : C.emerald },
+                  ].map(m => (
+                    <div key={m.label} style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 10, color: C.textDim, textTransform: "uppercase", marginBottom: 2 }}>{m.label}</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: m.color }}>{m.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {insights.map((ins, i) => (
+            <div key={i} style={{ ...S.glassCard, borderLeft: `3px solid ${ins.color}`, padding: 20 }}>
+              <div style={{ display: "flex", gap: 16 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10, background: `${ins.color}12`,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                }}>
+                  <ins.icon size={22} color={ins.color} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{ins.title}</div>
+                    {ins.metric && (
+                      <div style={{ fontSize: 20, fontWeight: 800, color: ins.color }}>{ins.metric}</div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, marginBottom: 8 }}>{ins.text}</div>
+                  <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, background: `${ins.color}08`, border: `1px solid ${ins.color}15`, color: ins.color }}>
+                    💡 {ins.tip}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* Ask AI Tab */
+        <div style={{ ...S.glassCard, padding: 24 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Ask About Your Trading</h3>
+          <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 16 }}>Try: "How can I improve?" or "What's my best setup?" or "Where do I make mistakes?"</p>
+          <div style={{ display: "flex", gap: 12 }}>
+            <input value={customQuestion} onChange={e => setCustomQuestion(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && askAI()}
+              style={{ ...S.input, flex: 1 }} placeholder="Ask anything about your trading data..."
+            />
+            <button onClick={askAI} style={S.btn("primary")}><Send size={16} /> Ask</button>
+          </div>
+          {aiResponse && (
+            <div style={{
+              marginTop: 16, padding: 16, borderRadius: C.radiusCard,
+              background: `linear-gradient(135deg, ${C.accent}08, ${C.accentDark}05)`,
+              border: `1px solid ${C.border}`, fontSize: 13, color: C.text, lineHeight: 1.8, whiteSpace: "pre-wrap"
+            }}>
+              {aiResponse}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

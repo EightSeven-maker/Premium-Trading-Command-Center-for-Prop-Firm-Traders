@@ -1774,6 +1774,7 @@ function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
       items: [
         { id: "analytics", icon: BarChart3, label: "Analytics" },
         { id: "ai", icon: Brain, label: "AI Coach" },
+        { id: "psychology", icon: Brain, label: "Psychology" },
       ]
     },
     {
@@ -5399,6 +5400,159 @@ function DrawdownChart({ trades }) {
   );
 }
 
+// ─── PSYCHOLOGY DASHBOARD ─────────────────────────────────────────────────────
+function PsychologyDashboard({ trades }) {
+  // Extract emotional data from trade notes and post-session data
+  const psychData = useMemo(() => {
+    const emotionMap = {};
+    const mistakeMap = {};
+    let disciplineScore = 0;
+    let totalWithData = 0;
+
+    trades.forEach(t => {
+      // Track emotions if stored
+      if (t.emotion) {
+        emotionMap[t.emotion] = (emotionMap[t.emotion] || 0) + 1;
+      }
+      // Track mistakes
+      if (t.mistake) {
+        mistakeMap[t.mistake] = (mistakeMap[t.mistake] || 0) + 1;
+      }
+      // Discipline: followedPlan field
+      if (t.followedPlan !== undefined) {
+        disciplineScore += t.followedPlan ? 1 : 0;
+        totalWithData++;
+      }
+    });
+
+    const topEmotions = Object.entries(emotionMap).sort((a, b) => b[1] - a[1]);
+    const topMistakes = Object.entries(mistakeMap).sort((a, b) => b[1] - a[1]);
+    const disciplinePct = totalWithData > 0 ? (disciplineScore / totalWithData) * 100 : 0;
+
+    // Calculate emotion impact on P&L
+    const emotionPnl = {};
+    trades.forEach(t => {
+      if (t.emotion && t.pnl) {
+        emotionPnl[t.emotion] = (emotionPnl[t.emotion] || 0) + t.pnl;
+      }
+    });
+
+    return { topEmotions, topMistakes, disciplinePct, emotionPnl, totalWithData, totalTrades: trades.length };
+  }, [trades]);
+
+  if (trades.length === 0) {
+    return (
+      <div style={{ ...S.glassCard, padding: 24, textAlign: "center" }}>
+        <Brain size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
+        <div style={{ color: C.textDim, fontSize: 13 }}>Log trades to see your psychology patterns</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ ...S.glassCard, padding: 20 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          <Brain size={14} color={C.accent} /> Trading Psychology
+        </h3>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
+          <div style={{ padding: 16, borderRadius: C.radiusCard, background: "rgba(0,0,0,0.3)", textAlign: "center" }}>
+            <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Discipline Score</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: psychData.disciplinePct >= 80 ? C.emerald : psychData.disciplinePct >= 50 ? C.yellow : C.amber }}>
+              {psychData.totalWithData > 0 ? `${psychData.disciplinePct.toFixed(0)}%` : "—"}
+            </div>
+            <div style={{ fontSize: 10, color: C.textDim, marginTop: 4 }}>followed plan</div>
+          </div>
+          <div style={{ padding: 16, borderRadius: C.radiusCard, background: "rgba(0,0,0,0.3)", textAlign: "center" }}>
+            <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Journaling</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: C.accent }}>{trades.length}</div>
+            <div style={{ fontSize: 10, color: C.textDim, marginTop: 4 }}>total trades logged</div>
+          </div>
+          <div style={{ padding: 16, borderRadius: C.radiusCard, background: "rgba(0,0,0,0.3)", textAlign: "center" }}>
+            <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Unique Mistakes</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: psychData.topMistakes.length > 0 ? C.amber : C.emerald }}>
+              {psychData.topMistakes.length || 0}
+            </div>
+            <div style={{ fontSize: 10, color: C.textDim, marginTop: 4 }}>patterns detected</div>
+          </div>
+        </div>
+
+        {/* Top Emotions */}
+        {psychData.topEmotions.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={S.label}>Emotional State Breakdown</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {psychData.topEmotions.slice(0, 5).map(([emotion, count]) => {
+                const pnl = psychData.emotionPnl[emotion] || 0;
+                return (
+                  <div key={emotion} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: 8, background: "rgba(0,0,0,0.2)" }}>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{emotion}</div>
+                    <div style={{ fontSize: 11, color: C.textMuted }}>{count}x</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: pnl >= 0 ? C.emerald : C.amber }}>
+                      {fmt(pnl)}
+                    </div>
+                    <div style={{ width: 80, height: 4, borderRadius: 2, background: C.border }}>
+                      <div style={{ width: `${(count / psychData.topEmotions[0][1]) * 100}%`, height: "100%", borderRadius: 2, background: pnl >= 0 ? C.emerald : C.amber }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Top Mistakes */}
+        {psychData.topMistakes.length > 0 && (
+          <div>
+            <div style={S.label}>Most Common Mistakes</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {psychData.topMistakes.slice(0, 5).map(([mistake, count]) => (
+                <div key={mistake} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: 8, background: `${C.amber}08` }}>
+                  <AlertTriangle size={14} color={C.amber} />
+                  <div style={{ flex: 1, fontSize: 13 }}>{mistake}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.amber }}>{count}x</div>
+                  <div style={{ width: 60, height: 4, borderRadius: 2, background: C.border }}>
+                    <div style={{ width: `${(count / psychData.topMistakes[0][1]) * 100}%`, height: "100%", borderRadius: 2, background: C.amber }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Mindset Tips */}
+      <div style={{ ...S.glassCard, padding: 20 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+          <Sparkles size={14} color={C.accent} /> Mindset Tips
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {psychData.disciplinePct < 80 && (
+            <div style={{ padding: "10px 14px", borderRadius: 8, background: `${C.amber}08`, border: `1px solid ${C.amber}15`, fontSize: 12, color: C.textMuted }}>
+              💡 Your discipline score is {psychData.disciplinePct.toFixed(0)}%. Try pre-committing to your rules before each session.
+            </div>
+          )}
+          {psychData.topMistakes.length > 0 && (
+            <div style={{ padding: "10px 14px", borderRadius: 8, background: `${C.amber}08`, border: `1px solid ${C.amber}15`, fontSize: 12, color: C.textMuted }}>
+              🎯 Focus on eliminating 1 mistake per week. Your top mistake "{psychData.topMistakes[0]?.[0]}" occurs {psychData.topMistakes[0]?.[1]} times.
+            </div>
+          )}
+          {psychData.topEmotions.length > 0 && (
+            <div style={{ padding: "10px 14px", borderRadius: 8, background: `${C.accent}08`, border: `1px solid ${C.accent}15`, fontSize: 12, color: C.textMuted }}>
+              🧠 Your most common emotion is "{psychData.topEmotions[0]?.[0]}". {psychData.emotionPnl[psychData.topEmotions[0]?.[0]] >= 0 ? "This state works for you!" : "Try centering before your next trade."}
+            </div>
+          )}
+          {psychData.totalWithData === 0 && (
+            <div style={{ padding: "10px 14px", borderRadius: 8, background: `${C.accent}08`, border: `1px solid ${C.accent}15`, fontSize: 12, color: C.textMuted }}>
+              📝 Log your emotional state and whether you followed your plan in the Post-Session to unlock psychology insights.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── SETTINGS PAGE ──────────────────────────────────────────────────────────
 function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMode, setSpiritualMode, dailyGoal, setDailyGoal, weeklyGoal, setWeeklyGoal, monthlyGoal, setMonthlyGoal, dailyLossLimit, setDailyLossLimit }) {
   const [showGoals, setShowGoals] = useState(false);
@@ -6533,6 +6687,7 @@ export default function App() {
       case "postsession": return <PostSessionPage setPage={setPage} showToast={showToast} trades={trades} onAddTrade={onAddTrade} spiritualMode={spiritualMode} />;
       case "journal": return <JournalPage trades={trades} onDeleteTrade={onDeleteTrade} onUpdateTrade={onUpdateTrade} showToast={showToast} />;
       case "analytics": return <AnalyticsPage trades={trades} />;
+      case "psychology": return <PsychologyDashboard trades={trades} />;
       case "ai": return <AICoachPage trades={trades} />;
       case "settings": return <SettingsPage trades={trades} setTrades={setTrades} propAccounts={propAccounts} showToast={showToast} spiritualMode={spiritualMode} setSpiritualMode={setSpiritualMode} dailyGoal={dailyGoal} setDailyGoal={setDailyGoal} weeklyGoal={weeklyGoal} setWeeklyGoal={setWeeklyGoal} monthlyGoal={monthlyGoal} setMonthlyGoal={setMonthlyGoal} dailyLossLimit={dailyLossLimit} setDailyLossLimit={setDailyLossLimit} />;
       case "milestones": return <MilestonesPage milestones={milestones} trades={trades} propAccounts={propAccounts} payouts={payouts} weeklyReviews={weeklyReviews} setPage={setPage} />;

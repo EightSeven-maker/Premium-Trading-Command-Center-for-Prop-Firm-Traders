@@ -4433,22 +4433,124 @@ function PreSessionPage({ onStartSession, setPage, spiritualMode = true }) {
         </div>
       )}
 
-      {/* Step 1: Analysis */}
+      {/* Step 1: Analysis + Trading Plan */}
       {step === 1 && (
-        <div style={{ ...S.glassCard, maxWidth: 680, margin: "0 auto" }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
-            <Eye size={22} color={C.accent} /> Market Analysis
-          </h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-            <Select label="Daily Bias" value={analysis.bias} onChange={v => setAnalysis({ ...analysis, bias: v })} options={["Bullish", "Bearish", "Neutral"]} />
-            <Select label="HTF Orderflow" value={analysis.htf} onChange={v => setAnalysis({ ...analysis, htf: v })} options={["Bullish", "Bearish", "Neutral", "Bar Code", "MMBM", "MMSM", "Consolidation"]} />
-            <Select label="MMXM Model" value={analysis.mmxm} onChange={v => setAnalysis({ ...analysis, mmxm: v })} options={["MMBM", "MMSM"]} />
-            <Select label="News Day?" value={analysis.newsDay} onChange={v => setAnalysis({ ...analysis, newsDay: v })} options={["NO", "YES", "FOMC", "NFP"]} />
+        <div style={{ maxWidth: 780, margin: "0 auto" }}>
+          <div style={{ ...S.glassCard, padding: 24, marginBottom: 20 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+              <Eye size={22} color={C.accent} /> Market Analysis
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <Select label="Daily Bias" value={analysis.bias} onChange={v => setAnalysis({ ...analysis, bias: v })} options={["Bullish", "Bearish", "Neutral"]} />
+              <Select label="HTF Orderflow" value={analysis.htf} onChange={v => setAnalysis({ ...analysis, htf: v })} options={["Bullish", "Bearish", "Neutral", "Bar Code", "MMBM", "MMSM", "Consolidation"]} />
+              <Select label="MMXM Model" value={analysis.mmxm} onChange={v => setAnalysis({ ...analysis, mmxm: v })} options={["MMBM", "MMSM"]} />
+              <Select label="News Day?" value={analysis.newsDay} onChange={v => setAnalysis({ ...analysis, newsDay: v })} options={["NO", "YES", "FOMC", "NFP", "CPI", "PPI"]} />
+            </div>
+          </div>
+
+          {/* Trading Plan Card */}
+          <div style={{ ...S.glassCard, padding: 24, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+              <Target size={18} color={C.accent} /> Today's Trading Plan
+            </h3>
+            
+            {/* Key Levels */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={S.label}>Key Levels</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {[
+                  { key: "pdh", label: "PDH (Prev Day High)" },
+                  { key: "pdl", label: "PDL (Prev Day Low)" },
+                  { key: "pwh", label: "PWH (Prev Week High)" },
+                  { key: "pwl", label: "PWL (Prev Week Low)" },
+                  { key: "asianHigh", label: "Asian Range High" },
+                  { key: "asianLow", label: "Asian Range Low" },
+                ].map(field => (
+                  <div key={field.key}>
+                    <input
+                      value={analysis[field.key] || ""}
+                      onChange={e => setAnalysis({ ...analysis, [field.key]: e.target.value })}
+                      style={{ ...S.input, fontSize: 12 }}
+                      placeholder={field.label}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Setups to Watch */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={S.label}>Setups to Watch</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {["FVG", "IFVG", "OB", "BRKR", "CISD", "Turtle Soup", "RTH Gap", "Liquidity Grab", "SMT", "Order Block"].map(setup => {
+                  const selected = (analysis.setups || []).includes(setup);
+                  return (
+                    <button key={setup} onClick={() => {
+                      const current = analysis.setups || [];
+                      setAnalysis({ ...analysis, setups: selected ? current.filter(s => s !== setup) : [...current, setup] });
+                    }} style={{
+                      padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      background: selected ? `${C.accent}20` : "rgba(0,0,0,0.3)",
+                      color: selected ? C.accentLight : C.textMuted,
+                      border: `1px solid ${selected ? C.accent : C.border}`,
+                      fontFamily: "Inter", transition: "all 0.2s"
+                    }}>
+                      {setup}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Kill Zones */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={S.label}>Kill Zones to Trade</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[["NY AM (9:30-11:00)", "nyam"], ["NY PM (13:30-15:00)", "nypm"], ["London (3:00-5:00)", "london"], ["Asian (7PM-3AM)", "asian"]].map(([label, key]) => (
+                  <button key={key} onClick={() => {
+                    const current = analysis.killZones || [];
+                    setAnalysis({ ...analysis, killZones: current.includes(key) ? current.filter(z => z !== key) : [...current, key] });
+                  }} style={{
+                    flex: 1, padding: "10px", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    background: (analysis.killZones || []).includes(key) ? `${C.accent}20` : "rgba(0,0,0,0.3)",
+                    color: (analysis.killZones || []).includes(key) ? C.accentLight : C.textMuted,
+                    border: `1px solid ${(analysis.killZones || []).includes(key) ? C.accent : C.border}`,
+                    fontFamily: "Inter", textAlign: "center"
+                  }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Risk Management */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={S.label}>Risk Management</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Max Risk Per Trade ($)</div>
+                  <input type="number" value={analysis.maxRisk || ""} onChange={e => setAnalysis({ ...analysis, maxRisk: e.target.value })}
+                    style={{ ...S.input, fontSize: 12 }} placeholder="$" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Max Contracts</div>
+                  <input type="number" value={analysis.maxContracts || ""} onChange={e => setAnalysis({ ...analysis, maxContracts: e.target.value })}
+                    style={{ ...S.input, fontSize: 12 }} placeholder="1" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4 }}>Daily Loss Limit ($)</div>
+                  <input type="number" value={analysis.dailyLimit || ""} onChange={e => setAnalysis({ ...analysis, dailyLimit: e.target.value })}
+                    style={{ ...S.input, fontSize: 12 }} placeholder="$" />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Chart Screenshot */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={S.label}>Chart Screenshot</label>
+          <div style={{ ...S.glassCard, padding: 24, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+              <Camera size={16} color={C.accent} /> Chart Snapshot
+            </h3>
             <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
               <label style={{
                 display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10,
@@ -4457,10 +4559,7 @@ function PreSessionPage({ onStartSession, setPage, spiritualMode = true }) {
               }}>
                 <Camera size={16} color={C.accent} />
                 <span>{chartScreenshot ? "Change Screenshot" : "Upload Screenshot"}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
+                <input type="file" accept="image/*" style={{ display: "none" }}
                   onChange={e => {
                     const file = e.target.files[0];
                     if (!file) return;
@@ -4471,13 +4570,8 @@ function PreSessionPage({ onStartSession, setPage, spiritualMode = true }) {
                 />
               </label>
               {chartScreenshot && (
-                <button
-                  onClick={() => setChartScreenshot(null)}
-                  style={{
-                    padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.amber}40`,
-                    background: `${C.amber}15`, color: C.amber, fontSize: 12, cursor: "pointer"
-                  }}
-                >
+                <button onClick={() => setChartScreenshot(null)}
+                  style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.amber}40`, background: `${C.amber}15`, color: C.amber, fontSize: 12, cursor: "pointer" }}>
                   <X size={14} /> Remove
                 </button>
               )}
@@ -4488,15 +4582,24 @@ function PreSessionPage({ onStartSession, setPage, spiritualMode = true }) {
               </div>
             )}
           </div>
-          <div style={{ marginBottom: 20 }}>
-            <label style={S.label}>Pre-Market Notes</label>
-            <textarea value={analysis.notes} onChange={e => setAnalysis({ ...analysis, notes: e.target.value })}
-              style={{ ...S.input, minHeight: 100, resize: "vertical" }} placeholder="Key levels, confluences..." />
+
+          {/* Pre-Market Notes */}
+          <div style={{ ...S.glassCard, padding: 24, marginBottom: 20 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+              <FileText size={16} color={C.accent} /> Pre-Market Notes
+            </h3>
+            <textarea
+              value={analysis.notes || ""}
+              onChange={e => setAnalysis({ ...analysis, notes: e.target.value })}
+              style={{ ...S.input, minHeight: 120, resize: "vertical" }}
+              placeholder="Key levels to watch, confluences, anticipated scenarios, alternative paths..."
+            />
           </div>
+
           <div style={{ display: "flex", gap: 12 }}>
             <button onClick={() => setStep(0)} style={S.btn("ghost")}><ChevronLeft size={16} /> Back</button>
             <button onClick={() => setStep(2)} style={{ ...S.btn("primary"), flex: 1, justifyContent: "center" }}>
-              Commit to Rules <Lock size={16} />
+              Review Rules & Commit <Lock size={16} />
             </button>
           </div>
         </div>

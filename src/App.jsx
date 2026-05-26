@@ -5316,6 +5316,11 @@ function AnalyticsPage({ trades }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Pivot Grid */}
+      <div style={{ marginTop: 24 }}>
+        <PivotGrid trades={trades} />
+      </div>
     </div>
   );
 }
@@ -5499,6 +5504,169 @@ function DrawdownChart({ trades }) {
           <Area type="monotone" dataKey="drawdown" stroke={C.amber} fill="url(#ddGrad)" strokeWidth={1.5} />
         </AreaChart>
       </ResponsiveContainer>
+    </div>
+  );
+}
+
+// ─── PIVOT GRID ───────────────────────────────────────────────────────────────
+function PivotGrid({ trades }) {
+  const dimensions = [
+    { key: "ticker", label: "Symbol" },
+    { key: "direction", label: "Direction" },
+    { key: "grade", label: "Grade" },
+    { key: "entryModel", label: "Setup" },
+    { key: "mistake", label: "Mistake" },
+    { key: "emotion", label: "Emotion" },
+  ];
+  const [rowDim, setRowDim] = useState("ticker");
+  const [colDim, setColDim] = useState("direction");
+  const [metric, setMetric] = useState("pnl");
+
+  const gridData = useMemo(() => {
+    const matrix = {};
+    trades.forEach(t => {
+      const rowVal = t[rowDim] || "Other";
+      const colVal = t[colDim] || "Other";
+      if (!matrix[rowVal]) matrix[rowVal] = {};
+      if (!matrix[rowVal][colVal]) matrix[rowVal][colVal] = { pnl: 0, count: 0, wins: 0, losses: 0 };
+      matrix[rowVal][colVal].pnl += t.pnl || 0;
+      matrix[rowVal][colVal].count++;
+      if (t.pnl > 0) matrix[rowVal][colVal].wins++;
+      else if (t.pnl < 0) matrix[rowVal][colVal].losses++;
+    });
+    return matrix;
+  }, [trades, rowDim, colDim]);
+
+  const colValues = useMemo(() => {
+    const vals = new Set();
+    trades.forEach(t => {
+      const v = t[colDim] || "Other";
+      vals.add(v);
+    });
+    return [...vals];
+  }, [trades, colDim]);
+
+  const metricValue = (cell) => {
+    if (!cell) return "—";
+    switch (metric) {
+      case "pnl": return cell.pnl;
+      case "count": return cell.count;
+      case "winRate": return cell.count > 0 ? (cell.wins / cell.count) * 100 : 0;
+      case "avgPnl": return cell.count > 0 ? cell.pnl / cell.count : 0;
+      default: return cell.pnl;
+    }
+  };
+
+  const metricLabel = (v) => {
+    if (v === "—") return v;
+    switch (metric) {
+      case "pnl": return fmt(v);
+      case "count": return v;
+      case "winRate": return `${v.toFixed(0)}%`;
+      case "avgPnl": return fmt(v);
+      default: return fmt(v);
+    }
+  };
+
+  if (trades.length === 0) {
+    return (
+      <div style={{ ...S.glassCard, padding: 24, textAlign: "center" }}>
+        <BarChart3 size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
+        <div style={{ color: C.textDim, fontSize: 13 }}>Log trades to use the Pivot Grid</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ ...S.glassCard, padding: 20 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <BarChart3 size={14} color={C.accent} /> Pivot Grid
+        <span style={{ fontSize: 11, fontWeight: 400, color: C.textMuted }}>— Cross-filter your trades</span>
+      </h3>
+
+      {/* Controls */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 11, color: C.textDim }}>Rows:</span>
+          <select value={rowDim} onChange={e => setRowDim(e.target.value)}
+            style={{ ...S.input, padding: "6px 10px", fontSize: 12, width: "auto" }}>
+            {dimensions.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
+          </select>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 11, color: C.textDim }}>Columns:</span>
+          <select value={colDim} onChange={e => setColDim(e.target.value)}
+            style={{ ...S.input, padding: "6px 10px", fontSize: 12, width: "auto" }}>
+            {dimensions.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
+          </select>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 11, color: C.textDim }}>Metric:</span>
+          <select value={metric} onChange={e => setMetric(e.target.value)}
+            style={{ ...S.input, padding: "6px 10px", fontSize: 12, width: "auto" }}>
+            <option value="pnl">P&L</option>
+            <option value="count">Count</option>
+            <option value="winRate">Win Rate %</option>
+            <option value="avgPnl">Avg P&L</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <thead>
+            <tr>
+              <th style={{ padding: "8px 12px", textAlign: "left", borderBottom: `1px solid ${C.border}`, color: C.textDim, fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>
+                {dimensions.find(d => d.key === rowDim)?.label}
+              </th>
+              {colValues.map(col => (
+                <th key={col} style={{ padding: "8px 12px", textAlign: "right", borderBottom: `1px solid ${C.border}`, color: C.textDim, fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>
+                  {col}
+                </th>
+              ))}
+              <th style={{ padding: "8px 12px", textAlign: "right", borderBottom: `1px solid ${C.border}`, color: C.accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>
+                Total
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(gridData).map(([rowVal, cols]) => {
+              const total = Object.values(cols).reduce((s, c) => ({
+                pnl: s.pnl + c.pnl, count: s.count + c.count,
+                wins: s.wins + c.wins, losses: s.losses + c.losses
+              }), { pnl: 0, count: 0, wins: 0, losses: 0 });
+              return (
+                <tr key={rowVal}>
+                  <td style={{ padding: "6px 12px", borderBottom: `1px solid ${C.border}`, fontWeight: 600, whiteSpace: "nowrap" }}>
+                    {rowVal}
+                  </td>
+                  {colValues.map(col => {
+                    const cell = cols[col];
+                    const val = metricValue(cell);
+                    return (
+                      <td key={col} style={{
+                        padding: "6px 12px", borderBottom: `1px solid ${C.border}`,
+                        textAlign: "right", fontWeight: 600,
+                        color: typeof val === "number" ? (val >= 0 ? C.emerald : C.amber) : C.textDim
+                      }}>
+                        {metricLabel(val)}
+                      </td>
+                    );
+                  })}
+                  <td style={{
+                    padding: "6px 12px", borderBottom: `1px solid ${C.border}`,
+                    textAlign: "right", fontWeight: 700,
+                    color: typeof metricValue(total) === "number" ? (metricValue(total) >= 0 ? C.emerald : C.amber) : C.textDim
+                  }}>
+                    {metricLabel(metricValue(total))}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

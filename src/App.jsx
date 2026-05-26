@@ -743,6 +743,11 @@ function computeStats(trades) {
       pnlBySymbol: {}, pnlBySession: {}, pnlByDayOfWeek: {},
       setupPerformance: [], todayStats: { pnl: 0, wins: 0, losses: 0 },
       dailyLossLimitUsed: 0, highWatermark: 0, equityCurve: [],
+      sharpeRatio: 0, sortinoRatio: 0, calmarRatio: 0, avgRR: 0,
+      winLossRatio: 0, avgRMultiple: 0, largestWinningDay: 0, largestLosingDay: 0,
+      avgTradeDuration: 0, profitDays: 0, lossDays: 0, totalDays: 0,
+      profitDayPercent: 0, hourlyPnl: {}, monthlyPnl: {},
+      pnlByHour: {}, pnlByMonth: {},
     };
   }
 
@@ -752,6 +757,7 @@ function computeStats(trades) {
   const winRate = trades.length > 0 ? (wins.length / trades.length) * 100 : 0;
   const avgWinner = wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
   const avgLoser = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0;
+  const winLossRatio = avgLoser > 0 ? avgWinner / avgLoser : 0;
   const expectancy = trades.length > 0
     ? (winRate / 100 * avgWinner) - ((1 - winRate / 100) * avgLoser)
     : 0;
@@ -760,6 +766,14 @@ function computeStats(trades) {
   const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
   const bestTrade = Math.max(...trades.map(t => t.pnl || 0));
   const worstTrade = Math.min(...trades.map(t => t.pnl || 0));
+
+  // R-Multiple: assume risk is average loser, or use trade.stop if available
+  const avgRisk = avgLoser > 0 ? avgLoser : 1;
+  const avgRMultiple = trades.length > 0
+    ? trades.reduce((s, t) => s + ((t.pnl || 0) / avgRisk), 0) / trades.length
+    : 0;
+  // Average R:R (win/loss ratio normalized)
+  const avgRR = avgLoser > 0 ? avgWinner / avgLoser : 0;
 
   // Streaks
   const sorted = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -778,10 +792,8 @@ function computeStats(trades) {
   // Current streak
   let currentStreak = 0;
   for (let i = sorted.length - 1; i >= 0; i--) {
-    const win = sorted[i].pnl > 0;
-    const lastWin = sorted[sorted.length - 1].pnl > 0;
     if (i === sorted.length - 1) { currentStreak = 1; }
-    else if (win === lastWin) { currentStreak++; }
+    else if ((sorted[i].pnl > 0) === (sorted[sorted.length - 1].pnl > 0)) { currentStreak++; }
     else { break; }
   }
 
@@ -842,19 +854,80 @@ function computeStats(trades) {
   // Best/Worst Day
   const byDay = {};
   trades.forEach(t => { const day = t.date || today; byDay[day] = (byDay[day] || 0) + (t.pnl || 0); });
-  const bestDay = Object.values(byDay).length > 0 ? Math.max(...Object.values(byDay)) : 0;
-  const worstDay = Object.values(byDay).length > 0 ? Math.min(...Object.values(byDay)) : 0;
+  const dayValues = Object.values(byDay);
+  const bestDay = dayValues.length > 0 ? Math.max(...dayValues) : 0;
+  const worstDay = dayValues.length > 0 ? Math.min(...dayValues) : 0;
+  const largestWinningDay = bestDay;
+  const largestLosingDay = worstDay;
+  const profitDays = dayValues.filter(v => v > 0).length;
+  const lossDays = dayValues.filter(v => v < 0).length;
+  const totalDays = dayValues.length;
 
   // Max Drawdown + Equity Curve
   let equity = 0, highWater = 0, maxDrawdown = 0;
+  let ddStart = 0, currentDD = 0, maxDDPer = 0;
   const equityCurve = [];
   sorted.forEach(t => {
     equity += t.pnl || 0;
-    if (equity > highWater) highWater = equity;
-    const dd = highWater - equity;
-    if (dd > maxDrawdown) maxDrawdown = dd;
-    equityCurve.push({ date: t.date, equity, pnl: t.pnl || 0 });
+    if (equity > highWater) {
+      highWater = equity;
+      currentDD = 0;
+    } else {
+      currentDD = highWater - equity;
+    }
+    if (currentDD > maxDrawdown) maxDrawdown = currentDD;
+    if (highWater > 0) {
+      const ddPct = (currentDD / highWater) * 100;
+      if (ddPct > maxDDPer) maxDDPer = ddPct;
+    }
+    equityCurve.push({ date: t.date, equity, pnl: t.pnl || 0, highWatermark: highWater });
   });
+
+  // Sharpe & Sortino Ratios (using daily returns)
+  const dailyReturns = {};
+  sorted.forEach(t => {
+    const day = t.date;
+    dailyReturns[day] = (dailyReturns[day] || 0) + (t.pnl || 0);
+  });
+  const returns = Object.values(dailyReturns);
+  const meanReturn = returns.length > 0 ? returns.reduce((s, v) => s + v, 0) / returns.length : 0;
+  const variance = returns.length > 0 ? returns.reduce((s, v) => s + Math.pow(v - meanReturn, 2), 0) / returns.length : 0;
+  const stdDev = Math.sqrt(variance);
+  // Downside deviation (Sortino)
+  const downsideReturns = returns.filter(v => v < 0);
+  const downsideVariance = downsideReturns.length > 0
+    ? downsideReturns.reduce((s, v) => s + Math.pow(v - meanReturn, 2), 0) / returns.length
+    : 0;
+  const downsideDev = Math.sqrt(downsideVariance);
+  const sharpeRatio = stdDev > 0 ? (meanReturn / stdDev) * Math.sqrt(252) : 0;
+  const sortinoRatio = downsideDev > 0 ? (meanReturn / downsideDev) * Math.sqrt(252) : 0;
+  // Calmar Ratio (CAGR / max drawdown) — simplified: total return / max drawdown
+  const calmarRatio = maxDrawdown > 0 ? totalPnl / maxDrawdown : totalPnl > 0 ? Infinity : 0;
+
+  // P&L by Hour
+  const pnlByHour = {};
+  for (let h = 0; h < 24; h++) pnlByHour[h] = { pnl: 0, count: 0, wins: 0, losses: 0 };
+  trades.forEach(t => {
+    const h = new Date(t.date).getHours();
+    if (!pnlByHour[h]) pnlByHour[h] = { pnl: 0, count: 0, wins: 0, losses: 0 };
+    pnlByHour[h].pnl += t.pnl || 0;
+    pnlByHour[h].count++;
+    if (t.pnl > 0) pnlByHour[h].wins++;
+    else if (t.pnl < 0) pnlByHour[h].losses++;
+  });
+
+  // P&L by Month
+  const pnlByMonth = {};
+  trades.forEach(t => {
+    const m = t.date ? t.date.substring(0, 7) : today.substring(0, 7);
+    pnlByMonth[m] = (pnlByMonth[m] || 0) + (t.pnl || 0);
+  });
+
+  // Avg trade duration (if time data exists)
+  const tradesWithTime = trades.filter(t => t.time);
+  const avgTradeDuration = tradesWithTime.length > 0
+    ? tradesWithTime.reduce((s, t) => s + (t.duration || 0), 0) / tradesWithTime.length
+    : 0;
 
   return {
     totalPnl, winRate, avgWinner, avgLoser,
@@ -865,6 +938,14 @@ function computeStats(trades) {
     setupPerformance, todayStats,
     dailyLossLimitUsed: Math.max(0, -(todayStats.pnl)),
     highWatermark: highWater, equityCurve,
+    sharpeRatio, sortinoRatio, calmarRatio, avgRR,
+    winLossRatio, avgRMultiple,
+    largestWinningDay, largestLosingDay,
+    avgTradeDuration, profitDays, lossDays, totalDays,
+    profitDayPercent: totalDays > 0 ? (profitDays / totalDays) * 100 : 0,
+    hourlyPnl: pnlByHour, monthlyPnl: pnlByMonth,
+    pnlByHour, pnlByMonth,
+    maxDrawdownPercent: maxDDPer,
   };
 }
 
@@ -872,16 +953,15 @@ function computeStats(trades) {
 function StatCard({ icon, label, value, sub, color }) {
   const isPositive = typeof value === "number" && value > 0;
   const isNegative = typeof value === "number" && value < 0;
-  const displayColor = isPositive ? "#22c55e" : isNegative ? "#ef4444" : (color || C.text.secondary);
-  const prefix = typeof value === "number" && value > 0 ? "+" : "";
+  const displayColor = isPositive ? C.emerald : isNegative ? C.amber : (color || C.textDim);
 
   return (
     <div style={{
-      background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.18)",
-      borderRadius: 10, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 3, minWidth: 0,
+      background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}`,
+      borderRadius: C.radiusCard, padding: "12px 16px", display: "flex", flexDirection: "column", gap: 4, minWidth: 0,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-        {icon && React.cloneElement(icon, { size: 12, style: { color: C.accent } })}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {icon && React.cloneElement(icon, { size: 13, style: { color: C.accent } })}
         <span style={{ fontSize: 9, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</span>
       </div>
       <div style={{ fontSize: 18, fontWeight: 800, color: displayColor, lineHeight: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -2672,46 +2752,62 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
 }
 
 // ─── ANALYTICS HUB ──────────────────────────────────────────────────────────
-function AnalyticsHub({ trades }) {
-  const { totalPnl, winRate, avgWinner, avgLoser, expectancy, profitFactor } = useMemo(() => computeStats(trades), [trades]);
-  const equityCurve = useMemo(() => computeStats(trades).equityCurve, [trades]);
-  const highWatermark = useMemo(() => {
-    let hw = 0;
-    let peak = 0;
-    trades.slice().sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(t => {
-      peak += t.pnl;
-      if (peak > hw) hw = peak;
-    });
-    return hw;
-  }, [trades]);
+function AnalyticsHub({ trades, page }) {
+  const stats = useMemo(() => computeStats(trades), [trades]);
 
   const statCards = [
-    { label: "Total P&L", value: totalPnl, fmt: fmt, color: pnlColor(totalPnl), prefix: "" },
-    { label: "Win Rate", value: winRate, fmt: v => `${v}%`, color: winRate >= 50 ? C.emerald : winRate >= 40 ? C.yellow : C.amber },
-    { label: "Avg Winner", value: avgWinner, fmt: fmt, color: C.emerald },
-    { label: "Avg Loser", value: avgLoser, fmt: v => `-${fmt(Math.abs(v))}`, color: C.amber },
-    { label: "Expectancy", value: expectancy, fmt: v => (v >= 0 ? "+" : "") + v.toFixed(2), color: pnlColor(expectancy) },
-    { label: "Profit Factor", value: profitFactor, fmt: v => v.toFixed(2), color: profitFactor >= 1.5 ? C.emerald : profitFactor >= 1 ? C.yellow : C.amber }
+    { label: "Total P&L", value: stats.totalPnl, fmt: fmt, color: pnlColor(stats.totalPnl) },
+    { label: "Win Rate", value: stats.winRate, fmt: v => `${v}%`, color: stats.winRate >= 50 ? C.emerald : stats.winRate >= 40 ? C.yellow : C.amber },
+    { label: "Avg Winner", value: stats.avgWinner, fmt: fmt, color: C.emerald },
+    { label: "Avg Loser", value: stats.avgLoser, fmt: v => `-${fmt(Math.abs(v))}`, color: C.amber },
+    { label: "Expectancy", value: stats.expectancy, fmt: v => (v >= 0 ? "+" : "") + v.toFixed(2), color: pnlColor(stats.expectancy) },
+    { label: "Profit Factor", value: stats.profitFactor, fmt: v => v.toFixed(2), color: stats.profitFactor >= 1.5 ? C.emerald : stats.profitFactor >= 1 ? C.yellow : C.amber }
+  ];
+
+  const advancedCards = [
+    { label: "Sharpe", value: stats.sharpeRatio, fmt: v => v.toFixed(2), color: stats.sharpeRatio >= 1 ? C.emerald : stats.sharpeRatio > 0 ? C.yellow : C.amber },
+    { label: "Sortino", value: stats.sortinoRatio, fmt: v => v.toFixed(2), color: stats.sortinoRatio >= 1 ? C.emerald : stats.sortinoRatio > 0 ? C.yellow : C.amber },
+    { label: "Calmar", value: stats.calmarRatio, fmt: v => v.toFixed(2), color: stats.calmarRatio >= 1 ? C.emerald : stats.calmarRatio > 0 ? C.yellow : C.amber },
+    { label: "Avg R:R", value: stats.avgRR, fmt: v => `1:${v.toFixed(2)}`, color: stats.avgRR >= 2 ? C.emerald : stats.avgRR >= 1 ? C.yellow : C.amber },
+    { label: "Max DD", value: stats.maxDrawdown, fmt: fmtUsd, color: C.amber },
+    { label: "DD %", value: stats.maxDrawdownPercent, fmt: v => `${v.toFixed(1)}%`, color: stats.maxDrawdownPercent > 20 ? C.amber : stats.maxDrawdownPercent > 10 ? C.yellow : C.emerald },
+    { label: "Profit Days", value: stats.profitDayPercent, fmt: v => `${v.toFixed(0)}%`, color: stats.profitDayPercent >= 50 ? C.emerald : C.amber },
+    { label: "Best Day", value: stats.bestDay, fmt: fmt, color: C.emerald },
   ];
 
   return (
     <>
       {/* Hero Stat Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12, marginBottom: 8 }}>
         {statCards.map((card, i) => (
           <AnimatedStatCard key={card.label} card={card} delay={i * 80} />
         ))}
+      </div>
+
+      {/* Advanced Stat Cards */}
+      {trades.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 10, marginBottom: 16 }}>
+          {advancedCards.map((card, i) => (
+            <AnimatedStatCard key={card.label} card={card} delay={(i + 6) * 60} />
+          ))}
+        </div>
+      )}
+
+      {/* Drawdown + Calendar */}
+      <div style={{ display: "grid", gridTemplateColumns: trades.length > 0 ? "1fr 1fr" : "1fr", gap: 16, marginBottom: 16 }}>
+        {trades.length > 0 && <DrawdownChart trades={trades} />}
+        {trades.length > 0 && <HourOfDayChart trades={trades} />}
       </div>
 
       {/* Equity Curve + Setup Performance */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div style={{ ...S.glassCard, padding: 20 }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: C.text }}>Equity Curve</h3>
-          {equityCurve.length === 0 ? (
+          {stats.equityCurve.length === 0 ? (
             <div style={{ textAlign: "center", padding: 32, color: C.textDim, fontSize: 13 }}>No trade data yet</div>
           ) : (
             <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={equityCurve} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <AreaChart data={stats.equityCurve} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={C.accent} stopOpacity={0.3} />
@@ -2719,15 +2815,15 @@ function AnalyticsHub({ trades }) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: C.textDim }} tickFormatter={d => d.split("-")[2]} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: C.textDim }} tickFormatter={d => d ? d.split("-")[2] : ""} />
                 <YAxis tick={{ fontSize: 10, fill: C.textDim }} tickFormatter={v => `$${v}`} width={55} />
                 <Tooltip
                   contentStyle={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, fontSize: 12 }}
                   labelStyle={{ color: C.text }}
                   formatter={(val, name) => [name === "cumulative" ? fmt(val) : val, name === "cumulative" ? "Cumulative" : "Daily"]}
                 />
-                {highWatermark > 0 && (
-                  <ReferenceLine y={highWatermark} stroke={C.yellow} strokeDasharray="5 5" label={{ value: `HWM $${fmtUsd(highWatermark)}`, position: "right", fontSize: 9, fill: C.yellow }} />
+                {stats.highWatermark > 0 && (
+                  <ReferenceLine y={stats.highWatermark} stroke={C.amber} strokeDasharray="5 5" label={{ value: `HWM $${fmtUsd(stats.highWatermark)}`, position: "right", fontSize: 9, fill: C.amber }} />
                 )}
                 <Area type="monotone" dataKey="cumulative" stroke={C.accent} fill="url(#eqGrad)" strokeWidth={2} />
               </AreaChart>
@@ -2742,7 +2838,7 @@ function AnalyticsHub({ trades }) {
       </div>
 
       {/* Day of Week + More Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
         <div style={{ ...S.glassCard, padding: 20 }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text }}>Day Performance</h3>
           <DayOfWeekMiniHeatmap trades={trades} />
@@ -2752,6 +2848,13 @@ function AnalyticsHub({ trades }) {
           <SessionMiniBreakdown trades={trades} />
         </div>
       </div>
+
+      {/* Calendar Heatmap */}
+      {trades.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <CalendarHeatmap trades={trades} />
+        </div>
+      )}
     </>
   );
 }
@@ -4918,6 +5021,189 @@ function AnalyticsPage({ trades }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+    </div>
+  );
+}
+
+// ─── CALENDAR HEATMAP ─────────────────────────────────────────────────────────
+function CalendarHeatmap({ trades, months = 3 }) {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setMonth(startDate.getMonth() - months);
+
+  // Build day P&L map
+  const dayPnl = {};
+  trades.forEach(t => {
+    if (t.date) {
+      dayPnl[t.date] = (dayPnl[t.date] || 0) + (t.pnl || 0);
+    }
+  });
+
+  // Generate days grid
+  const days = [];
+  const d = new Date(startDate);
+  while (d <= now) {
+    const key = d.toISOString().split("T")[0];
+    const pnl = dayPnl[key] || 0;
+    const hasTrade = key in dayPnl;
+    days.push({ date: key, pnl, hasTrade, day: d.getDate(), month: d.getMonth() });
+    d.setDate(d.getDate() + 1);
+  }
+
+  // Group by month
+  const months_display = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const byMonth = {};
+  days.forEach(day => {
+    const m = `${day.date.substring(0,7)}-${day.month}`;
+    if (!byMonth[m]) byMonth[m] = { month: day.month, label: months_display[day.month], days: [] };
+    byMonth[m].days.push(day);
+  });
+
+  const getColor = (pnl, hasTrade) => {
+    if (!hasTrade) return "transparent";
+    if (pnl > 0) return `rgba(16, 185, 129, ${Math.min(0.9, 0.2 + Math.abs(pnl) / 500)})`;
+    if (pnl < 0) return `rgba(217, 119, 6, ${Math.min(0.9, 0.2 + Math.abs(pnl) / 500)})`;
+    return C.border;
+  };
+
+  return (
+    <div style={{ ...S.glassCard, padding: 20 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <Calendar size={14} color={C.accent} /> Trading Calendar
+      </h3>
+      <div style={{ display: "flex", gap: 24, overflowX: "auto", paddingBottom: 8 }}>
+        {Object.entries(byMonth).map(([key, month]) => (
+          <div key={key} style={{ minWidth: 200 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>{month.label}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
+              {["S","M","T","W","T","F","S"].map(d => (
+                <div key={d} style={{ fontSize: 8, color: C.textDim, textAlign: "center", marginBottom: 2 }}>{d}</div>
+              ))}
+              {/* Padding for first day of month */}
+              {Array(new Date(month.days[0].date).getDay()).fill(null).map((_, i) => (
+                <div key={`pad-${i}`} />
+              ))}
+              {month.days.map(day => (
+                <div
+                  key={day.date}
+                  title={`${day.date}: ${day.hasTrade ? fmt(day.pnl) : "No trades"}`}
+                  style={{
+                    width: "100%", aspectRatio: 1, borderRadius: 4,
+                    background: getColor(day.pnl, day.hasTrade),
+                    border: `1px solid ${day.hasTrade ? "transparent" : C.border}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 9, fontWeight: day.hasTrade ? 600 : 400,
+                    color: day.hasTrade ? C.text : C.textDim,
+                    cursor: "pointer"
+                  }}
+                >
+                  {day.day}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12, fontSize: 10, color: C.textDim }}>
+        <span>Less</span>
+        <div style={{ width: 12, height: 12, borderRadius: 2, background: C.emeraldBg, border: `1px solid ${C.emeraldBorder}` }} />
+        <div style={{ width: 12, height: 12, borderRadius: 2, background: `rgba(16, 185, 129, 0.5)`, border: `1px solid ${C.emeraldBorder}` }} />
+        <div style={{ width: 12, height: 12, borderRadius: 2, background: `rgba(16, 185, 129, 0.8)`, border: `1px solid ${C.emeraldBorder}` }} />
+        <span>More</span>
+        <span style={{ marginLeft: 8 }}>|</span>
+        <div style={{ width: 12, height: 12, borderRadius: 2, background: C.amberBg, border: `1px solid ${C.amberBorder}` }} />
+        <div style={{ width: 12, height: 12, borderRadius: 2, background: `rgba(217, 119, 6, 0.5)`, border: `1px solid ${C.amberBorder}` }} />
+        <div style={{ width: 12, height: 12, borderRadius: 2, background: `rgba(217, 119, 6, 0.8)`, border: `1px solid ${C.amberBorder}` }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── HOUR OF DAY CHART ────────────────────────────────────────────────────────
+function HourOfDayChart({ trades }) {
+  const hourlyData = useMemo(() => {
+    const hData = {};
+    for (let h = 0; h < 24; h++) hData[h] = { hour: h, pnl: 0, count: 0, wins: 0, losses: 0 };
+    trades.forEach(t => {
+      const h = new Date(t.date).getHours();
+      if (!hData[h]) hData[h] = { hour: h, pnl: 0, count: 0, wins: 0, losses: 0 };
+      hData[h].pnl += t.pnl || 0;
+      hData[h].count++;
+      if (t.pnl > 0) hData[h].wins++;
+      else if (t.pnl < 0) hData[h].losses++;
+    });
+    return Object.values(hData).filter(d => d.count > 0);
+  }, [trades]);
+
+  if (hourlyData.length === 0) return null;
+
+  const marketHours = ["8:00","9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00"];
+
+  return (
+    <div style={{ ...S.glassCard, padding: 20 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <Clock size={14} color={C.accent} /> P&L by Hour
+      </h3>
+      <ResponsiveContainer width="100%" height={180}>
+        <BarChart data={hourlyData}>
+          <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+          <XAxis dataKey="hour" tick={{ fontSize: 10, fill: C.textDim }} tickFormatter={h => `${h}:00`} />
+          <YAxis tick={{ fontSize: 10, fill: C.textDim }} tickFormatter={v => `$${v}`} width={50} />
+          <Tooltip
+            contentStyle={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 11 }}
+            labelStyle={{ color: C.text }}
+            formatter={(val, name) => [fmt(val), name === "pnl" ? "P&L" : val]}
+          />
+          <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
+            {hourlyData.map((entry, i) => (
+              <Cell key={i} fill={entry.pnl >= 0 ? C.emerald : C.amber} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// ─── DRAWNDOWN CHART ──────────────────────────────────────────────────────────
+function DrawdownChart({ trades }) {
+  const ddData = useMemo(() => {
+    if (!trades.length) return [];
+    const sorted = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let equity = 0, highWater = 0;
+    return sorted.map(t => {
+      equity += t.pnl || 0;
+      if (equity > highWater) highWater = equity;
+      const drawdown = highWater > 0 ? ((highWater - equity) / highWater) * 100 : 0;
+      return { date: t.date, drawdown: -Math.abs(drawdown) };
+    });
+  }, [trades]);
+
+  if (ddData.length === 0) return null;
+
+  return (
+    <div style={{ ...S.glassCard, padding: 20 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <TrendingDown size={14} color={C.accent} /> Drawdown %
+      </h3>
+      <ResponsiveContainer width="100%" height={120}>
+        <AreaChart data={ddData}>
+          <defs>
+            <linearGradient id="ddGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={C.amber} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={C.amber} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+          <XAxis dataKey="date" tick={{ fontSize: 8, fill: C.textDim }} tickFormatter={d => d ? d.split("-").slice(1).join("/") : ""} />
+          <YAxis tick={{ fontSize: 8, fill: C.textDim }} tickFormatter={v => `${v.toFixed(1)}%`} width={45} domain={["auto", 0]} />
+          <Tooltip
+            contentStyle={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 11 }}
+            formatter={(val) => [`${val.toFixed(1)}%`, "Drawdown"]}
+          />
+          <Area type="monotone" dataKey="drawdown" stroke={C.amber} fill="url(#ddGrad)" strokeWidth={1.5} />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 }

@@ -3164,7 +3164,7 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast, subscriptions
   const [apiCredentials, setApiCredentials] = useState({ apiKey: "", apiSecret: "", accountId: "" });
   const [connectedAccounts, setConnectedAccounts] = useState([]);
   const [syncing, setSyncing] = useState(false);
-  const [newAccount, setNewAccount] = useState({ firm: "", name: "", balance: 50000, target: 55000, dailyLossLimit: 1000 });
+  const [newAccount, setNewAccount] = useState({ firm: "", name: "", balance: 50000, target: 55000, dailyLossLimit: 1000, startingBalance: 50000, minDays: 10, daysTraded: 0, dailyLossUsed: 0, bestDayPct: 0, status: "challenge" });
 
   // Bookkeeping tab state
   const [hqTab, setHqTab] = useState("subscriptions");
@@ -3808,22 +3808,105 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast, subscriptions
           </div>
         ) : propAccounts.map(account => {
           const startingBalance = account.startingBalance || 50000;
+          const progress = ((account.balance - startingBalance) / (account.target - startingBalance)) * 100;
+          const dailyLossUsed = account.dailyLossLimit > 0 ? Math.min(100, (account.dailyLossUsed || 0) / account.dailyLossLimit * 100) : 0;
+          const daysUntilPayout = account.daysUntilPayout || 0;
+          const phase = account.status === "funded" ? "Funded" : account.status === "verification" ? "Verification" : account.status === "challenge2" ? "Challenge 2" : "Challenge 1";
           return (
             <div key={account.id} style={S.glassCard}>
+              {/* Header */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                 <div>
-                  <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", marginBottom: 4 }}>{account.firm}</div>
+                  <div style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>{account.firm}</div>
                   <h3 style={{ fontSize: 16, fontWeight: 700 }}>{account.name}</h3>
+                  <div style={{ fontSize: 10, color: C.textDim }}>Phase: {phase}</div>
                 </div>
-                <span style={S.badge(account.status === "funded" ? C.emerald : C.yellow)}>{account.status === "funded" ? "Funded" : "Challenge"}</span>
+                <span style={S.badge(account.status === "funded" ? C.emerald : C.accent)}>{account.status === "funded" ? "Funded" : phase}</span>
               </div>
-              <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-                <div><div style={S.label}>Balance</div><div style={{ fontSize: 20, fontWeight: 800 }}>{fmtUsd(account.balance)}</div></div>
-                <div><div style={S.label}>Target</div><div style={{ fontSize: 20, fontWeight: 800, color: C.emerald }}>{fmtUsd(account.target)}</div></div>
+
+              {/* Balance Row */}
+              <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={S.label}>Balance</div>
+                  <div style={{ fontSize: 20, fontWeight: 800 }}>{fmtUsd(account.balance)}</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={S.label}>Target</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: C.emerald }}>{fmtUsd(account.target)}</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={S.label}>Profit</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: pnlColor(account.balance - startingBalance) }}>
+                    {fmt(account.balance - startingBalance)}
+                  </div>
+                </div>
               </div>
+
+              {/* Progress Bar */}
+              {account.status !== "funded" && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, color: C.textDim }}>Progress to target</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: progress >= 100 ? C.emerald : C.accent }}>
+                      {Math.min(100, Math.max(0, progress)).toFixed(0)}%
+                    </span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 3, background: "rgba(0,0,0,0.3)", overflow: "hidden" }}>
+                    <div style={{
+                      width: `${Math.min(100, Math.max(0, progress))}%`, height: "100%",
+                      borderRadius: 3, background: `linear-gradient(90deg, ${C.accent}, ${C.emerald})`,
+                      transition: "width 0.5s ease"
+                    }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Daily Loss Gauge */}
+              {account.dailyLossLimit > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, color: C.textDim }}>Daily Loss Limit</span>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700,
+                      color: dailyLossUsed >= 80 ? C.amber : dailyLossUsed >= 50 ? C.yellow : C.emerald
+                    }}>
+                      {fmtUsd(account.dailyLossUsed || 0)} / {fmtUsd(account.dailyLossLimit)}
+                    </span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 2, background: "rgba(0,0,0,0.3)", overflow: "hidden" }}>
+                    <div style={{
+                      width: `${dailyLossUsed}%`, height: "100%", borderRadius: 2,
+                      background: dailyLossUsed >= 80 ? C.amber : dailyLossUsed >= 50 ? C.yellow : C.emerald,
+                      transition: "width 0.5s ease"
+                    }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Evaluations Stats */}
+              {account.status !== "funded" && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                  <div style={{ padding: 8, borderRadius: 8, background: "rgba(0,0,0,0.2)", textAlign: "center" }}>
+                    <div style={{ fontSize: 10, color: C.textDim }}>Min Trading Days</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{account.daysTraded || 0}/{account.minDays || 10}</div>
+                  </div>
+                  <div style={{ padding: 8, borderRadius: 8, background: "rgba(0,0,0,0.2)", textAlign: "center" }}>
+                    <div style={{ fontSize: 10, color: C.textDim }}>Consistency Rule</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: (account.balance - startingBalance) > 0 ? C.emerald : C.textDim }}>
+                      {account.status === "funded" ? "Funded" : `${account.bestDayPct || 0}%`}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => updateBalance(account.id, 500)} style={{ ...S.btn("success", "sm"), flex: 1 }}><Plus size={12} /> +$500</button>
                 <button onClick={() => updateBalance(account.id, -100)} style={{ ...S.btn("danger", "sm"), flex: 1 }}><TrendingDown size={12} /> -$100</button>
+                <button onClick={() => {
+                  const used = (account.dailyLossUsed || 0) + Math.abs(-100);
+                  setPropAccounts(propAccounts.map(a => a.id === account.id ? { ...a, dailyLossUsed: Math.min(a.dailyLossLimit || 1000, used) } : a));
+                }} style={{ ...S.btn("ghost", "sm") }}><AlertTriangle size={12} /> Loss</button>
               </div>
             </div>
           );

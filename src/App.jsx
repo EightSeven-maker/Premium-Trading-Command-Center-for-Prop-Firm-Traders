@@ -48,54 +48,69 @@ class ErrorBoundary extends React.Component {
 }
 
 // ─── THEME & CONSTANTS ──────────────────────────────────────────────────────
-// V4.5 — Near-pure black / Purple neon glass / Cream primitives
+// V4.5 — Near-pure black / Blue primary / Warm stone neutrals
 const C = {
   // Surfaces
   bg: "#020409",
-  bgCard: "rgba(2, 4, 9, 0.65)",
-  bgCardAlt: "rgba(6, 8, 18, 0.5)",
-  bgHover: "rgba(16, 20, 35, 0.7)",
-  bgGlass: "rgba(2, 4, 9, 0.55)",
+  bgCard: "rgba(2, 4, 9, 0.6)",
+  bgCardAlt: "rgba(5, 8, 16, 0.5)",
+  bgHover: "rgba(255, 255, 255, 0.04)",
+  bgGlass: "rgba(2, 4, 9, 0.5)",
   // Borders
-  border: "rgba(255, 255, 255, 0.06)",
-  borderLight: "rgba(255, 255, 255, 0.1)",
-  borderGlow: "rgba(176, 38, 255, 0.2)",
-  // Primary Purple (Neon edge glow)
-  accent: "#b026ff",
-  accentLight: "#ca6eff",
-  accentGlow: "rgba(176, 38, 255, 0.35)",
-  purple: "#a855f7",
-  purpleGlow: "rgba(168, 85, 247, 0.15)",
+  border: "rgba(87, 83, 78, 0.2)",
+  borderLight: "rgba(87, 83, 78, 0.1)",
+  borderGlow: "rgba(59, 130, 246, 0.15)",
+  // Primary Blue (brand)
+  accent: "#3b82f6",
+  accentLight: "#60a5fa",
+  accentGlow: "rgba(59, 130, 246, 0.25)",
+  accentDark: "#2563eb",
+  // Purple (subtle brand accent — neon edge glow)
+  purple: "#8b5cf6",
+  purpleGlow: "rgba(139, 92, 246, 0.1)",
   // Cream / Off-white (Topstep-style primary buttons)
   cream: "#f5f0e8",
   creamHover: "#ede6db",
-  creamText: "#1a1a1a",
+  creamText: "#0c0a09",
   // Blue (restrained focus rings & link affordance)
   blue: "#3b82f6",
   blueLight: "#60a5fa",
   blueGlow: "rgba(59, 130, 246, 0.2)",
+  blueRing: "rgba(59, 130, 246, 0.35)",
   // Semantic — emerald (positive) / amber (caution/loss)
   emerald: "#10b981",
   emeraldLight: "#34d399",
-  emeraldBg: "rgba(16, 185, 129, 0.12)",
-  emeraldBorder: "rgba(16, 185, 129, 0.22)",
-  emeraldGlow: "rgba(16, 185, 129, 0.12)",
+  emeraldBg: "rgba(16, 185, 129, 0.1)",
+  emeraldBorder: "rgba(16, 185, 129, 0.2)",
+  emeraldGlow: "rgba(16, 185, 129, 0.1)",
   amber: "#d97706",
   amberLight: "#f59e0b",
-  amberBg: "rgba(217, 119, 6, 0.12)",
-  amberBorder: "rgba(217, 119, 6, 0.22)",
-  amberGlow: "rgba(217, 119, 6, 0.12)",
-  // Accent warmth (streaks, milestones, celebration)
+  amberBg: "rgba(217, 119, 6, 0.1)",
+  amberBorder: "rgba(217, 119, 6, 0.2)",
+  amberGlow: "rgba(217, 119, 6, 0.1)",
+  // Warm accent (milestones, celebrations)
   gold: "#d97706",
   goldLight: "#f59e0b",
-  goldBg: "rgba(217, 119, 6, 0.12)",
-  goldBorder: "rgba(217, 119, 6, 0.22)",
-  goldGlow: "rgba(217, 119, 6, 0.15)",
-  // Text
-  text: "#ffffff",
-  textMuted: "#8896a6",
-  textDim: "#5a6b7d",
-  white: "#ffffff"
+  goldBg: "rgba(217, 119, 6, 0.1)",
+  goldBorder: "rgba(217, 119, 6, 0.2)",
+  goldGlow: "rgba(217, 119, 6, 0.12)",
+  // Text (warm stone palette)
+  text: "#f5f5f4",
+  textMuted: "#a8a29e",
+  textDim: "#78716c",
+  textOnPrimary: "#ffffff",
+  white: "#ffffff",
+  // Radii
+  radiusInput: 10,
+  radiusCard: 14,
+  radiusBtn: 10,
+  radiusModal: 18,
+  radiusPill: 9999,
+  // Shadows
+  shadowCard: "0 1px 2px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1)",
+  shadowCardLg: "0 2px 4px rgba(0,0,0,0.2), 0 8px 16px rgba(0,0,0,0.15)",
+  shadowBtn: "0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
+  shadowGlow: "0 0 0 3px rgba(59,130,246,0.15), 0 8px 28px rgba(59,130,246,0.1)"
 };
 
 const QUOTES = [
@@ -151,22 +166,22 @@ const TRADING_RULES = [
   "Ardas before every session — mind must be clear"
 ];
 
-// ─── STYLES (V4.5 — Near-black glass / Cream primitives) ────────────────────
+// ─── STYLES (V4.5 — Near-black / Blue primary / Warm stone) ─────────────────
 const S = {
   glassCard: {
     background: "rgba(2, 4, 9, 0.55)",
     backdropFilter: "blur(20px)",
     WebkitBackdropFilter: "blur(20px)",
-    borderRadius: 20,
+    borderRadius: C.radiusCard,
     border: `1px solid ${C.border}`,
-    boxShadow: `0 8px 32px 0 rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(176, 38, 255, 0.06) inset`,
+    boxShadow: C.shadowCard,
     transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)"
   },
   input: {
     background: "rgba(2, 4, 9, 0.5)",
     border: `1px solid ${C.border}`,
-    borderRadius: 12,
-    padding: "12px 16px",
+    borderRadius: C.radiusInput,
+    padding: "10px 16px",
     color: C.text,
     fontSize: 14,
     outline: "none",
@@ -177,20 +192,20 @@ const S = {
   },
   inputFocus: {
     borderColor: C.blue,
-    boxShadow: `0 0 0 2px ${C.blueGlow}`
+    boxShadow: `0 0 0 2px ${C.blueRing}`
   },
   btn: (variant = "primary", size = "md") => {
     const sizes = {
       xs: { padding: "4px 10px", fontSize: 11 },
       sm: { padding: "8px 14px", fontSize: 12 },
-      md: { padding: "12px 20px", fontSize: 14 },
-      lg: { padding: "16px 28px", fontSize: 16 }
+      md: { padding: "10px 16px", fontSize: 14 },
+      lg: { padding: "14px 24px", fontSize: 16 }
     };
     const variants = {
-      primary: { background: C.cream, color: C.creamText, border: "none", fontWeight: 700, boxShadow: "0 2px 12px rgba(0,0,0,0.2)" },
-      secondary: { background: "rgba(6, 8, 18, 0.6)", border: `1px solid ${C.border}`, boxShadow: "none" },
-      success: { background: `linear-gradient(135deg, ${C.emerald}, #047857)`, border: "none", boxShadow: `0 0 20px ${C.emeraldGlow}` },
-      danger: { background: `linear-gradient(135deg, ${C.amber}, #b45309)`, border: "none" },
+      primary: { background: C.cream, color: C.creamText, border: "none", fontWeight: 600, boxShadow: C.shadowBtn },
+      secondary: { background: "rgba(5, 8, 16, 0.6)", border: `1px solid ${C.border}`, boxShadow: "none" },
+      success: { background: `linear-gradient(135deg, ${C.emerald}, #047857)`, border: "none", boxShadow: `0 0 16px ${C.emeraldGlow}` },
+      danger: { background: `linear-gradient(135deg, ${C.amber}, #78350f)`, border: "none" },
       ghost: { background: "transparent", border: `1px solid ${C.border}` },
       glass: { background: "rgba(2, 4, 9, 0.65)", border: `1px solid ${C.border}`, color: C.text, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }
     };
@@ -199,7 +214,7 @@ const S = {
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
-      borderRadius: 12,
+      borderRadius: C.radiusBtn,
       cursor: "pointer",
       fontWeight: 600,
       fontFamily: "Inter, sans-serif",
@@ -212,23 +227,23 @@ const S = {
   badge: (color, glow = false) => ({
     display: "inline-flex",
     alignItems: "center",
-    padding: "4px 12px",
-    borderRadius: 20,
+    padding: "3px 10px",
+    borderRadius: C.radiusPill,
     fontSize: 11,
-    fontWeight: 700,
+    fontWeight: 600,
     background: `${color}15`,
     color: color,
-    border: `1px solid ${color}30`,
-    boxShadow: glow ? `0 0 20px ${color}30` : "none"
+    border: `1px solid ${color}25`,
+    boxShadow: glow ? `0 0 16px ${color}25` : "none"
   }),
   label: {
     fontSize: 11,
-    fontWeight: 700,
+    fontWeight: 600,
     color: C.textDim,
     marginBottom: 8,
     display: "block",
     textTransform: "uppercase",
-    letterSpacing: "0.08em"
+    letterSpacing: "0.06em"
   },
   grid: (cols, gap = 20) => ({ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap }),
   between: { display: "flex", justifyContent: "space-between", alignItems: "center" },
@@ -1578,7 +1593,7 @@ function TopBar({ session, showToast }) {
     <div style={{
       height: 60, background: "rgba(2, 4, 9, 0.7)",
       borderBottom: `1px solid ${C.border}`,
-      boxShadow: "0 1px 0 rgba(176, 38, 255, 0.06)",
+      boxShadow: "0 1px 0 rgba(59, 130, 246, 0.06)",
       display: "flex", alignItems: "center", justifyContent: "space-between",
       padding: "0 24px", position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
       backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)"
@@ -1586,11 +1601,11 @@ function TopBar({ session, showToast }) {
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <div style={{
-          width: 40, height: 40, borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+          width: 40, height: 40, borderRadius: C.radiusBtn,
+          background: `linear-gradient(135deg, ${C.accent}, ${C.accentDark})`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontWeight: 900, fontSize: 16, color: C.white,
-          boxShadow: `0 4px 16px ${C.accentGlow}`
+          boxShadow: C.shadowGlow
         }}>87</div>
         <div>
           <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>EightSeven HQ</div>
@@ -1744,10 +1759,10 @@ function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
                 padding: collapsed ? "12px" : "10px 20px",
                 width: "100%", border: "none", cursor: "pointer", fontFamily: "Inter",
                 justifyContent: collapsed ? "center" : "flex-start",
-                background: isLive ? `linear-gradient(90deg, ${C.emerald}15, transparent)` : 
-                             active ? `linear-gradient(90deg, ${C.accent}12, transparent)` : "transparent",
+                background: isLive ? `linear-gradient(90deg, ${C.emerald}12, transparent)` : 
+                             active ? `linear-gradient(90deg, ${C.accent}10, transparent)` : "transparent",
                 color: isLive ? C.emerald : active ? C.accentLight : C.textMuted,
-                fontWeight: isLive || active ? 700 : 500, fontSize: 13,
+                fontWeight: isLive || active ? 600 : 500, fontSize: 13,
                 borderLeft: isLive ? `2px solid ${C.emerald}` : active ? `2px solid ${C.accent}` : "2px solid transparent",
                 transition: "all 0.2s ease", textAlign: "left",
                 borderRadius: collapsed ? 8 : 0,
@@ -6052,7 +6067,7 @@ export default function App() {
   return (
     <div style={{
       background: C.bg, color: C.text, fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif", minHeight: "100vh",
-      backgroundImage: `radial-gradient(circle at 0% 0%, ${C.accentGlow} 0%, transparent 60%), radial-gradient(circle at 100% 100%, ${C.purpleGlow} 0%, transparent 60%)`
+      backgroundImage: `radial-gradient(circle at 0% 0%, ${C.accentGlow} 0%, transparent 65%), radial-gradient(circle at 100% 100%, ${C.purpleGlow} 0%, transparent 65%)`
     }}>
       <TopBar session={session} />
       <Sidebar 

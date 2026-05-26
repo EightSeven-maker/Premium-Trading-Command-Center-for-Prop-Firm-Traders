@@ -51,11 +51,11 @@ class ErrorBoundary extends React.Component {
 // V4.5 — Near-pure black / Blue primary / Warm stone neutrals
 const C = {
   // Surfaces
-  bg: "#020409",
-  bgCard: "rgba(2, 4, 9, 0.6)",
-  bgCardAlt: "rgba(5, 8, 16, 0.5)",
+  bg: "#000000",
+  bgCard: "rgba(0, 0, 0, 0.6)",
+  bgCardAlt: "rgba(0, 0, 0, 0.5)",
   bgHover: "rgba(255, 255, 255, 0.04)",
-  bgGlass: "rgba(2, 4, 9, 0.5)",
+  bgGlass: "rgba(0, 0, 0, 0.5)",
   // Borders
   border: "rgba(87, 83, 78, 0.2)",
   borderLight: "rgba(87, 83, 78, 0.1)",
@@ -169,7 +169,7 @@ const TRADING_RULES = [
 // ─── STYLES (V4.5 — Near-black / Blue primary / Warm stone) ─────────────────
 const S = {
   glassCard: {
-    background: "rgba(2, 4, 9, 0.55)",
+    background: "rgba(0, 0, 0, 0.55)",
     backdropFilter: "blur(20px)",
     WebkitBackdropFilter: "blur(20px)",
     borderRadius: C.radiusCard,
@@ -178,7 +178,7 @@ const S = {
     transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)"
   },
   input: {
-    background: "rgba(2, 4, 9, 0.5)",
+    background: "rgba(0, 0, 0, 0.5)",
     border: `1px solid ${C.border}`,
     borderRadius: C.radiusInput,
     padding: "10px 16px",
@@ -207,7 +207,7 @@ const S = {
       success: { background: `linear-gradient(135deg, ${C.emerald}, #047857)`, border: "none", boxShadow: `0 0 16px ${C.emeraldGlow}` },
       danger: { background: `linear-gradient(135deg, ${C.amber}, #78350f)`, border: "none" },
       ghost: { background: "transparent", border: `1px solid ${C.border}` },
-      glass: { background: "rgba(2, 4, 9, 0.65)", border: `1px solid ${C.border}`, color: C.text, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }
+      glass: { background: "rgba(0, 0, 0, 0.65)", border: `1px solid ${C.border}`, color: C.text, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }
     };
     return {
       display: "inline-flex",
@@ -1591,7 +1591,7 @@ function SessionSummaryModal({ sessionData, onClose }) {
 function TopBar({ session, showToast }) {
   return (
     <div style={{
-      height: 60, background: "rgba(2, 4, 9, 0.7)",
+      height: 60, background: "rgba(0, 0, 0, 0.7)",
       borderBottom: `1px solid ${C.border}`,
       boxShadow: "0 1px 0 rgba(59, 130, 246, 0.06)",
       display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -1714,7 +1714,7 @@ function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
   return (
     <div data-sidebar style={{
       width: collapsed ? 60 : 240, height: "calc(100vh - 60px)", position: "fixed", top: 60, left: 0,
-      background: "rgba(2, 4, 9, 0.75)",
+      background: "rgba(0, 0, 0, 0.75)",
       backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
       borderRight: `1px solid ${C.border}`,
       display: "flex", flexDirection: "column", padding: collapsed ? "16px 8px" : "16px 0", 
@@ -1731,7 +1731,7 @@ function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
       >
         <div style={{
           width: 32, height: 32, borderRadius: 8,
-          background: "rgba(2,4,9,0.5)", border: `1px solid ${C.border}`,
+          background: "rgba(0,0,0,0.5)", border: `1px solid ${C.border}`,
           display: "flex", alignItems: "center", justifyContent: "center"
         }}>
           {collapsed ? (

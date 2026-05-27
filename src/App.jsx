@@ -8,7 +8,7 @@ import {
   Briefcase, Globe, Star, Coffee, Flame, Crosshair, Camera, Save,
   ExternalLink, RefreshCw, Gauge, Award, MessageSquare, Send, CreditCard, Receipt,
    Download, Upload, Sparkles, PieChart, TrendingUp as TrendingIcon, Filter, EyeOff, Moon,
-   Trophy, ClipboardCheck
+   Trophy, ClipboardCheck, Share2
 } from "lucide-react";
 import jsPDF from "jspdf";
 import {
@@ -2030,6 +2030,25 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
   const [learnings, setLearnings] = useState("");
   const [tradeTook, setTradeTook] = useState([]);
   const [notes, setNotes] = useState("");
+  const [screenshots, setScreenshots] = useState([]);
+  const [tags, setTags] = useState("");
+
+  const handleScreenshotUpload = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setScreenshots(prev => [...prev, { name: file.name, data: ev.target.result, type: file.type }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = ""; // Reset so same file can be re-uploaded
+  };
+  
+  const removeScreenshot = (idx) => {
+    setScreenshots(prev => prev.filter((_, i) => i !== idx));
+  };
 
   const toggleMultiSelect = (arr, setArr, value) => {
     setArr(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
@@ -2065,6 +2084,7 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
       tapeReading, momentumType, timeframe, scalpTarget,
       // Meta
       newsDay, poi, learnings, tradeTook, notes,
+      screenshots, tags: tags.split(",").map(s => s.trim()).filter(Boolean),
       // Post-session
       postArdas, emotions, mentalState, energyLevel,
       sessionQuality, distractions, postTradeActions,
@@ -2110,6 +2130,8 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
     setLearnings("");
     setTradeTook([]);
     setNotes("");
+    setScreenshots([]);
+    setTags("");
     // Reset post session
     setPostArdas([]);
     setEmotions([]);
@@ -2407,6 +2429,59 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
             </div>
           </div>
           )}
+
+          {/* Section: Screenshots + Tags */}
+          <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.textSecondary, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Screenshots & Tags
+            </h4>
+            
+            {/* Screenshot Upload */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Chart Screenshots</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+                {screenshots.map((ss, i) => (
+                  <div key={i} style={{ position: "relative", width: 80, height: 60, borderRadius: 6, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                    <img src={ss.data} alt={ss.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <button onClick={() => removeScreenshot(i)} style={{
+                      position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%",
+                      background: "rgba(0,0,0,0.7)", border: "none", cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", color: C.loss
+                    }}>×</button>
+                  </div>
+                ))}
+              </div>
+              <label style={{
+                display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: C.radiusSm,
+                background: C.bgInput, border: `1px dashed ${C.border}`, cursor: "pointer",
+                fontSize: 12, color: C.textSecondary, transition: "all 0.15s"
+              }}>
+                <Camera size={14} /> {screenshots.length > 0 ? "Add More" : "Attach Screenshot"}
+                <input type="file" accept="image/*" multiple onChange={handleScreenshotUpload} style={{ display: "none" }} />
+              </label>
+            </div>
+            
+            {/* Tags */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Tags (comma separated)</label>
+              <input type="text" value={tags} onChange={e => setTags(e.target.value)} style={S.input} 
+                placeholder="e.g. reversal, news, fomo, A+ setup" />
+              {tags && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
+                  {tags.split(",").map((t, i) => {
+                    const tag = t.trim();
+                    if (!tag) return null;
+                    return (
+                      <span key={i} style={{
+                        padding: "3px 8px", borderRadius: C.radiusPill, fontSize: 10, fontWeight: 600,
+                        background: "rgba(255,255,255,0.06)", color: C.textSecondary, border: `1px solid ${C.border}`
+                      }}>{tag}</span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Section: Session Info - All Multi-Select Dropdowns */}
           <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
@@ -3225,6 +3300,13 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
         />
       </div>
 
+      {/* ── Setup Playbook + Calendar ────────────────────────── */}
+      {trades.length >= 5 && (
+        <div style={{ marginTop: 24 }}>
+          <SetupPlaybook trades={trades} />
+        </div>
+      )}
+      
       {/* ── Analytics Charts ─────────────────────────────────────── */}
       {trades.length > 0 && (
         <>
@@ -5215,15 +5297,23 @@ function JournalPage({ trades, onDeleteTrade, onUpdateTrade, showToast }) {
   const [search, setSearch] = useState("");
   const [filterTicker, setFilterTicker] = useState("");
   const [filterDirection, setFilterDirection] = useState("");
+  const [filterTag, setFilterTag] = useState("");
+  const [filterMethodology, setFilterMethodology] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
+  const [shareTrade, setShareTrade] = useState(null);
 
+  // Collect all unique tags for filter dropdown
+  const allTags = [...new Set(trades.flatMap(t => t.tags || []))].sort();
+  
   const filtered = trades.filter(t => {
     if (filterTicker && t.ticker !== filterTicker) return false;
     if (filterDirection && t.direction !== filterDirection) return false;
+    if (filterTag && (!t.tags || !t.tags.includes(filterTag))) return false;
+    if (filterMethodology && t.methodology !== filterMethodology) return false;
     if (dateFrom && t.date < dateFrom) return false;
     if (dateTo && t.date > dateTo) return false;
     if (search && !JSON.stringify(t).toLowerCase().includes(search.toLowerCase())) return false;
@@ -5274,11 +5364,15 @@ function JournalPage({ trades, onDeleteTrade, onUpdateTrade, showToast }) {
             <option value="Long">Long</option>
             <option value="Short">Short</option>
           </select>
+          <select value={filterTag} onChange={e => setFilterTag(e.target.value)} style={S.input}>
+            <option value="">All Tags</option>
+            {allTags.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
           <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={S.input} placeholder="From" />
           <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={S.input} placeholder="To" />
         </div>
-        {(filterTicker || filterDirection || dateFrom || dateTo) && (
-          <button onClick={() => { setFilterTicker(""); setFilterDirection(""); setDateFrom(""); setDateTo(""); }}
+        {(filterTicker || filterDirection || filterTag || filterMethodology || dateFrom || dateTo) && (
+          <button onClick={() => { setFilterTicker(""); setFilterDirection(""); setFilterTag(""); setFilterMethodology(""); setDateFrom(""); setDateTo(""); }}
             style={{ ...S.btn("ghost", "sm"), marginTop: 12 }}>
             <X size={14} /> Clear Filters
           </button>
@@ -5328,6 +5422,9 @@ function JournalPage({ trades, onDeleteTrade, onUpdateTrade, showToast }) {
                       </div>
                     ) : (
                       <>
+                        <button onClick={(e) => { e.stopPropagation(); setShareTrade(t); }} style={S.btn("ghost", "sm")} title="Share trade card">
+                          <Share2 size={14} />
+                        </button>
                         <button onClick={(e) => { e.stopPropagation(); startEdit(t, i); }} style={S.btn("ghost", "sm")}>
                           <Edit3 size={14} />
                         </button>
@@ -5350,6 +5447,32 @@ function JournalPage({ trades, onDeleteTrade, onUpdateTrade, showToast }) {
                       <div style={{ marginTop: 12, padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 8 }}>
                         <div style={S.label}>Notes</div>
                         <p style={{ fontSize: 13, color: C.textMuted, margin: 0 }}>{t.notes}</p>
+                      </div>
+                    )}
+                    {/* Screenshots */}
+                    {t.screenshots && t.screenshots.length > 0 && (
+                      <div style={{ marginTop: 12 }}>
+                        <div style={S.label}>Screenshots</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {t.screenshots.map((ss, i) => (
+                            <div key={i} style={{ width: 120, height: 90, borderRadius: 8, overflow: "hidden", border: `1px solid ${C.border}`, cursor: "pointer", position: "relative" }}
+                              onClick={() => window.open(ss.data, "_blank")}>
+                              <img src={ss.data} alt={ss.name || `Screenshot ${i+1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Tags */}
+                    {t.tags && t.tags.length > 0 && (
+                      <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 10, color: C.textDim, textTransform: "uppercase", fontWeight: 600 }}>Tags:</span>
+                        {t.tags.map((tag, i) => (
+                          <span key={i} style={{
+                            padding: "3px 8px", borderRadius: C.radiusPill, fontSize: 10, fontWeight: 600,
+                            background: "rgba(255,255,255,0.06)", color: C.textSecondary, border: `1px solid ${C.border}`
+                          }}>{tag}</span>
+                        ))}
                       </div>
                     )}
                     <button onClick={() => onDeleteTrade(tradeIdx)} style={{ ...S.btn("danger", "sm"), marginTop: 16 }}>
@@ -5397,6 +5520,11 @@ function JournalPage({ trades, onDeleteTrade, onUpdateTrade, showToast }) {
             );
           })}
         </div>
+      )}
+      
+      {/* Share Trade Card Modal */}
+      {shareTrade && (
+        <TradeShareCard trade={shareTrade} onClose={() => setShareTrade(null)} />
       )}
     </div>
   );
@@ -5751,6 +5879,260 @@ function AnalyticsCharts({ trades }) {
 }
 
 // ─── ANALYTICS PAGE ────────────────────────────────────────────────────────
+// ─── SETUP PLAYBOOK ───────────────────────────────────────────────────────
+function SetupPlaybook({ trades }) {
+  const playbook = useMemo(() => {
+    if (trades.length < 5) return null;
+    
+    // Group by setup type (entry model or methodology)
+    const bySetup = {};
+    trades.forEach(t => {
+      const setup = t.entryModel?.[0] || t.methodology || "Other";
+      if (!bySetup[setup]) bySetup[setup] = { trades: [], wins: 0, losses: 0, pnl: 0, tickers: {}, hours: {} };
+      bySetup[setup].trades.push(t);
+      if (t.pnl > 0) bySetup[setup].wins++;
+      else bySetup[setup].losses++;
+      bySetup[setup].pnl += (t.pnl || 0);
+      if (t.ticker) bySetup[setup].tickers[t.ticker] = (bySetup[setup].tickers[t.ticker] || 0) + 1;
+      if (t.tradeEntryTime?.length) {
+        t.tradeEntryTime.forEach(time => {
+          bySetup[setup].hours[time] = (bySetup[setup].hours[time] || 0) + 1;
+        });
+      }
+    });
+    
+    return Object.entries(bySetup)
+      .map(([name, data]) => ({
+        name,
+        count: data.trades.length,
+        wins: data.wins,
+        losses: data.losses,
+        winRate: data.trades.length > 0 ? (data.wins / data.trades.length) * 100 : 0,
+        totalPnl: data.pnl,
+        avgPnl: data.trades.length > 0 ? data.pnl / data.trades.length : 0,
+        bestTicker: Object.entries(data.tickers).sort((a,b) => b[1]-a[1])[0]?.[0] || "—",
+        isProfitable: data.pnl > 0,
+      }))
+      .filter(s => s.count >= 2)
+      .sort((a, b) => b.winRate - a.winRate);
+  }, [trades]);
+  
+  if (!playbook || playbook.length === 0) return null;
+  
+  const bestSetup = playbook[0];
+  const worstSetup = playbook[playbook.length - 1];
+  
+  return (
+    <div style={{ ...S.glassCard, padding: 20 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 6, color: C.text, display: "flex", alignItems: "center", gap: 8 }}>
+        <Target size={16} color={C.profit} /> Setup Playbook
+      </h3>
+      <p style={{ fontSize: 11, color: C.textDim, marginBottom: 16 }}>
+        Your edge, quantified. Best setups ranked by win rate.
+      </p>
+      
+      {/* Hero insight */}
+      {bestSetup && bestSetup.isProfitable && (
+        <div style={{
+          padding: "14px 16px", borderRadius: C.radiusSm, marginBottom: 14,
+          background: C.profitBg, border: `1px solid ${C.profitBorder}`
+        }}>
+          <div style={{ fontSize: 11, color: C.profitLight, fontWeight: 600, marginBottom: 4 }}>🎯 YOUR MONEY MAKER</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>
+            {bestSetup.name} — <span style={{ color: C.profit }}>{bestSetup.winRate.toFixed(0)}% WR</span> across {bestSetup.count} trades
+          </div>
+          <div style={{ fontSize: 12, color: C.textSecondary, marginTop: 4 }}>
+            Avg {bestSetup.totalPnl >= 0 ? "+" : ""}${bestSetup.avgPnl.toFixed(0)}/trade · Best on {bestSetup.ticker || bestSetup.bestTicker}
+          </div>
+        </div>
+      )}
+      
+      {/* Setup table */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {playbook.slice(0, 6).map((setup, i) => (
+          <div key={setup.name} style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "10px 12px",
+            borderRadius: C.radiusSm, background: i === 0 ? "rgba(255,255,255,0.02)" : "transparent",
+            border: i === 0 ? `1px solid ${C.border}` : "1px solid transparent"
+          }}>
+            {/* Rank */}
+            <div style={{ width: 24, height: 24, borderRadius: 6, background: i === 0 ? C.profitBg : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: i === 0 ? C.profit : C.textDim }}>
+              {i + 1}
+            </div>
+            
+            {/* Setup name + meta */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{setup.name}</div>
+              <div style={{ fontSize: 10, color: C.textDim }}>
+                {setup.count} trades · Best: {setup.bestTicker}
+              </div>
+            </div>
+            
+            {/* Win Rate bar */}
+            <div style={{ width: 120 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: setup.winRate >= 50 ? C.profit : C.loss }}>
+                  {setup.winRate.toFixed(0)}%
+                </span>
+                <span style={{ fontSize: 11, color: setup.totalPnl >= 0 ? C.profitLight : C.lossLight }}>
+                  {setup.totalPnl >= 0 ? "+" : ""}${setup.totalPnl.toFixed(0)}
+                </span>
+              </div>
+              <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%", width: `${Math.min(setup.winRate, 100)}%`, borderRadius: 2,
+                  background: setup.winRate >= 60 ? C.profit : setup.winRate >= 40 ? C.gold : C.loss,
+                  transition: "width 0.5s ease"
+                }} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {worstSetup && !worstSetup.isProfitable && (
+        <div style={{
+          padding: "10px 14px", borderRadius: C.radiusSm, marginTop: 12,
+          background: C.lossBg, border: `1px solid ${C.lossBorder}`
+        }}>
+          <span style={{ fontSize: 11, color: C.loss, fontWeight: 600 }}>⚠ Avoid: </span>
+          <span style={{ fontSize: 11, color: C.textSecondary }}>
+            {worstSetup.name} has {worstSetup.winRate.toFixed(0)}% WR and -${Math.abs(worstSetup.totalPnl).toFixed(0)} total P&L
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── TRADE SHARE CARD ─────────────────────────────────────────────────────
+function TradeShareCard({ trade, onClose }) {
+  const canvasRef = useRef(null);
+  
+  const generateImage = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext("2d");
+    const w = 600, h = 400;
+    canvas.width = w;
+    canvas.height = h;
+    
+    // Background
+    ctx.fillStyle = "#0a0a0a";
+    ctx.fillRect(0, 0, w, h);
+    
+    // Brand bar
+    ctx.fillStyle = "#121212";
+    ctx.fillRect(0, 0, w, 56);
+    ctx.fillStyle = "#fafafa";
+    ctx.font = "bold 18px Inter, sans-serif";
+    ctx.fillText("87Capital", 24, 36);
+    ctx.fillStyle = "#525252";
+    ctx.font = "600 10px Inter, sans-serif";
+    ctx.fillText("TRADING OS V5", 24, 50);
+    
+    // Trade info
+    const pnlColor = trade.pnl >= 0 ? "#22c55e" : "#ef4444";
+    ctx.fillStyle = pnlColor;
+    ctx.font = "bold 48px Inter, sans-serif";
+    ctx.fillText(`${trade.pnl >= 0 ? "+" : ""}$${Math.abs(trade.pnl).toFixed(0)}`, 24, 120);
+    
+    ctx.fillStyle = "#fafafa";
+    ctx.font = "bold 22px Inter, sans-serif";
+    ctx.fillText(`${trade.ticker || "—"} · ${trade.direction || "—"}`, 24, 155);
+    
+    // Details grid
+    const details = [
+      { label: "Methodology", value: trade.methodology || "—" },
+      { label: "Setup Grade", value: trade.grade || "—" },
+      { label: "Entry Model", value: Array.isArray(trade.entryModel) ? trade.entryModel.join(", ") : trade.entryModel || "—" },
+      { label: "Contracts", value: trade.contracts || "1" },
+      { label: "Date", value: trade.date || "—" },
+      { label: "Tags", value: Array.isArray(trade.tags) ? trade.tags.join(", ") : "—" },
+    ];
+    
+    let y = 190;
+    details.forEach(d => {
+      ctx.fillStyle = "#525252";
+      ctx.font = "600 10px Inter, sans-serif";
+      ctx.fillText(d.label.toUpperCase(), 24, y);
+      ctx.fillStyle = "#a3a3a3";
+      ctx.font = "14px Inter, sans-serif";
+      ctx.fillText(d.value, 140, y);
+      y += 28;
+    });
+    
+    // Notes
+    if (trade.notes) {
+      ctx.fillStyle = "#525252";
+      ctx.font = "600 10px Inter, sans-serif";
+      ctx.fillText("NOTES", 24, y + 8);
+      ctx.fillStyle = "#737373";
+      ctx.font = "12px Inter, sans-serif";
+      const words = trade.notes.split(" ");
+      let line = "";
+      let noteY = y + 26;
+      words.forEach(word => {
+        const test = line + word + " ";
+        if (ctx.measureText(test).width > w - 48) {
+          ctx.fillText(line, 24, noteY);
+          line = word + " ";
+          noteY += 18;
+        } else {
+          line = test;
+        }
+      });
+      ctx.fillText(line, 24, noteY);
+    }
+    
+    // Footer
+    ctx.fillStyle = "#525252";
+    ctx.font = "10px Inter, sans-serif";
+    ctx.fillText("87capital.vercel.app · Trade smarter, not harder", 24, h - 16);
+    
+    // Download
+    const link = document.createElement("a");
+    link.download = `87capital-trade-${trade.date || "share"}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
+  
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 2000, background: C.bgOverlay,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      animation: "fadeIn 0.2s ease-out"
+    }} onClick={onClose}>
+      <div style={{
+        background: C.bgCard, borderRadius: C.radiusModal, padding: 24, maxWidth: 640, width: "90vw",
+        border: `1px solid ${C.border}`, animation: "fadeInUp 0.25s ease-out"
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Share Trade Card</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: C.textDim }}>
+            <X size={20} />
+          </button>
+        </div>
+        
+        {/* Preview */}
+        <canvas ref={canvasRef} style={{ width: "100%", borderRadius: C.radiusSm, border: `1px solid ${C.border}` }} />
+        
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <button onClick={generateImage} style={{ ...S.btn("primary"), flex: 1 }}>
+            <Download size={16} /> Download Image
+          </button>
+          <button onClick={onClose} style={S.btn("ghost")}>Close</button>
+        </div>
+        
+        <p style={{ fontSize: 11, color: C.textDim, marginTop: 10, textAlign: "center" }}>
+          Share this on Twitter, Discord, or anywhere 📤
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function AnalyticsPage({ trades }) {
   // Calculate chart data
   const pnlByDate = (() => {
@@ -5891,100 +6273,6 @@ function AnalyticsPage({ trades }) {
       {/* Pivot Grid */}
       <div style={{ marginTop: 24 }}>
         <PivotGrid trades={trades} />
-      </div>
-    </div>
-  );
-}
-
-// ─── CALENDAR HEATMAP ─────────────────────────────────────────────────────────
-function CalendarHeatmap({ trades, months = 3 }) {
-  const now = new Date();
-  const startDate = new Date(now);
-  startDate.setMonth(startDate.getMonth() - months);
-
-  // Build day P&L map
-  const dayPnl = {};
-  trades.forEach(t => {
-    if (t.date) {
-      dayPnl[t.date] = (dayPnl[t.date] || 0) + (t.pnl || 0);
-    }
-  });
-
-  // Generate days grid
-  const days = [];
-  const d = new Date(startDate);
-  while (d <= now) {
-    const key = d.toISOString().split("T")[0];
-    const pnl = dayPnl[key] || 0;
-    const hasTrade = key in dayPnl;
-    days.push({ date: key, pnl, hasTrade, day: d.getDate(), month: d.getMonth() });
-    d.setDate(d.getDate() + 1);
-  }
-
-  // Group by month
-  const months_display = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const byMonth = {};
-  days.forEach(day => {
-    const m = `${day.date.substring(0,7)}-${day.month}`;
-    if (!byMonth[m]) byMonth[m] = { month: day.month, label: months_display[day.month], days: [] };
-    byMonth[m].days.push(day);
-  });
-
-  const getColor = (pnl, hasTrade) => {
-    if (!hasTrade) return "transparent";
-    if (pnl > 0) return `rgba(16, 185, 129, ${Math.min(0.9, 0.2 + Math.abs(pnl) / 500)})`;
-    if (pnl < 0) return `rgba(217, 119, 6, ${Math.min(0.9, 0.2 + Math.abs(pnl) / 500)})`;
-    return C.border;
-  };
-
-  return (
-    <div style={{ ...S.glassCard, padding: 20 }}>
-      <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-        <Calendar size={14} color={C.accent} /> Trading Calendar
-      </h3>
-      <div style={{ display: "flex", gap: 24, overflowX: "auto", paddingBottom: 8 }}>
-        {Object.entries(byMonth).map(([key, month]) => (
-          <div key={key} style={{ minWidth: 200 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>{month.label}</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
-              {["S","M","T","W","T","F","S"].map(d => (
-                <div key={d} style={{ fontSize: 8, color: C.textDim, textAlign: "center", marginBottom: 2 }}>{d}</div>
-              ))}
-              {/* Padding for first day of month */}
-              {Array(new Date(month.days[0].date).getDay()).fill(null).map((_, i) => (
-                <div key={`pad-${i}`} />
-              ))}
-              {month.days.map(day => (
-                <div
-                  key={day.date}
-                  title={`${day.date}: ${day.hasTrade ? fmt(day.pnl) : "No trades"}`}
-                  style={{
-                    width: "100%", aspectRatio: 1, borderRadius: 4,
-                    background: getColor(day.pnl, day.hasTrade),
-                    border: `1px solid ${day.hasTrade ? "transparent" : C.border}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 9, fontWeight: day.hasTrade ? 600 : 400,
-                    color: day.hasTrade ? C.text : C.textDim,
-                    cursor: "pointer"
-                  }}
-                >
-                  {day.day}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12, fontSize: 10, color: C.textDim }}>
-        <span>Less</span>
-        <div style={{ width: 12, height: 12, borderRadius: 2, background: C.emeraldBg, border: `1px solid ${C.emeraldBorder}` }} />
-        <div style={{ width: 12, height: 12, borderRadius: 2, background: `rgba(16, 185, 129, 0.5)`, border: `1px solid ${C.emeraldBorder}` }} />
-        <div style={{ width: 12, height: 12, borderRadius: 2, background: `rgba(16, 185, 129, 0.8)`, border: `1px solid ${C.emeraldBorder}` }} />
-        <span>More</span>
-        <span style={{ marginLeft: 8 }}>|</span>
-        <div style={{ width: 12, height: 12, borderRadius: 2, background: C.amberBg, border: `1px solid ${C.amberBorder}` }} />
-        <div style={{ width: 12, height: 12, borderRadius: 2, background: `rgba(217, 119, 6, 0.5)`, border: `1px solid ${C.amberBorder}` }} />
-        <div style={{ width: 12, height: 12, borderRadius: 2, background: `rgba(217, 119, 6, 0.8)`, border: `1px solid ${C.amberBorder}` }} />
       </div>
     </div>
   );

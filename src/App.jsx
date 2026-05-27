@@ -22,6 +22,7 @@ import {
    Trophy, ClipboardCheck, Share2, Heart
 } from "lucide-react";
 import jsPDF from "jspdf";
+import { saveState, loadState, cleanupOldKeys, getQuotaUsage, saveScreenshot, getScreenshot, deleteScreenshots, migrateScreenshotsToIDB, fullExport, validateImport } from "./storage.js";
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart as RePieChart, Pie, Cell, BarChart, Bar,
@@ -995,7 +996,7 @@ function StatCard({ icon, label, value, sub, color }) {
         <span style={{ fontSize: 9, fontWeight: 600, color: C.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</span>
       </div>
       <div style={{ fontSize: 18, fontWeight: 800, color: displayColor, lineHeight: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {typeof value === "number" ? `${prefix}$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: value % 1 !== 0 ? 2 : 0 })}` : value}
+        {typeof value === "number" ? `$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: value % 1 !== 0 ? 2 : 0 })}` : value}
       </div>
       {sub && <div style={{ fontSize: 9, color: C.textMuted }}>{sub}</div>}
     </div>
@@ -2128,10 +2129,6 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
       newsDay, poi, learnings, tradeTook, notes,
       screenshots,
       tags: tags ? tags.split(",").map(t => t.trim()).filter(Boolean) : [],
-      // Post-session
-      postArdas, emotions, mentalState, energyLevel,
-      sessionQuality, distractions, postTradeActions,
-      sessionSummary, nextSessionFocus
     });
     
     // Reset form
@@ -3508,7 +3505,7 @@ function AnalyticsHub({ trades, page }) {
     { label: "Total P&L", value: stats.totalPnl, fmt: fmt, color: pnlColor(stats.totalPnl) },
     { label: "Win Rate", value: stats.winRate, fmt: v => `${v}%`, color: stats.winRate >= 50 ? C.emerald : stats.winRate >= 40 ? C.yellow : C.amber },
     { label: "Avg Winner", value: stats.avgWinner, fmt: fmt, color: C.emerald },
-    { label: "Avg Loser", value: stats.avgLoser, fmt: v => `-${fmt(Math.abs(v))}`, color: C.amber },
+    { label: "Avg Loser", value: stats.avgLoser, fmt: v => fmt(-v), color: C.amber },
     { label: "Expectancy", value: stats.expectancy, fmt: v => (v >= 0 ? "+" : "") + v.toFixed(2), color: pnlColor(stats.expectancy) },
     { label: "Profit Factor", value: stats.profitFactor, fmt: v => v.toFixed(2), color: stats.profitFactor >= 1.5 ? C.emerald : stats.profitFactor >= 1 ? C.yellow : C.amber }
   ];
@@ -5478,6 +5475,26 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
   const [editingCell, setEditingCell] = useState(null); // {rowIdx, colKey}
   const [editValue, setEditValue] = useState("");
   const [newRow, setNewRow] = useState(false);
+  const [search, setSearch] = useState("");
+  const [hiddenCols, setHiddenCols] = useState(new Set());
+
+  // Options for dropdown columns
+  const colOptions = {
+    ticker: TICKERS,
+    direction: ["Long", "Short"],
+    tradeSetup: SETUP_GRADES,
+    entryModel: ENTRY_MODELS,
+    htfOrderflow: HTF_ORDERFLOW,
+    mmxm: MMXM_OPTIONS,
+    liquidity: LIQUIDITY_OPTIONS,
+    smrTime: SMR_TIME,
+    tradeEntryTime: SMR_TIME,
+    toi: TOI_TIME,
+    newsDay: NEWS_DAY,
+    tradeTook: TRADE_TOOK,
+    mistake: MISTAKES,
+    poi: MIDNIGHT_OPEN,
+  };
   
   // Column definitions matching your Notion template
   const columns = [
@@ -5502,16 +5519,8 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
     { key: "learnings", label: "Learnings", width: 120, type: "text" },
     { key: "notes", label: "Summary", width: 150, type: "text" },
   ];
-  
-  const sortedTrades = [...trades].sort((a, b) => new Date(b.date) - new Date(a.date));
-  
-  // Totals
-  const totalPnl = trades.reduce((s, t) => s + (t.pnl || 0), 0);
-  const winCount = trades.filter(t => t.pnl > 0).length;
-  const lossCount = trades.filter(t => t.pnl < 0).length;
-  const wr = trades.length > 0 ? ((winCount / trades.length) * 100).toFixed(0) : 0;
-  
-  // Get cell value
+
+  // Get cell value (must be before sortedTrades for search)
   const getValue = (trade, col) => {
     const val = trade[col.key];
     if (col.key === "pnl") return val || 0;
@@ -5523,7 +5532,24 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
     if (col.key === "direction") return trade.direction || "";
     return val || "";
   };
-  
+
+  const sortedTrades = [...trades]
+    .filter(t => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return columns.some(col => {
+        const val = getValue(t, col);
+        return String(val || "").toLowerCase().includes(q);
+      });
+    })
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // Totals
+  const totalPnl = trades.reduce((s, t) => s + (t.pnl || 0), 0);
+  const winCount = trades.filter(t => t.pnl > 0).length;
+  const lossCount = trades.filter(t => t.pnl < 0).length;
+  const wr = trades.length > 0 ? ((winCount / trades.length) * 100).toFixed(0) : 0;
+
   // Start editing cell
   const startEdit = (rowIdx, colKey) => {
     const trade = sortedTrades[rowIdx];
@@ -5577,6 +5603,36 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
     const val = getValue(trade, col);
     
     if (isEditing) {
+      const options = colOptions[col.key];
+      if (options && options.length > 0) {
+        return (
+          <select
+            autoFocus
+            value={editValue}
+            onChange={e => { setEditValue(e.target.value); setTimeout(saveEdit, 50); }}
+            onBlur={saveEdit}
+            onKeyDown={e => {
+              if (e.key === "Escape") { setEditingCell(null); setEditValue(""); }
+              if (e.key === "Tab") {
+                e.preventDefault();
+                saveEdit();
+                const colIdx = columns.findIndex(c => c.key === col.key);
+                if (colIdx < columns.length - 1) {
+                  setTimeout(() => startEdit(rowIdx, columns[colIdx + 1].key), 50);
+                }
+              }
+            }}
+            style={{
+              width: "100%", background: C.bgInput, border: "none", outline: "none",
+              color: col.key === "pnl" ? pnlColor(val || 0) : C.text,
+              fontSize: 12, fontFamily: "Inter", padding: "2px 4px", borderRadius: 4,
+            }}
+          >
+            <option value="">—</option>
+            {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+        );
+      }
       return (
         <input
           autoFocus
@@ -5589,7 +5645,6 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
             if (e.key === "Tab") {
               e.preventDefault();
               saveEdit();
-              // Move to next cell
               const colIdx = columns.findIndex(c => c.key === col.key);
               if (colIdx < columns.length - 1) {
                 setTimeout(() => startEdit(rowIdx, columns[colIdx + 1].key), 50);
@@ -5658,6 +5713,21 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
               {v === "table" ? "📊 Table" : v === "calendar" ? "📅 Calendar" : "📰 Feed"}
             </button>
           ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ position: "relative" }}>
+            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.textDim }} />
+            <input
+              placeholder="Search trades..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                width: 200, padding: "6px 12px 6px 32px", borderRadius: 8,
+                border: `1px solid ${C.border}`, background: C.bgInput, color: C.text,
+                fontSize: 12, fontFamily: "Inter", outline: "none"
+              }}
+            />
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ display: "flex", gap: 6, fontSize: 11, color: C.textMuted }}>
@@ -7324,8 +7394,9 @@ function PsychologyDashboard({ trades }) {
 
     trades.forEach(t => {
       // Track emotions if stored
-      if (t.emotion) {
-        emotionMap[t.emotion] = (emotionMap[t.emotion] || 0) + 1;
+      if (t.emotion || t.emotions) {
+        const ems = Array.isArray(t.emotions) ? t.emotions : [t.emotion].filter(Boolean);
+        ems.forEach(em => { emotionMap[em] = (emotionMap[em] || 0) + 1; });
       }
       // Track mistakes
       if (t.mistake) {
@@ -7345,8 +7416,9 @@ function PsychologyDashboard({ trades }) {
     // Calculate emotion impact on P&L
     const emotionPnl = {};
     trades.forEach(t => {
-      if (t.emotion && t.pnl) {
-        emotionPnl[t.emotion] = (emotionPnl[t.emotion] || 0) + t.pnl;
+      if ((t.emotion || t.emotions) && t.pnl) {
+        const ems = Array.isArray(t.emotions) ? t.emotions : [t.emotion].filter(Boolean);
+        ems.forEach(em => { emotionPnl[em] = (emotionPnl[em] || 0) + t.pnl; });
       }
     });
 
@@ -7563,7 +7635,7 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
           doc.setTextColor(120, 113, 108);
           doc.text(`${i + 1}. ${s.name}`, margin, y);
           doc.setTextColor(s.totalPnl >= 0 ? 16 : 217, s.totalPnl >= 0 ? 185 : 119, s.totalPnl >= 0 ? 129 : 6);
-          doc.text(`${fmt(s.totalPln || s.totalPnl)} (${s.winRate.toFixed(0)}% WR, ${s.count} trades)`, margin + 80, y);
+          doc.text(`${fmt(s.totalPnl)} (${s.winRate.toFixed(0)}% WR, ${s.count} trades)`, margin + 80, y);
           y += 6;
         });
         y += 8;
@@ -7631,14 +7703,10 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
 
   // Export JSON backup
   const exportJSON = () => {
-    const data = {
-      version: "5.0",
-      exportedAt: new Date().toISOString(),
-      app: "Mart Journal",
-      trader: "Trader",
-      trades,
-      propAccounts
-    };
+    const data = fullExport({
+      trades, session, propAccounts, subscriptions, expenses, payouts, milestones, weeklyReviews,
+      settings: { spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit }
+    });
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -7740,7 +7808,7 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
             toi: get(row, "toi"),
             smt: get(row, "smt"),
             newsDay: get(row, "news day") || get(row, "newsday"),
-            mistake: get(row, "trade took") || get(row, "tradetook"),
+            tradeTook: get(row, "trade took") || get(row, "tradetook") || get(row, "took"),
             notes: get(row, "summry") || get(row, "learnings") || get(row, "summary") || get(row, "notes") || "",
           };
 
@@ -7876,7 +7944,7 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
                     type="number"
                     value={dailyGoal}
                     onChange={e => setDailyGoal(Number(e.target.value))}
-                    style={{ ...S.input(100), background: "rgba(0,0,0,0.3)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e", fontWeight: 700 }}
+                    style={{ ...S.input, width: 100, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e", fontWeight: 700 }}
                   />
                 </div>
               </div>
@@ -7891,7 +7959,7 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
                     type="number"
                     value={weeklyGoal}
                     onChange={e => setWeeklyGoal(Number(e.target.value))}
-                    style={{ ...S.input(100), background: "rgba(0,0,0,0.3)", border: "1px solid rgba(99,102,241,0.3)", color: C.accent, fontWeight: 700 }}
+                    style={{ ...S.input, width: 100, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(99,102,241,0.3)", color: C.accent, fontWeight: 700 }}
                   />
                 </div>
               </div>
@@ -7906,7 +7974,7 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
                     type="number"
                     value={monthlyGoal}
                     onChange={e => setMonthlyGoal(Number(e.target.value))}
-                    style={{ ...S.input(100), background: "rgba(0,0,0,0.3)", border: "1px solid rgba(168,85,247,0.3)", color: "#a855f7", fontWeight: 700 }}
+                    style={{ ...S.input, width: 100, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(168,85,247,0.3)", color: "#a855f7", fontWeight: 700 }}
                   />
                 </div>
               </div>
@@ -7921,7 +7989,7 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
                     type="number"
                     value={dailyLossLimit}
                     onChange={e => setDailyLossLimit(Number(e.target.value))}
-                    style={{ ...S.input(100), background: "rgba(0,0,0,0.3)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", fontWeight: 700 }}
+                    style={{ ...S.input, width: 100, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", fontWeight: 700 }}
                   />
                 </div>
               </div>
@@ -7973,7 +8041,7 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
             <Logo size={48} />
             <div>
               <div style={{ fontSize: 18, fontWeight: 800, color: C.gold }}>Mart Journal Trading OS</div>
-              <div style={{ fontSize: 12, color: C.textMuted }}>Version 4.0 — Built for Karan Singh</div>
+              <div style={{ fontSize: 12, color: C.textMuted }}>Version 5.0 — Mart Journal</div>
             </div>
           </div>
           <p style={{ color: C.textMuted, lineHeight: 1.7, fontSize: 13 }}>
@@ -8104,7 +8172,7 @@ function checkMilestones({ trades, propAccounts, payouts, weeklyReviews, existin
         current: netProfit > 0 ? 1 : 0 },
       // ── Habit ────────────────────────────────────────────────
       { ...getOrCreate("H1", { type: "habit", label: "Pre-Session Planner", description: "First pre-session plan written", target: 1, icon: "🧘", category: "Habit" }),
-        current: propAccounts.length > 0 || trades.length > 0 ? 1 : 0 },
+        current: weeklyReviews.length > 0 || (session && session.analysis) ? 1 : 0 },
       { ...getOrCreate("H2", { type: "habit", label: "7-Day Journal Streak", description: "Logged trades 7 days straight", target: 7, icon: "📆", category: "Habit" }),
         current: journalStreak },
       { ...getOrCreate("H3", { type: "habit", label: "30-Day Journal Streak", description: "Logged trades 30 days straight", target: 30, icon: "🗓️", category: "Habit" }),
@@ -8118,7 +8186,7 @@ function checkMilestones({ trades, propAccounts, payouts, weeklyReviews, existin
       { ...getOrCreate("H7", { type: "habit", label: "12 Weeks Reviewed", description: "Completed 12 weekly reviews", target: 12, icon: "🎓", category: "Habit" }),
         current: weeklyReviews.length },
       { ...getOrCreate("H8", { type: "habit", label: "Zero B Trades", description: "A whole week with no B trades", target: 1, icon: "🎯", category: "Habit" }),
-        current: 0 },
+        current: (() => { /* Check if any week has zero B-grade or lower trades */ if (trades.length === 0) return 0; const gradeMap = {}; trades.forEach(t => { const d = new Date(t.date); d.setHours(0,0,0,0); const monday = new Date(d); monday.setDate(d.getDate() - ((d.getDay()+6)%7)); const wk = monday.toISOString().slice(0,10); if (!gradeMap[wk]) gradeMap[wk] = true; const g = t.setupGrade || t.grade || ""; if (g && (g.toUpperCase().startsWith("B") || g.toUpperCase() === "C" || g.toUpperCase() === "D" || g.toUpperCase() === "F")) gradeMap[wk] = false; }); return Object.values(gradeMap).filter(v => v === true).length; })() },
     ];
 
     // Mark achievements
@@ -8611,40 +8679,17 @@ export default function App() {
   const [lastSessionData, setLastSessionData] = useState(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [dailyGoal, setDailyGoal] = useState(() => {
-    try {
-      const saved = localStorage.getItem("mart_journal");
-      if (saved) { const d = JSON.parse(saved); if (d.dailyGoal) return d.dailyGoal; }
-    } catch(e) {}
-    return 250;
-  });
-  const [weeklyGoal, setWeeklyGoal] = useState(() => {
-    try {
-      const saved = localStorage.getItem("mart_journal");
-      if (saved) { const d = JSON.parse(saved); if (d.weeklyGoal) return d.weeklyGoal; }
-    } catch(e) {}
-    return 1000;
-  });
-  const [monthlyGoal, setMonthlyGoal] = useState(() => {
-    try {
-      const saved = localStorage.getItem("mart_journal");
-      if (saved) { const d = JSON.parse(saved); if (d.monthlyGoal) return d.monthlyGoal; }
-    } catch(e) {}
-    return 4000;
-  });
-  const [dailyLossLimit, setDailyLossLimit] = useState(() => {
-    try {
-      const saved = localStorage.getItem("mart_journal");
-      if (saved) { const d = JSON.parse(saved); if (d.dailyLossLimit) return d.dailyLossLimit; }
-    } catch(e) {}
-    return 250;
-  });
+  const [dailyGoal, setDailyGoal] = useState(250);
+  const [weeklyGoal, setWeeklyGoal] = useState(1000);
+  const [monthlyGoal, setMonthlyGoal] = useState(4000);
+  const [dailyLossLimit, setDailyLossLimit] = useState(250);
   const [subscriptions, setSubscriptions] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [payouts, setPayouts] = useState([]);
   const [milestones, setMilestones] = useState([]);
   const [weeklyReviews, setWeeklyReviews] = useState([]);
   const [showWeeklyReview, setShowWeeklyReview] = useState(false);
+  const [deletedTrade, setDeletedTrade] = useState(null);
 
   // Toast helper - defined first to avoid closure issues
   const showToast = (message, type = "info") => {
@@ -8652,20 +8697,11 @@ export default function App() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Load from localStorage (with migration from old key)
+  // Load from localStorage (with versioned storage + corruption recovery)
   useEffect(() => {
     try {
-      // Try new key first, fall back to old key for migration
-      let saved = localStorage.getItem("mart_journal");
-      if (!saved) {
-        const oldData = localStorage.getItem("87capital_v4");
-        if (oldData) {
-          localStorage.setItem("mart_journal", oldData);
-          saved = oldData;
-        }
-      }
-      if (saved) {
-        const data = JSON.parse(saved);
+      const data = loadState();
+      if (data) {
         if (data.trades) setTrades(data.trades);
         if (data.session) setSession(data.session);
         if (data.propAccounts) setPropAccounts(data.propAccounts);
@@ -8693,12 +8729,17 @@ export default function App() {
           }
         }
       }
-    } catch (e) {}
+      // Clean up old storage keys after successful load
+      cleanupOldKeys();
+    } catch (e) { console.error("[Mart Journal] Load error:", e); }
   }, []);
 
-  // Save to localStorage
+  // Save to localStorage (versioned, with backup + quota awareness)
   useEffect(() => {
-    localStorage.setItem("mart_journal", JSON.stringify({ trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, subscriptions, expenses, payouts, milestones, weeklyReviews }));
+    const result = saveState({ trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, subscriptions, expenses, payouts, milestones, weeklyReviews });
+    if (!result.success && result.pct > 90) {
+      console.warn("[Mart Journal] Storage nearly full. Consider exporting your data.");
+    }
   }, [trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, subscriptions, expenses, payouts, milestones, weeklyReviews]);
 
   // ── Initialize + detect milestones — runs whenever data changes ─────────────────
@@ -8744,7 +8785,28 @@ export default function App() {
     setSession(s => ({ ...s, trades: s.trades + 1 }));
   };
 
-  const onDeleteTrade = (idx) => setTrades(prev => prev.filter((_, i) => i !== idx));
+  const onDeleteTrade = (idx) => {
+    const trade = trades[idx];
+    setTrades(prev => prev.filter((_, i) => i !== idx));
+    // Store for undo
+    setDeletedTrade({ trade, idx });
+    showToast(
+      <span>Trade deleted — <button onClick={() => undoDelete()} style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", fontWeight: 700, textDecoration: "underline" }}>Undo</button></span>,
+      "info"
+    );
+    // Auto-clear undo after 8 seconds
+    setTimeout(() => setDeletedTrade(null), 8000);
+  };
+  const undoDelete = () => {
+    if (!deletedTrade) return;
+    setTrades(prev => {
+      const next = [...prev];
+      next.splice(deletedTrade.idx, 0, deletedTrade.trade);
+      return next;
+    });
+    setDeletedTrade(null);
+    showToast("Trade restored!", "success");
+  };
 
   const onUpdateTrade = (idx, updatedTrade) => {
     setTrades(prev => prev.map((t, i) => i === idx ? { ...t, ...updatedTrade } : t));

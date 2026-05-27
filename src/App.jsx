@@ -5471,6 +5471,330 @@ function PreSessionPage({ onStartSession, setPage, spiritualMode = true }) {
 }
 
 // ─── JOURNAL PAGE ───────────────────────────────────────────────────────────
+
+// ─── NOTION-STYLE TABLE JOURNAL ───────────────────────────────────────────
+function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, showToast }) {
+  const [view, setView] = useState("table");
+  const [editingCell, setEditingCell] = useState(null); // {rowIdx, colKey}
+  const [editValue, setEditValue] = useState("");
+  const [newRow, setNewRow] = useState(false);
+  
+  // Column definitions matching your Notion template
+  const columns = [
+    { key: "date", label: "Date", width: 100, type: "date", pinned: true },
+    { key: "name", label: "Name", width: 90, type: "text" },
+    { key: "ticker", label: "Ticker", width: 70, type: "select", pinned: true },
+    { key: "direction", label: "Dir", width: 55, type: "direction" },
+    { key: "pnl", label: "P&L", width: 85, type: "number", pinned: true, isCurrency: true },
+    { key: "contracts", label: "Size", width: 55, type: "number" },
+    { key: "tradeSetup", label: "Setup", width: 60, type: "select" },
+    { key: "entryModel", label: "Entry Model", width: 110, type: "text" },
+    { key: "htfOrderflow", label: "HTF OF", width: 90, type: "text" },
+    { key: "mmxm", label: "MMXM", width: 70, type: "text" },
+    { key: "liquidity", label: "Liquidity", width: 90, type: "text" },
+    { key: "smrTime", label: "SMR Time", width: 85, type: "text" },
+    { key: "tradeEntryTime", label: "Entry Time", width: 85, type: "text" },
+    { key: "toi", label: "TOI", width: 80, type: "text" },
+    { key: "poi", label: "POI", width: 80, type: "text" },
+    { key: "newsDay", label: "News", width: 65, type: "text" },
+    { key: "tradeTook", label: "Took", width: 70, type: "text" },
+    { key: "mistake", label: "Mistake", width: 80, type: "text" },
+    { key: "learnings", label: "Learnings", width: 120, type: "text" },
+    { key: "notes", label: "Summary", width: 150, type: "text" },
+  ];
+  
+  const sortedTrades = [...trades].sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  // Totals
+  const totalPnl = trades.reduce((s, t) => s + (t.pnl || 0), 0);
+  const winCount = trades.filter(t => t.pnl > 0).length;
+  const lossCount = trades.filter(t => t.pnl < 0).length;
+  const wr = trades.length > 0 ? ((winCount / trades.length) * 100).toFixed(0) : 0;
+  
+  // Get cell value
+  const getValue = (trade, col) => {
+    const val = trade[col.key];
+    if (col.key === "pnl") return val || 0;
+    if (col.key === "entryModel") return Array.isArray(val) ? val.join(", ") : (val || "");
+    if (col.key === "htfOrderflow" || col.key === "mmxm" || col.key === "liquidity" || col.key === "smrTime" || col.key === "tradeEntryTime" || col.key === "toi" || col.key === "tradeTook" || col.key === "newsDay") {
+      return Array.isArray(val) ? val.join(", ") : (val || "");
+    }
+    if (col.key === "tradeSetup") return trade.grade || trade.setupGrade || "";
+    if (col.key === "direction") return trade.direction || "";
+    return val || "";
+  };
+  
+  // Start editing cell
+  const startEdit = (rowIdx, colKey) => {
+    const trade = sortedTrades[rowIdx];
+    const val = getValue(trade, columns.find(c => c.key === colKey));
+    setEditingCell({ rowIdx, colKey });
+    setEditValue(String(val));
+  };
+  
+  // Save cell edit
+  const saveEdit = () => {
+    if (!editingCell) return;
+    const { rowIdx, colKey } = editingCell;
+    const trade = sortedTrades[rowIdx];
+    const actualIdx = trades.indexOf(trade);
+    const col = columns.find(c => c.key === colKey);
+    
+    let value = editValue;
+    if (col.type === "number" || col.isCurrency) {
+      value = parseFloat(editValue) || 0;
+    }
+    
+    onUpdateTrade(actualIdx, { [colKey]: value });
+    setEditingCell(null);
+    setEditValue("");
+  };
+  
+  // Add new row inline
+  const addNewRow = () => {
+    if (newRow) {
+      // Submit the new row
+      saveEdit();
+      setNewRow(false);
+    } else {
+      onAddTrade({
+        date: new Date().toISOString().split("T")[0],
+        ticker: "MNQ",
+        pnl: 0,
+        contracts: 1,
+        direction: "Long",
+        name: "",
+        entryModel: "",
+        tradeSetup: "",
+      });
+      showToast("New trade row added — fill in the details", "info");
+    }
+  };
+  
+  // Cell renderer
+  const renderCell = (trade, col, rowIdx) => {
+    const isEditing = editingCell && editingCell.rowIdx === rowIdx && editingCell.colKey === col.key;
+    const val = getValue(trade, col);
+    
+    if (isEditing) {
+      return (
+        <input
+          autoFocus
+          value={editValue}
+          onChange={e => setEditValue(e.target.value)}
+          onBlur={saveEdit}
+          onKeyDown={e => {
+            if (e.key === "Enter") saveEdit();
+            if (e.key === "Escape") { setEditingCell(null); setEditValue(""); }
+            if (e.key === "Tab") {
+              e.preventDefault();
+              saveEdit();
+              // Move to next cell
+              const colIdx = columns.findIndex(c => c.key === col.key);
+              if (colIdx < columns.length - 1) {
+                setTimeout(() => startEdit(rowIdx, columns[colIdx + 1].key), 50);
+              }
+            }
+          }}
+          style={{
+            width: "100%", background: "transparent", border: "none", outline: "none",
+            color: col.key === "pnl" ? pnlColor(val || 0) : C.text,
+            fontSize: 12, fontFamily: "Inter", padding: "2px 4px",
+            fontWeight: col.key === "pnl" ? 700 : 400,
+          }}
+        />
+      );
+    }
+    
+    // P&L cell styling
+    if (col.key === "pnl") {
+      const n = Number(val) || 0;
+      return (
+        <div onClick={() => startEdit(rowIdx, col.key)} style={{
+          cursor: "text", fontWeight: 700, fontSize: 12,
+          color: n > 0 ? C.emerald : n < 0 ? C.amber : C.textDim,
+          padding: "2px 4px", borderRadius: 3,
+        }}>
+          {n >= 0 ? "+" : ""}{n.toFixed(0)}
+        </div>
+      );
+    }
+    
+    // Direction cell
+    if (col.key === "direction") {
+      return (
+        <div onClick={() => startEdit(rowIdx, col.key)} style={{
+          cursor: "text", fontSize: 11, fontWeight: 600, padding: "2px 4px", borderRadius: 3,
+          color: val === "Long" ? C.emerald : val === "Short" ? C.amber : C.textDim,
+        }}>
+          {val || "—"}
+        </div>
+      );
+    }
+    
+    // Default cell
+    return (
+      <div onClick={() => startEdit(rowIdx, col.key)} style={{
+        cursor: "text", fontSize: 11, color: val ? C.text : C.textDim,
+        padding: "2px 4px", borderRadius: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+      }}>
+        {val || "—"}
+      </div>
+    );
+  };
+  
+  return (
+    <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out", maxWidth: "100%", overflow: "hidden" }}>
+      {/* Header with view tabs */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 4 }}>
+          {["table", "calendar", "feed"].map(v => (
+            <button key={v} onClick={() => setView(v)} style={{
+              padding: "6px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600,
+              background: view === v ? C.bgCard : "transparent",
+              color: view === v ? C.text : C.textDim,
+              fontFamily: "Inter", transition: "all 0.15s"
+            }}>
+              {v === "table" ? "📊 Table" : v === "calendar" ? "📅 Calendar" : "📰 Feed"}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", gap: 6, fontSize: 11, color: C.textMuted }}>
+            <span style={{ fontWeight: 700, color: C.text }}>{trades.length}</span> trades
+            <span>·</span>
+            <span style={{ fontWeight: 700, color: C.emerald }}>{winCount}W</span>
+            <span>·</span>
+            <span style={{ fontWeight: 700, color: C.amber }}>{lossCount}L</span>
+            <span>·</span>
+            <span style={{ fontWeight: 700, color: C.accentLight }}>{wr}% WR</span>
+          </div>
+          <button onClick={addNewRow} style={S.btn("primary", "sm")}>
+            <Plus size={14} /> New Trade
+          </button>
+        </div>
+      </div>
+      
+      {/* Table View */}
+      {view === "table" && (
+        <div style={{
+          overflowX: "auto", borderRadius: C.radiusCard,
+          border: `1px solid ${C.border}`, background: C.bgCard,
+        }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: "Inter" }}>
+            <thead>
+              <tr style={{ background: "rgba(0,0,0,0.3)", position: "sticky", top: 0, zIndex: 10 }}>
+                <th style={{ padding: 8, width: 30, textAlign: "center", color: C.textDim, fontSize: 10 }}>#</th>
+                {columns.map(col => (
+                  <th key={col.key} style={{
+                    padding: "8px 6px", textAlign: "left", fontWeight: 700, fontSize: 10,
+                    color: C.textDim, textTransform: "uppercase", letterSpacing: "0.05em",
+                    minWidth: col.width, maxWidth: col.width,
+                    position: col.pinned ? "sticky" : "static",
+                    left: col.pinned && col.key === "date" ? 30 : "auto",
+                    background: col.pinned ? "rgba(0,0,0,0.3)" : "transparent",
+                    zIndex: col.pinned ? 11 : 0,
+                  }}>
+                    {col.label}
+                  </th>
+                ))}
+                <th style={{ padding: 8, width: 40, textAlign: "center" }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedTrades.map((trade, rowIdx) => (
+                <tr key={rowIdx} style={{
+                  borderBottom: `1px solid ${C.borderLight}`,
+                  transition: "background 0.1s",
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = C.bgHover || "rgba(255,255,255,0.02)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                >
+                  <td style={{ padding: "6px 8px", textAlign: "center", color: C.textDim, fontSize: 10 }}>
+                    {rowIdx + 1}
+                  </td>
+                  {columns.map(col => (
+                    <td key={col.key} style={{
+                      padding: "4px 6px",
+                      position: col.pinned ? "sticky" : "static",
+                      left: col.pinned && col.key === "date" ? 30 : "auto",
+                      background: "inherit",
+                    }}>
+                      {renderCell(trade, col, rowIdx)}
+                    </td>
+                  ))}
+                  <td style={{ padding: 4, textAlign: "center" }}>
+                    <button onClick={() => onDeleteTrade(trades.indexOf(trade))} style={{
+                      background: "none", border: "none", cursor: "pointer", color: C.textDim, padding: 4, opacity: 0.5,
+                    }} title="Delete trade">
+                      <X size={12} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            {/* Footer totals */}
+            <tfoot>
+              <tr style={{ background: "rgba(0,0,0,0.25)", borderTop: `2px solid ${C.border}` }}>
+                <td style={{ padding: "8px 8px", fontWeight: 700, fontSize: 11, color: C.textDim }}>
+                  COUNT {trades.length}
+                </td>
+                {columns.map(col => (
+                  <td key={col.key} style={{ padding: "6px 6px", fontWeight: 700, fontSize: 11 }}>
+                    {col.key === "pnl" ? (
+                      <span style={{ color: totalPnl >= 0 ? C.emerald : C.amber }}>
+                        SUM {totalPnl >= 0 ? "+" : ""}{totalPnl.toFixed(2)}
+                      </span>
+                    ) : col.key === "contracts" ? (
+                      <span style={{ color: C.textDim }}>
+                        {trades.reduce((s, t) => s + (t.contracts || 0), 0)}
+                      </span>
+                    ) : null}
+                  </td>
+                ))}
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+      
+      {/* Calendar View */}
+      {view === "calendar" && (
+        <CalendarHeatmap trades={trades} />
+      )}
+      
+      {/* Feed View */}
+      {view === "feed" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {sortedTrades.length === 0 ? (
+            <div style={{ ...S.glassCard, textAlign: "center", padding: 60, color: C.textDim }}>
+              <p>No trades yet. Add your first trade above.</p>
+            </div>
+          ) : (
+            sortedTrades.map((trade, rowIdx) => (
+              <div key={rowIdx} style={{ ...S.glassCard, padding: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontWeight: 700, fontSize: 15 }}>{trade.ticker} {trade.direction}</span>
+                    <span style={{ fontSize: 12, color: C.textDim }}>{trade.date}</span>
+                    {trade.tradeSetup && <span style={S.badge(gradeColor(trade.tradeSetup))}>{trade.tradeSetup}</span>}
+                  </div>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: pnlColor(trade.pnl || 0) }}>{fmt(trade.pnl || 0)}</span>
+                </div>
+                {trade.entryModel && <div style={{ fontSize: 12, color: C.textMuted }}>Entry: {Array.isArray(trade.entryModel) ? trade.entryModel.join(", ") : trade.entryModel}</div>}
+                {trade.notes && <p style={{ fontSize: 12, color: C.textDim, marginTop: 6 }}>{trade.notes}</p>}
+                {trade.learnings && <p style={{ fontSize: 11, color: C.accentLight, marginTop: 4, fontStyle: "italic" }}>💡 {trade.learnings}</p>}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── OLD JOURNAL PAGE (kept for reference) ───────────────────────────
 function JournalPage({ trades, onDeleteTrade, onUpdateTrade, showToast }) {
   const [search, setSearch] = useState("");
   const [filterTicker, setFilterTicker] = useState("");
@@ -8434,7 +8758,7 @@ export default function App() {
       case "news": return <NewsPage showToast={showToast} />;
       case "presession": return <PreSessionPage onStartSession={onStartSession} setPage={setPage} spiritualMode={spiritualMode} />;
       case "postsession": return <PostSessionPage setPage={setPage} showToast={showToast} trades={trades} onAddTrade={onAddTrade} spiritualMode={spiritualMode} />;
-      case "journal": return <JournalPage trades={trades} onDeleteTrade={onDeleteTrade} onUpdateTrade={onUpdateTrade} showToast={showToast} />;
+      case "journal": return <NotionJournalPage trades={trades} onAddTrade={onAddTrade} onDeleteTrade={onDeleteTrade} onUpdateTrade={onUpdateTrade} showToast={showToast} />;
       case "analytics": return <AnalyticsPage trades={trades} />;
       case "psychology": return <PsychologyDashboard trades={trades} />;
       case "ai": return <AICoachPage trades={trades} />;

@@ -282,7 +282,7 @@ const S = {
 };
 
 // ─── UTILITIES ───────────────────────────────────────────────────────────────
-const fmt = (n) => (n >= 0 ? "+" : "") + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = (n) => (n > 0 ? "+" : "") + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtUsd = (n) => "$" + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pnlColor = (n) => n >= 0 ? C.emerald : C.amber;
 const pnlBg = (n) => n >= 0 ? C.emeraldBg : C.amberBg;
@@ -7028,9 +7028,19 @@ function AnalyticsPage({ trades }) {
     return (
       <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
         <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 28 }}>Analytics</h1>
-        <div style={{ ...S.glassCard, textAlign: "center", padding: 80, color: C.textDim }}>
-          <BarChart3 size={56} style={{ opacity: 0.3, marginBottom: 16 }} />
-          <p>Analytics dashboard coming soon. Log some trades to see your stats!</p>
+        {/* Show stat cards even with zero data */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 24 }}>
+          <MiniStat icon={DollarSign} label="Total P&L" value="$0.00" color={C.textDim} />
+          <MiniStat icon={Target} label="Win Rate" value="0.0%" color={C.textDim} />
+          <MiniStat icon={TrendingUp} label="Avg Win" value="$0.00" color={C.textDim} />
+          <MiniStat icon={TrendingDown} label="Avg Loss" value="$0.00" color={C.textDim} />
+          <MiniStat icon={Award} label="Best Trade" value="$0.00" color={C.textDim} />
+          <MiniStat icon={AlertTriangle} label="Worst Trade" value="$0.00" color={C.textDim} />
+        </div>
+        <div style={{ ...S.glassCard, textAlign: "center", padding: 60, color: C.textDim }}>
+          <BarChart3 size={48} style={{ opacity: 0.2, marginBottom: 12 }} />
+          <p style={{ fontSize: 14 }}>Start logging trades to unlock your analytics.</p>
+          <p style={{ fontSize: 12, marginTop: 4 }}>Your equity curve, win rate chart, and pivot grid will appear here.</p>
         </div>
       </div>
     );

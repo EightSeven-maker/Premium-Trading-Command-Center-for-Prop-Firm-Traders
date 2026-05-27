@@ -3502,6 +3502,61 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
         </div>
       </div>
 
+      {/* First-Trade Onboarding — shown when no trades exist */}
+      {trades.length === 0 && (
+        <div style={{ 
+          marginBottom: 24, padding: 28, borderRadius: C.radiusCard,
+          background: `linear-gradient(135deg, ${C.accent}10, ${C.purple}08)`,
+          border: `1px solid ${C.accent}20`
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 20 }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: 14,
+              background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 24, flexShrink: 0
+            }}>🚀</div>
+            <div style={{ flex: 1 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Welcome to Mart Journal</h2>
+              <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 20, lineHeight: 1.6 }}>
+                Your trading journal is empty. Let's get your first trade logged in under 60 seconds.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+                {[
+                  { step: 1, icon: "🎯", title: "Log Your First Trade", desc: "Go to Journal → click New Trade. Enter ticker, direction, P&L.", action: "journal" },
+                  { step: 2, icon: "📊", title: "Fill Your Dashboard", desc: "After 3+ trades, stats auto-populate — win rate, expectancy, Sharpe.", action: null },
+                  { step: 3, icon: "🧠", title: "Review with AI Coach", desc: "After 5+ trades, get pattern analysis and mistake detection.", action: null },
+                ].map((s, i) => (
+                  <div key={i} style={{
+                    padding: 16, borderRadius: 12, background: "rgba(0,0,0,0.3)",
+                    border: `1px solid ${C.border}`, textAlign: "center"
+                  }}>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Step {s.step}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{s.title}</div>
+                    <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>{s.desc}</div>
+                    {s.action && (
+                      <button onClick={() => setPage(s.action)} style={{
+                        marginTop: 10, padding: "6px 14px", borderRadius: 8,
+                        border: `1px solid ${C.accent}`, background: `${C.accent}15`,
+                        color: C.accent, fontSize: 11, fontWeight: 600, cursor: "pointer"
+                      }}>
+                        Go → 
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding: "12px 16px", borderRadius: 10, background: `${C.gold}08`, border: `1px solid ${C.goldBorder}` }}>
+                <span style={{ fontSize: 12, color: C.gold }}>
+                  💡 <strong>Pro tip:</strong> Use the <strong>Journal</strong> page (Notion table) for bulk entry — it's the fastest way to log trades.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div style={{ display: "grid", gridTemplateColumns: "60% 40%", gap: 20 }}>
         <AnalyticsHub trades={trades} />
@@ -3950,7 +4005,7 @@ function TradePanel({ trades, activeSetupFilter, activeDayFilter, setActiveSetup
 }
 
 // ─── PROP FIRMS PAGE ─────────────────────────────────────────────────────────
-function PropFirmsPage({ propAccounts, setPropAccounts, showToast, subscriptions, setSubscriptions, expenses, setExpenses, payouts, setPayouts }) {
+function PropFirmsPage({ propAccounts, setPropAccounts, showToast, subscriptions, setSubscriptions, expenses, setExpenses, payouts, setPayouts, trades }) {
   const [showAdd, setShowAdd] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
   const [connectingFirm, setConnectingFirm] = useState(null);
@@ -4264,6 +4319,21 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast, subscriptions
     setPropAccounts(propAccounts.map(a => a.id === id ? { ...a, balance: a.balance + change } : a));
   };
 
+  // Auto-calculate daily loss from real trades for each prop account
+  useEffect(() => {
+    if (!trades || trades.length === 0) return;
+    const todayStr = new Date().toISOString().split("T")[0];
+    const todayTrades = trades.filter(t => t.date === todayStr);
+    const todayLoss = todayTrades.reduce((sum, t) => sum + Math.min(0, t.pnl || 0), 0);
+    const absLoss = Math.abs(todayLoss);
+    if (absLoss > 0) {
+      setPropAccounts(prev => prev.map(a => ({
+        ...a,
+        dailyLossUsed: Math.max(a.dailyLossUsed || 0, absLoss)
+      })));
+    }
+  }, [trades]);
+
   const totalEquity = connectedAccounts.reduce((s, a) => s + a.equity, 0);
   const totalOpenPnl = connectedAccounts.reduce((s, a) => s + a.openPnl, 0);
   const totalTodayPnl = connectedAccounts.reduce((s, a) => s + a.todayPnl, 0);
@@ -4287,6 +4357,19 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast, subscriptions
         <div style={{ display: "flex", gap: 12 }}>
           <button onClick={() => setShowConnect(true)} style={S.btn("primary")}><Zap size={16} /> Connect Account</button>
           <button onClick={() => setShowAdd(true)} style={S.btn("ghost")}><Plus size={16} /> Manual Add</button>
+        </div>
+      </div>
+
+      {/* ── DEMO MODE Banner ──────────────────────────────────────────── */}
+      <div style={{
+        marginBottom: 20, padding: "12px 20px", borderRadius: C.radiusCard,
+        background: `${C.amber}10`, border: `1px solid ${C.amberBorder}`,
+        display: "flex", alignItems: "center", gap: 12
+      }}>
+        <AlertTriangle size={16} color={C.amber} />
+        <div style={{ flex: 1 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.amber }}>DEMO MODE</span>
+          <span style={{ fontSize: 12, color: C.textMuted, marginLeft: 8 }}>— Connect uses simulated data. Real API integration coming soon.</span>
         </div>
       </div>
 
@@ -4830,6 +4913,9 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast, subscriptions
                   <div><label style={S.label}>API Secret</label><input type="password" value={apiCredentials.apiSecret} onChange={e => setApiCredentials({ ...apiCredentials, apiSecret: e.target.value })} style={S.input} placeholder="Enter your API secret" /></div>
                   <div><label style={S.label}>Account ID (Optional)</label><input value={apiCredentials.accountId} onChange={e => setApiCredentials({ ...apiCredentials, accountId: e.target.value })} style={S.input} placeholder="Your account identifier" /></div>
                 </div>
+                <div style={{ marginTop: 12, padding: "8px 12px", borderRadius: 8, background: `${C.amber}10`, border: `1px solid ${C.amberBorder}`, fontSize: 11, color: C.amber, display: "flex", alignItems: "center", gap: 8 }}>
+                  <AlertTriangle size={12} /> This is a demo — any credentials will return simulated data.
+                </div>
                 <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
                   <button onClick={() => { setConnectingFirm(null); setApiCredentials({ apiKey: "", apiSecret: "", accountId: "" }); }} style={{ ...S.btn("ghost", "md"), flex: 1 }}>Back</button>
                   <button onClick={() => connectToFirm(connectingFirm.id)} disabled={syncing} style={{ ...S.btn("primary", "md"), flex: 1 }}>{syncing ? "Connecting..." : "Connect"}</button>
@@ -4889,14 +4975,25 @@ function NewsPage({ showToast }) {
     { headline: "Natural gas futures jump on cold weather forecast", source: "Reuters", sentiment: "volatile", time: "35m ago" },
   ];
 
-  // Weekly calendar events (high impact)
-  const weeklyEvents = [
-    { day: "Mon", date: 14, events: [{ time: "08:30", event: "Core CPI", currency: "USD", impact: "High" }] },
-    { day: "Tue", date: 15, events: [{ time: "09:00", event: "Retail Sales", currency: "USD", impact: "High" }] },
-    { day: "Wed", date: 16, events: [{ time: "14:00", event: "FOMC Decision", currency: "USD", impact: "High" }, { time: "14:30", event: "Fed Press Conference", currency: "USD", impact: "Medium" }] },
-    { day: "Thu", date: 17, events: [{ time: "08:30", event: "Jobless Claims", currency: "USD", impact: "Medium" }] },
-    { day: "Fri", date: 18, events: [{ time: "09:45", event: "Flash PMI", currency: "USD", impact: "Medium" }, { time: "10:00", event: "Consumer Sentiment", currency: "USD", impact: "Medium" }] },
-  ];
+  // Weekly calendar events (high impact) — dynamic dates for current week
+  const weeklyEvents = (() => {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    const events = [
+      [{ time: "08:30", event: "Core CPI", currency: "USD", impact: "High" }],
+      [{ time: "09:00", event: "Retail Sales", currency: "USD", impact: "High" }],
+      [{ time: "14:00", event: "FOMC Decision", currency: "USD", impact: "High" }, { time: "14:30", event: "Fed Press Conference", currency: "USD", impact: "Medium" }],
+      [{ time: "08:30", event: "Jobless Claims", currency: "USD", impact: "Medium" }],
+      [{ time: "09:45", event: "Flash PMI", currency: "USD", impact: "Medium" }, { time: "10:00", event: "Consumer Sentiment", currency: "USD", impact: "Medium" }],
+    ];
+    return dayNames.map((day, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return { day, date: d.getDate(), events: events[i] };
+    });
+  })();
 
   // Economic calendar with countdown
   const economicEvents = [
@@ -6371,6 +6468,17 @@ function AICoachPage({ trades }) {
       <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8 }}>AI Coach</h1>
       <p style={{ color: C.textMuted, marginBottom: 28 }}>Actionable insights from your trading data. Ask questions, find patterns, improve.</p>
 
+      {/* DEMO MODE Banner */}
+      <div style={{
+        marginBottom: 24, padding: "10px 18px", borderRadius: C.radiusCard,
+        background: `${C.amber}08`, border: `1px solid ${C.amberBorder}`,
+        display: "flex", alignItems: "center", gap: 10
+      }}>
+        <AlertTriangle size={14} color={C.amber} />
+        <span style={{ fontSize: 12, fontWeight: 600, color: C.amber }}>DEMO COACH</span>
+        <span style={{ fontSize: 12, color: C.textMuted }}>— Rule-based analysis, not real AI. Matches your data against common trading patterns.</span>
+      </div>
+
       {/* Tab Bar */}
       <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "rgba(0,0,0,0.3)", padding: 4, borderRadius: C.radiusBtn, width: "fit-content" }}>
         {["insights", "ask"].map(tab => (
@@ -6441,7 +6549,10 @@ function AICoachPage({ trades }) {
         /* Ask AI Tab */
         <div style={{ ...S.glassCard, padding: 24 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Ask About Your Trading</h3>
-          <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 16 }}>Try: "How can I improve?" or "What's my best setup?" or "Where do I make mistakes?"</p>
+          <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 12 }}>Try: "How can I improve?" or "What's my best setup?" or "Where do I make mistakes?"</p>
+          <div style={{ marginBottom: 14, padding: "8px 12px", borderRadius: 8, background: `${C.amber}08`, border: `1px solid ${C.amberBorder}`, fontSize: 11, color: C.amber, display: "flex", alignItems: "center", gap: 8 }}>
+            <AlertTriangle size={11} /> Responses are pattern-matched, not AI-generated. Use for guidance only.
+          </div>
           <div style={{ display: "flex", gap: 12 }}>
             <input value={customQuestion} onChange={e => setCustomQuestion(e.target.value)}
               onKeyDown={e => e.key === "Enter" && askAI()}
@@ -8915,7 +9026,7 @@ export default function App() {
     switch (page) {
       case "trading-floor": return <TradingFloorPage session={session} onAddTrade={onAddTrade} setPage={setPage} showToast={showToast} trades={trades} />;
       case "dashboard": return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} dailyLossLimit={dailyLossLimit} milestones={milestones} weeklyReviews={weeklyReviews} showToast={showToast} />;
-      case "prop-firms": return <PropFirmsPage propAccounts={propAccounts} setPropAccounts={setPropAccounts} showToast={showToast} subscriptions={subscriptions} setSubscriptions={setSubscriptions} expenses={expenses} setExpenses={setExpenses} payouts={payouts} setPayouts={setPayouts} />;
+      case "prop-firms": return <PropFirmsPage propAccounts={propAccounts} setPropAccounts={setPropAccounts} showToast={showToast} subscriptions={subscriptions} setSubscriptions={setSubscriptions} expenses={expenses} setExpenses={setExpenses} payouts={payouts} setPayouts={setPayouts} trades={trades} />;
       case "news": return <NewsPage showToast={showToast} />;
       case "presession": return <PreSessionPage onStartSession={onStartSession} setPage={setPage} spiritualMode={spiritualMode} />;
       case "postsession": return <PostSessionPage setPage={setPage} showToast={showToast} trades={trades} onAddTrade={onAddTrade} spiritualMode={spiritualMode} />;

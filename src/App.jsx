@@ -4,12 +4,12 @@ import { createClient } from "@supabase/supabase-js";
 // Supabase client (public anon key — safe for client-side)
 const supabase = createClient(
   "https://lusrlnfxkaltlpnxxshi.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1c3JsbmZ4a2FsdGxwbnh4c2hpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTYyOTQwMDAsImV4cCI6MjAzMjA3MDAwMH0.placeholder"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1c3JsbmZ4a2FsdGxwbnh4c2hpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTg1OTgsImV4cCI6MjA5NDkzNDU5OH0.kP34o5dMBan7Mjeptpfg7Sxt_8WIBZdK6SBsE62IP5Y"
 );
 
 // Fallback supabase URL for REST calls
 const SB_URL = "https://lusrlnfxkaltlpnxxshi.supabase.co";
-const SB_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1c3JsbmZ4a2FsdGxwbnh4c2hpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTYyOTQwMDAsImV4cCI6MjAzMjA3MDAwMH0.placeholder";
+const SB_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1c3JsbmZ4a2FsdGxwbnh4c2hpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTg1OTgsImV4cCI6MjA5NDkzNDU5OH0.kP34o5dMBan7Mjeptpfg7Sxt_8WIBZdK6SBsE62IP5Y";
 import {
   BarChart3, Calendar, BookOpen, Target, FileText, TrendingUp, TrendingDown,
   DollarSign, Activity, Brain, Shield, Settings, Play, Square, Edit3,
@@ -2084,6 +2084,18 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
     setArr(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
   };
 
+  // Keyboard shortcut: Cmd+Enter / Ctrl+Enter to submit trade
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        submitTrade();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [pnl, symbol, contracts, direction, methodology, notes]);
+  
   const submitTrade = () => {
     const pnlVal = parseFloat(pnl);
     if (pnl === "" || isNaN(pnlVal)) {
@@ -2554,7 +2566,7 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
           </div>
 
           <button onClick={submitTrade} style={{ ...S.btn("primary", "lg"), width: "100%", justifyContent: "center" }}>
-            <Save size={16} /> Log Trade
+            <Save size={16} /> Log Trade <span style={{ opacity: 0.4, fontSize: 11, marginLeft: 8 }}>⌘↵</span>
           </button>
         </div>
       </div>
@@ -3427,7 +3439,7 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: C.text, marginBottom: 6 }}>
-            Good {new Date().getHours() < 12 ? "Morning" : new Date().getHours() < 17 ? "Afternoon" : "Evening"}, Karan
+            Good {new Date().getHours() < 12 ? "Morning" : new Date().getHours() < 17 ? "Afternoon" : "Evening"}, Trader
           </h1>
           <p style={{ fontSize: 14, color: C.textMuted, fontStyle: "italic" }}>"{quote}"</p>
         </div>
@@ -3459,10 +3471,12 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
         />
       </div>
 
-      {/* ── Rule Compliance ──────────────────────────────────── */}
-      <div style={{ marginTop: 20 }}>
-        <RuleComplianceTracker trades={trades} showToast={showToast} />
-      </div>
+      {/* ── Rule Compliance (only when trades exist) ────────── */}
+      {trades.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <RuleComplianceTracker trades={trades} showToast={showToast} />
+        </div>
+      )}
       
       {/* ── Setup Playbook + Calendar ────────────────────────── */}
       {trades.length >= 5 && (
@@ -6337,16 +6351,23 @@ function CommunityPage({ trades, showToast }) {
     setLoading(false);
   };
 
+  const [feedError, setFeedError] = useState(false);
+  
   // Load shared trades
   const loadFeed = async () => {
     setLoading(true);
+    setFeedError(false);
     try {
       const res = await fetch(`${SB_URL}/rest/v1/shared_trades?select=*&order=created_at.desc&limit=50`, {
         headers: { "apikey": SB_ANON_KEY, "Authorization": `Bearer ${SB_ANON_KEY}` }
       });
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       if (Array.isArray(data)) setSharedTrades(data);
-    } catch(e) {}
+    } catch(e) {
+      setFeedError(true);
+      console.log("Community feed offline — using cached data");
+    }
     setLoading(false);
   };
 
@@ -6478,10 +6499,21 @@ function CommunityPage({ trades, showToast }) {
             <span style={S.badge(C.accent)}>{sharedTrades.length} shared trades</span>
             <button onClick={loadFeed} style={S.btn("ghost", "sm")}><RefreshCw size={14} /> Refresh</button>
           </div>
-          {sharedTrades.length === 0 ? (
+          {loading ? (
+            <div style={{ ...S.glassCard, textAlign: "center", padding: 60, color: C.textDim }}>
+              <RefreshCw size={32} style={{ opacity: 0.5, marginBottom: 16, animation: "spin 1s linear infinite" }} />
+              <p>Loading community feed...</p>
+            </div>
+          ) : feedError ? (
+            <div style={{ ...S.glassCard, textAlign: "center", padding: 40, color: C.textDim }}>
+              <p style={{ marginBottom: 12 }}>Couldn't connect to community server.</p>
+              <button onClick={loadFeed} style={S.btn("ghost", "sm")}><RefreshCw size={14} /> Retry</button>
+            </div>
+          ) : sharedTrades.length === 0 ? (
             <div style={{ ...S.glassCard, textAlign: "center", padding: 60, color: C.textDim }}>
               <MessageSquare size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
               <p>No shared trades yet. Be the first!</p>
+              <p style={{ fontSize: 11, marginTop: 8 }}>Go to Active Session, log a trade, then share it here.</p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -8296,10 +8328,18 @@ export default function App() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Load from localStorage
+  // Load from localStorage (with migration from old key)
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("mart_journal");
+      // Try new key first, fall back to old key for migration
+      let saved = localStorage.getItem("mart_journal");
+      if (!saved) {
+        const oldData = localStorage.getItem("87capital_v4");
+        if (oldData) {
+          localStorage.setItem("mart_journal", oldData);
+          saved = oldData;
+        }
+      }
       if (saved) {
         const data = JSON.parse(saved);
         if (data.trades) setTrades(data.trades);

@@ -1967,8 +1967,22 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
   const [symbol, setSymbol] = useState("MNQ");
   const [pnl, setPnl] = useState("");
   const [contracts, setContracts] = useState(1);
+  const [direction, setDirection] = useState("Long");
   const [entryModel, setEntryModel] = useState([]);
   const [setupGrade, setSetupGrade] = useState("");
+  
+  // ─── TEMPLATE SYSTEM ──────────────────────────────────────────────────
+  const [methodology, setMethodology] = useState("ICT");
+  
+  const METHODOLOGIES = {
+    ICT: { label: "ICT Concepts", icon: "🌐", description: "Smart Money, Liquidity, Time-based" },
+    Orderflow: { label: "Orderflow", icon: "📊", description: "DOM, Delta, Volume Analysis" },
+    PriceAction: { label: "Price Action", icon: "📈", description: "Candlestick patterns, Market structure" },
+    SupplyDemand: { label: "Supply & Demand", icon: "⚖️", description: "Zones, Freshness, Imbalances" },
+    Trendline: { label: "Trendline / Technical", icon: "📐", description: "S/R, Channels, Breakouts" },
+    Scalping: { label: "Scalping", icon: "⚡", description: "Quick entries, Tape reading, Momentum" },
+    Custom: { label: "Custom / Mixed", icon: "🔧", description: "Your own combination" },
+  };
   
   // ICT Fields
   const [htfOrderflow, setHtfOrderflow] = useState([]);
@@ -1979,6 +1993,36 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
   const [smrTime, setSmrTime] = useState([]);
   const [toi, setToi] = useState([]);
   const [tradeEntryTime, setTradeEntryTime] = useState([]);
+  
+  // Orderflow Fields
+  const [domBehavior, setDomBehavior] = useState([]);
+  const [delta, setDelta] = useState([]);
+  const [cumulativeDelta, setCumulativeDelta] = useState([]);
+  const [absorption, setAbsorption] = useState([]);
+  const [volumeProfile, setVolumeProfile] = useState("");
+  
+  // Price Action Fields
+  const [candlestickPattern, setCandlestickPattern] = useState([]);
+  const [marketStructure, setMarketStructure] = useState([]);
+  const [keyLevel, setKeyLevel] = useState("");
+  const [rejectionType, setRejectionType] = useState([]);
+  
+  // Supply/Demand Fields
+  const [zoneType, setZoneType] = useState([]);
+  const [zoneFreshness, setZoneFreshness] = useState([]);
+  const [zonePattern, setZonePattern] = useState([]);
+  
+  // Trendline Fields
+  const [tlType, setTlType] = useState([]);
+  const [breakRetest, setBreakRetest] = useState([]);
+  const [channelType, setChannelType] = useState([]);
+  const [trendStrength, setTrendStrength] = useState("");
+  
+  // Scalping Fields
+  const [tapeReading, setTapeReading] = useState([]);
+  const [momentumType, setMomentumType] = useState([]);
+  const [timeframe, setTimeframe] = useState("");
+  const [scalpTarget, setScalpTarget] = useState("");
   
   // Meta fields
   const [newsDay, setNewsDay] = useState([]);
@@ -2000,38 +2044,37 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
     
     onAddTrade({
       date: today(), 
-      ticker: symbol, 
+      ticker: symbol,
+      direction,
       pnl: pnlVal, 
       contracts,
+      methodology,
       entryModel,
       setupGrade,
-      htfOrderflow,
-      liquidity,
-      mmxm,
-      midnightOpen,
-      smr,
-      smrTime,
-      toi,
-      tradeEntryTime,
-      newsDay,
-      poi,
-      learnings,
-      tradeTook,
-      notes,
-      postArdas,
-      emotions,
-      mentalState,
-      energyLevel,
-      sessionQuality,
-      distractions,
-      postTradeActions,
-      sessionSummary,
-      nextSessionFocus
+      // ICT
+      htfOrderflow, liquidity, mmxm, midnightOpen, smr, smrTime, toi, tradeEntryTime,
+      // Orderflow
+      domBehavior, delta, cumulativeDelta, absorption, volumeProfile,
+      // Price Action
+      candlestickPattern, marketStructure, keyLevel, rejectionType,
+      // Supply/Demand
+      zoneType, zoneFreshness, zonePattern,
+      // Trendline
+      tlType, breakRetest, channelType, trendStrength,
+      // Scalping
+      tapeReading, momentumType, timeframe, scalpTarget,
+      // Meta
+      newsDay, poi, learnings, tradeTook, notes,
+      // Post-session
+      postArdas, emotions, mentalState, energyLevel,
+      sessionQuality, distractions, postTradeActions,
+      sessionSummary, nextSessionFocus
     });
     
     // Reset form
     setPnl("");
     setContracts(1);
+    setDirection("Long");
     setEntryModel([]);
     setSetupGrade("");
     setHtfOrderflow([]);
@@ -2042,6 +2085,26 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
     setSmrTime([]);
     setToi([]);
     setTradeEntryTime([]);
+    setDomBehavior([]);
+    setDelta([]);
+    setCumulativeDelta([]);
+    setAbsorption([]);
+    setVolumeProfile("");
+    setCandlestickPattern([]);
+    setMarketStructure([]);
+    setKeyLevel("");
+    setRejectionType([]);
+    setZoneType([]);
+    setZoneFreshness([]);
+    setZonePattern([]);
+    setTlType([]);
+    setBreakRetest([]);
+    setChannelType([]);
+    setTrendStrength("");
+    setTapeReading([]);
+    setMomentumType([]);
+    setTimeframe("");
+    setScalpTarget("");
     setNewsDay([]);
     setPoi("");
     setLearnings("");
@@ -2154,21 +2217,65 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
       {/* Main Form */}
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
         <div style={S.glassCard}>
-          {/* Row 1: Ticker, P&L, Contracts */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
+          {/* Methodology Template Selector */}
+          <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+            <label style={S.label}>Trading Methodology</label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 8 }}>
+              {Object.entries(METHODOLOGIES).map(([key, m]) => {
+                const active = methodology === key;
+                return (
+                  <button key={key} onClick={() => setMethodology(key)} style={{
+                    padding: "10px 8px", borderRadius: C.radiusSm, cursor: "pointer",
+                    background: active ? "rgba(255,255,255,0.06)" : C.bgInput,
+                    border: `1px solid ${active ? C.borderFocus : C.border}`,
+                    color: active ? C.text : C.textSecondary,
+                    fontFamily: "Inter", fontSize: 11, fontWeight: active ? 600 : 500,
+                    textAlign: "center", transition: "all 0.15s ease"
+                  }}>
+                    <div style={{ fontSize: 16, marginBottom: 4 }}>{m.icon}</div>
+                    <div style={{ fontSize: 11 }}>{m.label}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Row 1: Ticker, Direction, P&L, Contracts */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
               <label style={S.label}>Ticker</label>
               <select value={symbol} onChange={e => setSymbol(e.target.value)} style={{ ...S.input, cursor: "pointer", appearance: "none",
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
                 backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 36 }}>
                 {["MNQ", "NQ", "MES", "ES", "CL", "GC", "RTY", "EU", "SI", "BTC"].map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
+              <label style={S.label}>Direction</label>
+              <div style={{ display: "flex", gap: 4 }}>
+                <button onClick={() => setDirection("Long")} style={{
+                  flex: 1, padding: "10px 8px", borderRadius: C.radiusSm, cursor: "pointer",
+                  background: direction === "Long" ? C.profitBg : C.bgInput,
+                  border: `1px solid ${direction === "Long" ? C.profitBorder : C.border}`,
+                  color: direction === "Long" ? C.profit : C.textSecondary,
+                  fontWeight: direction === "Long" ? 700 : 500,
+                  fontFamily: "Inter", fontSize: 13, transition: "all 0.15s"
+                }}>Long</button>
+                <button onClick={() => setDirection("Short")} style={{
+                  flex: 1, padding: "10px 8px", borderRadius: C.radiusSm, cursor: "pointer",
+                  background: direction === "Short" ? C.lossBg : C.bgInput,
+                  border: `1px solid ${direction === "Short" ? C.lossBorder : C.border}`,
+                  color: direction === "Short" ? C.loss : C.textSecondary,
+                  fontWeight: direction === "Short" ? 700 : 500,
+                  fontFamily: "Inter", fontSize: 13, transition: "all 0.15s"
+                }}>Short</button>
+              </div>
+            </div>
+            <div>
               <label style={S.label}>P&L ($)</label>
               <input type="number" value={pnl} onChange={e => setPnl(e.target.value)} style={{
                 ...S.input, fontWeight: 700,
-                color: pnl && !isNaN(parseFloat(pnl)) ? (parseFloat(pnl) >= 0 ? C.emerald : C.amber) : C.text
+                color: pnl && !isNaN(parseFloat(pnl)) ? (parseFloat(pnl) >= 0 ? C.profit : C.loss) : C.text
               }} placeholder="+/- amount" />
             </div>
             <div>
@@ -2189,12 +2296,14 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
             </div>
           </div>
 
-          {/* Section: ICT Analysis - All Multi-Select Dropdowns */}
+          {/* ─── METHODOLOGY-SPECIFIC FIELDS ──────────────────────────────── */}
+          
+          {/* ICT Analysis */}
+          {methodology === "ICT" && (
           <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              ICT Analysis
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.textSecondary, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              🌐 ICT Analysis
             </h4>
-
             <MultiSelectDropdown label="HTF Orderflow" options={HTF_ORDERFLOW} selected={htfOrderflow} onChange={setHtfOrderflow} placeholder="Select HTF Orderflow..." />
             <MultiSelectDropdown label="MMXM" options={MMXM_OPTIONS} selected={mmxm} onChange={setMmxm} placeholder="Select MMXM..." />
             <MultiSelectDropdown label="Midnight Open" options={MIDNIGHT_OPEN} selected={midnightOpen} onChange={setMidnightOpen} placeholder="Select Midnight Open..." />
@@ -2204,10 +2313,104 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
             <MultiSelectDropdown label="SMR Time" options={SMR_TIME} selected={smrTime} onChange={setSmrTime} placeholder="Select SMR Time..." />
             <MultiSelectDropdown label="TOI (Time of Interest)" options={TOI_TIME} selected={toi} onChange={setToi} placeholder="Select TOI..." />
           </div>
+          )}
+
+          {/* Orderflow Analysis */}
+          {methodology === "Orderflow" && (
+          <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.textSecondary, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              📊 Orderflow Analysis
+            </h4>
+            <MultiSelectDropdown label="DOM Behavior" options={["Stacked Bids", "Stacked Offers", "Thin Book", "Spoofing", "Iceberg Orders", "Absorption", "Pulling/Stacking"]} selected={domBehavior} onChange={setDomBehavior} placeholder="What did you see on DOM?" />
+            <MultiSelectDropdown label="Delta" options={["Positive Divergence", "Negative Divergence", "Delta Flip", "Cumulative Delta Surge", "Delta Neutral"]} selected={delta} onChange={setDelta} placeholder="Delta behavior..." />
+            <MultiSelectDropdown label="Cumulative Delta" options={["Uptrend Confirmed", "Downtrend Confirmed", "Divergence (Bull)", "Divergence (Bear)", "Flat"]} selected={cumulativeDelta} onChange={setCumulativeDelta} placeholder="Cumulative delta trend..." />
+            <MultiSelectDropdown label="Absorption" options={["At Resistance", "At Support", "At VWAP", "At POC", "None Observed"]} selected={absorption} onChange={setAbsorption} placeholder="Absorption location..." />
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Volume Profile POC Level</label>
+              <input type="text" value={volumeProfile} onChange={e => setVolumeProfile(e.target.value)} style={S.input} placeholder="e.g. 21550 or 'High Volume Node at 21500'" />
+            </div>
+          </div>
+          )}
+
+          {/* Price Action */}
+          {methodology === "PriceAction" && (
+          <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.textSecondary, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              📈 Price Action Analysis
+            </h4>
+            <MultiSelectDropdown label="Candlestick Pattern" options={["Pin Bar", "Engulfing", "Inside Bar", "Doji", "Hammer", "Shooting Star", "Morning/Evening Star", "Three Line Strike", "Marubozu"]} selected={candlestickPattern} onChange={setCandlestickPattern} placeholder="Select pattern..." />
+            <MultiSelectDropdown label="Market Structure" options={["HH/HL (Bullish)", "LH/LL (Bearish)", "Break of Structure (Bull)", "Break of Structure (Bear)", "Change of Character", "Indecision/Range"]} selected={marketStructure} onChange={setMarketStructure} placeholder="Market structure..." />
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Key Level Traded</label>
+              <input type="text" value={keyLevel} onChange={e => setKeyLevel(e.target.value)} style={S.input} placeholder="e.g. Previous Day High, Weekly Open" />
+            </div>
+            <MultiSelectDropdown label="Entry Confirmation" options={["Wick Rejection", "Body Close Beyond", "Retest Confirmed", "Trendline Bounce", "Moving Average Bounce", "Round Number Rejection"]} selected={rejectionType} onChange={setRejectionType} placeholder="How was entry confirmed?" />
+          </div>
+          )}
+
+          {/* Supply & Demand */}
+          {methodology === "SupplyDemand" && (
+          <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.textSecondary, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              ⚖️ Supply & Demand Analysis
+            </h4>
+            <MultiSelectDropdown label="Zone Type" options={["Supply (Rally-Base-Drop)", "Demand (Drop-Base-Rally)", "Supply (Rally-Base-Rally)", "Demand (Drop-Base-Drop)", "Flip Zone (S→D)", "Flip Zone (D→S)"]} selected={zoneType} onChange={setZoneType} placeholder="What type of zone?" />
+            <MultiSelectDropdown label="Zone Freshness" options={["Fresh (Untested)", "First Touch", "Second Touch", "Third Touch (Weakening)", "Multiple Touches (Broken)"]} selected={zoneFreshness} onChange={setZoneFreshness} placeholder="How fresh is the zone?" />
+            <MultiSelectDropdown label="Zone Pattern" options={["Compression Before Move", "Engulf Within Zone", "Wick Into Zone", "Body Close Into Zone", "Bounce From Zone Edge"]} selected={zonePattern} onChange={setZonePattern} placeholder="Entry pattern at zone..." />
+          </div>
+          )}
+
+          {/* Trendline */}
+          {methodology === "Trendline" && (
+          <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.textSecondary, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              📐 Trendline / Technical Analysis
+            </h4>
+            <MultiSelectDropdown label="Trendline Type" options={["Support TL", "Resistance TL", "Channel (Parallel)", "Trend Channel (Rising)", "Trend Channel (Falling)", "Wedge (Rising)", "Wedge (Falling)", "Triangle (Symmetrical)"]} selected={tlType} onChange={setTlType} placeholder="Type of trendline setup..." />
+            <MultiSelectDropdown label="Break / Retest" options={["Clean Break Up", "Clean Break Down", "False Breakout", "Retest Holding", "Retest Failed", "No Break Yet (Bounce)"]} selected={breakRetest} onChange={setBreakRetest} placeholder="Break/Retest behavior..." />
+            <MultiSelectDropdown label="Channel Structure" options={["Middle of Channel", "Channel Top", "Channel Bottom", "Channel Breakout", "Narrowing Channel", "Expanding Channel"]} selected={channelType} onChange={setChannelType} placeholder="Position in channel..." />
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Trend Strength (1-10)</label>
+              <input type="text" value={trendStrength} onChange={e => setTrendStrength(e.target.value)} style={S.input} placeholder="e.g. 7/10 strong uptrend" />
+            </div>
+          </div>
+          )}
+
+          {/* Scalping */}
+          {methodology === "Scalping" && (
+          <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.textSecondary, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              ⚡ Scalping Analysis
+            </h4>
+            <MultiSelectDropdown label="Tape Reading" options={["Heavy Buying", "Heavy Selling", "Two-Sided Action", "Slow Tape", "Fast Tape", "Large Lots Hitting", "Small Lots Only"]} selected={tapeReading} onChange={setTapeReading} placeholder="What did the tape show?" />
+            <MultiSelectDropdown label="Momentum Type" options={["Explosive Move", "Steady Grind", "Stop Hunt (Up)", "Stop Hunt (Down)", "Fade Move", "News Spike", "Opening Drive"]} selected={momentumType} onChange={setMomentumType} placeholder="Type of momentum..." />
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Entry Timeframe</label>
+              <input type="text" value={timeframe} onChange={e => setTimeframe(e.target.value)} style={S.input} placeholder="e.g. 1min, 2000 tick, 15s" />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Target (ticks/points)</label>
+              <input type="text" value={scalpTarget} onChange={e => setScalpTarget(e.target.value)} style={S.input} placeholder="e.g. 10 ticks, 5 points" />
+            </div>
+          </div>
+          )}
+
+          {/* Custom: Show all options as free-text */}
+          {methodology === "Custom" && (
+          <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.textSecondary, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              🔧 Custom Approach
+            </h4>
+            <div style={{ marginBottom: 14 }}>
+              <label style={S.label}>Your Setup Description</label>
+              <textarea value={learnings} onChange={e => setLearnings(e.target.value)} style={{ ...S.input, minHeight: 80, resize: "vertical" }} placeholder="Describe your setup, confluence, and why you took this trade..." />
+            </div>
+          </div>
+          )}
 
           {/* Section: Session Info - All Multi-Select Dropdowns */}
           <div style={{ marginTop: 20, marginBottom: 16, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <h4 style={{ fontSize: 13, fontWeight: 700, color: C.textSecondary, marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Session Info
             </h4>
 
@@ -2215,7 +2418,7 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
             <div style={{ marginBottom: 14 }}>
               <label style={S.label}>Today is News Day</label>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 24, fontWeight: 700, color: C.yellow }}>
+                <span style={{ fontSize: 24, fontWeight: 700, color: C.gold }}>
                   {(new Date().getDay() === 5) ? "NFP" : 
                    (new Date().getDate() >= 28 && new Date().getDate() <= 31) ? "Month End" : 
                    "NO"}
@@ -2224,7 +2427,7 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
                   {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                 </span>
               </div>
-              <p style={{ fontSize: 11, color: C.textMuted, margin: "4px 0 0" }}>
+              <p style={{ fontSize: 11, color: C.textDim, margin: "4px 0 0" }}>
                 {new Date().getDay() === 5 ? "NFP Friday - higher volatility expected" : 
                  "Normal trading day"}
               </p>

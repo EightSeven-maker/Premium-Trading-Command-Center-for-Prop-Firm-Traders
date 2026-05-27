@@ -3004,6 +3004,116 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
         </div>
       </div>
 
+      {/* ─── RISK MANAGEMENT STRIP ────────────────────────────────────── */}
+      {trades.length > 0 && (() => {
+        const todayTrades = trades.filter(t => t.date === today());
+        const todayPnl = todayTrades.reduce((s, t) => s + (t.pnl || 0), 0);
+        const dailyLossUsed = todayPnl < 0 ? Math.abs(todayPnl) : 0;
+        const lossLimitPct = dailyLossLimit > 0 ? Math.min((dailyLossUsed / dailyLossLimit) * 100, 100) : 0;
+        
+        // Consecutive loss count
+        const sorted = [...trades].sort((a, b) => new Date(b.date) - new Date(a.date));
+        let consecutiveLosses = 0;
+        for (const t of sorted) {
+          if (t.pnl < 0) consecutiveLosses++;
+          else break;
+        }
+        
+        // Max drawdown
+        const dailyPnl = {};
+        trades.forEach(t => { dailyPnl[t.date] = (dailyPnl[t.date] || 0) + (t.pnl || 0); });
+        let peak = 0, maxDD = 0;
+        Object.values(dailyPnl).forEach(d => { peak = Math.max(peak, d); maxDD = Math.max(maxDD, peak - d); });
+        const ddPct = dailyLossLimit > 0 ? Math.min((maxDD / dailyLossLimit) * 100, 100) : 0;
+        
+        const isNearLimit = lossLimitPct >= 75;
+        const isAtLimit = lossLimitPct >= 100;
+        const isConcerning = consecutiveLosses >= 2;
+        
+        return (
+          <div style={{
+            marginBottom: 20, padding: "14px 18px", borderRadius: C.radiusCard,
+            background: isAtLimit ? C.lossBg : isNearLimit ? "rgba(245,158,11,0.08)" : C.bgCard,
+            border: `1px solid ${isAtLimit ? C.lossBorder : isNearLimit ? C.goldBorder : C.border}`,
+            display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap"
+          }}>
+            {/* Daily P&L Gauge */}
+            <div style={{ flex: 1, minWidth: 180 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+                Today's P&L vs Loss Limit
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: todayPnl >= 0 ? C.profit : C.loss }}>
+                  {todayPnl >= 0 ? "+" : ""}{todayPnl.toFixed(0)}
+                </span>
+                <span style={{ color: C.textDim, fontSize: 12 }}>/</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: C.textSecondary }}>${dailyLossLimit}</span>
+                {isAtLimit && <span style={{ ...S.badge(C.loss, true), fontSize: 10 }}>LIMIT HIT</span>}
+                {isNearLimit && !isAtLimit && <span style={{ ...S.badge(C.gold, true), fontSize: 10 }}>WARNING</span>}
+              </div>
+              {/* Loss gauge bar */}
+              <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%", width: `${lossLimitPct}%`, borderRadius: 2,
+                  background: lossLimitPct >= 75 ? (lossLimitPct >= 100 ? C.loss : C.gold) : C.profit,
+                  transition: "width 0.5s ease"
+                }} />
+              </div>
+            </div>
+            
+            {/* Divider */}
+            <div style={{ width: 1, height: 40, background: C.border }} />
+            
+            {/* Consecutive Losses */}
+            <div style={{ minWidth: 100 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+                Consec. Losses
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 20, fontWeight: 800, color: consecutiveLosses >= 2 ? C.loss : consecutiveLosses >= 1 ? C.gold : C.text }}>
+                  {consecutiveLosses}
+                </span>
+                {isConcerning && <span style={{ fontSize: 11, color: C.loss }}>⚠ Step away</span>}
+              </div>
+            </div>
+            
+            {/* Divider */}
+            <div style={{ width: 1, height: 40, background: C.border }} />
+            
+            {/* Max Drawdown */}
+            <div style={{ minWidth: 100 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+                Max Drawdown
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: ddPct > 50 ? C.loss : C.text }}>
+                  ${maxDD.toFixed(0)}
+                </span>
+                <span style={{ fontSize: 12, color: C.textDim }}>({ddPct.toFixed(0)}%)</span>
+              </div>
+            </div>
+            
+            {/* Divider */}
+            <div style={{ width: 1, height: 40, background: C.border }} />
+            
+            {/* Today's Stats */}
+            <div style={{ minWidth: 120 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+                Today's Trades
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>
+                {todayTrades.length} trade{todayTrades.length !== 1 ? "s" : ""}
+                {todayTrades.length > 0 && (
+                  <span style={{ fontSize: 12, fontWeight: 600, marginLeft: 6, color: C.textSecondary }}>
+                    {todayTrades.filter(t => t.pnl > 0).length}W / {todayTrades.filter(t => t.pnl < 0).length}L
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
         <div>

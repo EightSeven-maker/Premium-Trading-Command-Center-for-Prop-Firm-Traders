@@ -51,14 +51,14 @@ class ErrorBoundary extends React.Component {
 // V4.5 — Near-pure black / Blue primary / Warm stone neutrals
 const C = {
   // Surfaces
-  bg: "#000000",
-  bgCard: "rgba(0, 0, 0, 0.6)",
-  bgCardAlt: "rgba(0, 0, 0, 0.5)",
+  bg: "#0a0a0a",
+  bgCard: "rgba(18, 18, 18, 0.85)",
+  bgCardAlt: "rgba(26, 26, 26, 0.7)",
   bgHover: "rgba(255, 255, 255, 0.04)",
   bgGlass: "rgba(0, 0, 0, 0.5)",
   // Borders
-  border: "rgba(87, 83, 78, 0.2)",
-  borderLight: "rgba(87, 83, 78, 0.1)",
+  border: "rgba(255, 255, 255, 0.06)",
+  borderLight: "rgba(255, 255, 255, 0.03)",
   borderGlow: "rgba(59, 130, 246, 0.15)",
   // Primary Blue (brand)
   accent: "#3b82f6",
@@ -107,8 +107,8 @@ const C = {
   radiusModal: 18,
   radiusPill: 9999,
   // Shadows
-  shadowCard: "0 1px 2px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1)",
-  shadowCardLg: "0 2px 4px rgba(0,0,0,0.2), 0 8px 16px rgba(0,0,0,0.15)",
+  shadowCard: "0 2px 4px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2)",
+  shadowCardLg: "0 4px 8px rgba(0,0,0,0.3), 0 12px 24px rgba(0,0,0,0.2)",
   shadowBtn: "0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
   shadowGlow: "0 0 0 3px rgba(59,130,246,0.15), 0 8px 28px rgba(59,130,246,0.1)"
 };
@@ -169,7 +169,7 @@ const TRADING_RULES = [
 // ─── STYLES (V4.5 — Near-black / Blue primary / Warm stone) ─────────────────
 const S = {
   glassCard: {
-    background: "rgba(0, 0, 0, 0.55)",
+    background: "rgba(18, 18, 18, 0.8)",
     backdropFilter: "blur(20px)",
     WebkitBackdropFilter: "blur(20px)",
     borderRadius: C.radiusCard,

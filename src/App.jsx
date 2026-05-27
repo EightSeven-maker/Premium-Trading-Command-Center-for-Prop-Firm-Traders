@@ -2876,6 +2876,81 @@ function NewsAlert({ alert, onDismiss }) {
   );
 }
 
+// ─── CALENDAR HEATMAP ─────────────────────────────────────────────────────
+function CalendarHeatmap({ trades }) {
+  const today = new Date();
+  const months = [];
+  for (let m = 2; m >= 0; m--) {
+    const year = today.getFullYear();
+    const month = today.getMonth() - m;
+    const date = new Date(year, month, 1);
+    months.push({ year: date.getFullYear(), month: date.getMonth(), label: date.toLocaleString('default', { month: 'short', year: '2-digit' }) });
+  }
+  
+  const dailyPnl = {};
+  trades.forEach(t => { if (t.date) dailyPnl[t.date] = (dailyPnl[t.date] || 0) + (t.pnl || 0); });
+  const maxAbsPnl = Math.max(1, ...Object.values(dailyPnl).map(v => Math.abs(v)));
+  
+  const getIntensity = (pnl) => {
+    if (pnl === undefined) return "transparent";
+    const intensity = Math.min(Math.abs(pnl) / maxAbsPnl, 1);
+    if (pnl > 0) return `rgba(34,197,94,${0.15 + intensity * 0.7})`;
+    if (pnl < 0) return `rgba(239,68,68,${0.15 + intensity * 0.7})`;
+    return "rgba(255,255,255,0.05)";
+  };
+  
+  const dayNames = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  
+  if (trades.length === 0) return null;
+  
+  return (
+    <div style={{ ...S.glassCard, padding: 20 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: C.text, display: "flex", alignItems: "center", gap: 8 }}>
+        <Calendar size={16} color={C.textSecondary} /> P&L Calendar
+      </h3>
+      <div style={{ display: "flex", gap: 24, overflowX: "auto" }}>
+        {months.map(({ year, month, label }) => {
+          const firstDay = new Date(year, month, 1).getDay();
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          const adjustedFirst = firstDay === 0 ? 6 : firstDay - 1;
+          
+          return (
+            <div key={label} style={{ minWidth: 200 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.textSecondary, marginBottom: 8, textAlign: "center" }}>{label}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
+                {dayNames.map(d => <div key={d} style={{ fontSize: 9, color: C.textDim, textAlign: "center", paddingBottom: 4 }}>{d}</div>)}
+                {Array.from({ length: adjustedFirst }).map((_, i) => <div key={`e-${i}`} />)}
+                {Array.from({ length: daysInMonth }).map((_, i) => {
+                  const day = i + 1;
+                  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const pnl = dailyPnl[dateStr];
+                  const isToday = dateStr === new Date().toISOString().split('T')[0];
+                  return (
+                    <div key={day} title={pnl !== undefined ? `${dateStr}: ${pnl >= 0 ? '+' : ''}$${Math.abs(pnl).toFixed(0)}` : dateStr} style={{
+                      aspectRatio: "1", borderRadius: 4, background: getIntensity(pnl),
+                      border: isToday ? `1.5px solid ${C.text}` : "1px solid transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 10, fontWeight: pnl !== undefined ? 600 : 400,
+                      color: pnl !== undefined ? (pnl > 0 ? C.profitLight : C.lossLight) : C.textDim,
+                      cursor: "default"
+                    }}>{day}</div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, justifyContent: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: "rgba(34,197,94,0.3)" }} /><span style={{ fontSize: 10, color: C.textDim }}>Profit</span></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: "rgba(239,68,68,0.3)" }} /><span style={{ fontSize: 10, color: C.textDim }}>Loss</span></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 12, height: 12, borderRadius: 3, background: "rgba(255,255,255,0.05)" }} /><span style={{ fontSize: 10, color: C.textDim }}>BE</span></div>
+        <span style={{ fontSize: 10, color: C.textDim }}>— darker = larger P&L</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── COMMAND CENTER PAGE ────────────────────────────────────────────────────
 function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, milestones, weeklyReviews }) {
   // ─── Interactive State ──────────────────────────────────────────────
@@ -3152,7 +3227,14 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
 
       {/* ── Analytics Charts ─────────────────────────────────────── */}
       {trades.length > 0 && (
-        <AnalyticsCharts trades={trades} />
+        <>
+          <div style={{ marginTop: 20 }}>
+            <CalendarHeatmap trades={trades} />
+          </div>
+          <div style={{ marginTop: 20 }}>
+            <AnalyticsCharts trades={trades} />
+          </div>
+        </>
       )}
     </div>
   );

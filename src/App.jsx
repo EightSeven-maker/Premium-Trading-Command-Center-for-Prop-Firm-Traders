@@ -48,69 +48,75 @@ class ErrorBoundary extends React.Component {
 }
 
 // ─── THEME & CONSTANTS ──────────────────────────────────────────────────────
-// V4.5 — Near-pure black / Blue primary / Warm stone neutrals
+// V5.0 — TopstepX-inspired true dark / Clean minimal / Professional grade
 const C = {
-  // Surfaces
-  bg: "#111111",
-  bgCard: "rgba(0, 0, 0, 0.6)",
-  bgCardAlt: "rgba(0, 0, 0, 0.5)",
-  bgHover: "rgba(255, 255, 255, 0.04)",
-  bgGlass: "rgba(0, 0, 0, 0.5)",
-  // Borders
-  border: "rgba(87, 83, 78, 0.2)",
-  borderLight: "rgba(87, 83, 78, 0.1)",
-  borderGlow: "rgba(59, 130, 246, 0.15)",
-  // Primary Blue (brand)
-  accent: "#3b82f6",
-  accentLight: "#60a5fa",
-  accentGlow: "rgba(59, 130, 246, 0.25)",
-  accentDark: "#2563eb",
-  // Purple (subtle brand accent — neon edge glow)
-  purple: "#8b5cf6",
-  purpleGlow: "rgba(139, 92, 246, 0.1)",
-  // Cream / Off-white (Topstep-style primary buttons)
-  cream: "#f5f0e8",
-  creamHover: "#ede6db",
-  creamText: "#0c0a09",
-  // Blue (restrained focus rings & link affordance)
-  blue: "#3b82f6",
-  blueLight: "#60a5fa",
-  blueGlow: "rgba(59, 130, 246, 0.2)",
-  blueRing: "rgba(59, 130, 246, 0.35)",
-  // Semantic — emerald (positive) / amber (caution/loss)
-  emerald: "#10b981",
-  emeraldLight: "#34d399",
-  emeraldBg: "rgba(16, 185, 129, 0.1)",
-  emeraldBorder: "rgba(16, 185, 129, 0.2)",
-  emeraldGlow: "rgba(16, 185, 129, 0.1)",
-  amber: "#d97706",
-  amberLight: "#f59e0b",
-  amberBg: "rgba(217, 119, 6, 0.1)",
-  amberBorder: "rgba(217, 119, 6, 0.2)",
-  amberGlow: "rgba(217, 119, 6, 0.1)",
-  // Warm accent (milestones, celebrations)
-  gold: "#d97706",
-  goldLight: "#f59e0b",
-  goldBg: "rgba(217, 119, 6, 0.1)",
-  goldBorder: "rgba(217, 119, 6, 0.2)",
-  goldGlow: "rgba(217, 119, 6, 0.12)",
-  // Text (warm stone palette)
-  text: "#f5f5f4",
-  textMuted: "#a8a29e",
-  textDim: "#78716c",
-  textOnPrimary: "#ffffff",
+  // Surfaces — true dark, no tint
+  bg: "#0a0a0a",
+  bgRaised: "#141414",
+  bgCard: "#121212",
+  bgCardHover: "#1a1a1a",
+  bgInput: "#0d0d0d",
+  bgOverlay: "rgba(0, 0, 0, 0.85)",
+  bgGlass: "rgba(10, 10, 10, 0.9)",
+  // Borders — whisper subtle
+  border: "rgba(255, 255, 255, 0.06)",
+  borderLight: "rgba(255, 255, 255, 0.04)",
+  borderFocus: "rgba(255, 255, 255, 0.12)",
+  // Accent — clean white/neutral, no blue tint
+  accent: "#fafafa",
+  accentLight: "#ffffff",
+  accentGlow: "rgba(255, 255, 255, 0.03)",
+  accentDark: "#e5e5e5",
+  // Semantic — green profit, red loss (universal trading standard)
+  profit: "#22c55e",
+  profitLight: "#4ade80",
+  profitBg: "rgba(34, 197, 94, 0.08)",
+  profitBorder: "rgba(34, 197, 94, 0.15)",
+  profitGlow: "rgba(34, 197, 94, 0.08)",
+  loss: "#ef4444",
+  lossLight: "#f87171",
+  lossBg: "rgba(239, 68, 68, 0.08)",
+  lossBorder: "rgba(239, 68, 68, 0.15)",
+  lossGlow: "rgba(239, 68, 68, 0.08)",
+  // Warm accent (milestones, warnings)
+  gold: "#f59e0b",
+  goldLight: "#fbbf24",
+  goldBg: "rgba(245, 158, 11, 0.08)",
+  goldBorder: "rgba(245, 158, 11, 0.15)",
+  // Text — clean hierarchy
+  text: "#fafafa",
+  textSecondary: "#a3a3a3",
+  textMuted: "#737373",
+  textDim: "#525252",
+  textOnPrimary: "#0a0a0a",
   white: "#ffffff",
-  // Radii
-  radiusInput: 10,
-  radiusCard: 14,
-  radiusBtn: 10,
-  radiusModal: 18,
+  // Radii — tighter, more professional
+  radiusXs: 6,
+  radiusSm: 8,
+  radiusInput: 8,
+  radiusCard: 10,
+  radiusBtn: 8,
+  radiusModal: 14,
   radiusPill: 9999,
-  // Shadows
-  shadowCard: "0 1px 2px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1)",
-  shadowCardLg: "0 2px 4px rgba(0,0,0,0.2), 0 8px 16px rgba(0,0,0,0.15)",
-  shadowBtn: "0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
-  shadowGlow: "0 0 0 3px rgba(59,130,246,0.15), 0 8px 28px rgba(59,130,246,0.1)"
+  // Shadows — subtle depth
+  shadowSm: "0 1px 2px rgba(0,0,0,0.3)",
+  shadowCard: "0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2)",
+  shadowCardLg: "0 4px 12px rgba(0,0,0,0.5)",
+  shadowBtn: "0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)",
+  shadowGlow: "0 0 0 2px rgba(255,255,255,0.08), 0 4px 20px rgba(0,0,0,0.4)",
+  // Legacy aliases for backward compatibility
+  emerald: "#22c55e",
+  emeraldLight: "#4ade80",
+  emeraldBg: "rgba(34, 197, 94, 0.08)",
+  emeraldBorder: "rgba(34, 197, 94, 0.15)",
+  emeraldGlow: "rgba(34, 197, 94, 0.08)",
+  amber: "#ef4444",
+  amberLight: "#f87171",
+  amberBg: "rgba(239, 68, 68, 0.08)",
+  amberBorder: "rgba(239, 68, 68, 0.15)",
+  goldGlow: "rgba(245, 158, 11, 0.08)",
+  accentGlow: "rgba(255, 255, 255, 0.03)",
+  purpleGlow: "rgba(255, 255, 255, 0.02)",
 };
 
 const QUOTES = [
@@ -166,48 +172,46 @@ const TRADING_RULES = [
   "Ardas before every session — mind must be clear"
 ];
 
-// ─── STYLES (V4.5 — Near-black / Blue primary / Warm stone) ─────────────────
+// ─── STYLES (V5.0 — True dark, minimal, TopstepX-inspired) ──────────────
 const S = {
   glassCard: {
-    background: "rgba(0, 0, 0, 0.55)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
+    background: C.bgCard,
     borderRadius: C.radiusCard,
     border: `1px solid ${C.border}`,
     boxShadow: C.shadowCard,
-    transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)"
+    transition: "all 0.2s ease"
   },
   input: {
-    background: "rgba(0, 0, 0, 0.5)",
+    background: C.bgInput,
     border: `1px solid ${C.border}`,
     borderRadius: C.radiusInput,
-    padding: "10px 16px",
+    padding: "10px 14px",
     color: C.text,
     fontSize: 14,
     outline: "none",
     width: "100%",
     fontFamily: "Inter, sans-serif",
-    transition: "all 0.2s ease",
+    transition: "all 0.15s ease",
     boxShadow: "none"
   },
   inputFocus: {
-    borderColor: C.blue,
-    boxShadow: `0 0 0 2px ${C.blueRing}`
+    borderColor: C.borderFocus,
+    boxShadow: `0 0 0 2px rgba(255,255,255,0.06)`
   },
   btn: (variant = "primary", size = "md") => {
     const sizes = {
       xs: { padding: "4px 10px", fontSize: 11 },
       sm: { padding: "8px 14px", fontSize: 12 },
-      md: { padding: "10px 16px", fontSize: 14 },
+      md: { padding: "10px 18px", fontSize: 14 },
       lg: { padding: "14px 24px", fontSize: 16 }
     };
     const variants = {
-      primary: { background: C.cream, color: C.creamText, border: "none", fontWeight: 600, boxShadow: C.shadowBtn },
-      secondary: { background: "rgba(5, 8, 16, 0.6)", border: `1px solid ${C.border}`, boxShadow: "none" },
-      success: { background: `linear-gradient(135deg, ${C.emerald}, #047857)`, border: "none", boxShadow: `0 0 16px ${C.emeraldGlow}` },
-      danger: { background: `linear-gradient(135deg, ${C.amber}, #78350f)`, border: "none" },
-      ghost: { background: "transparent", border: `1px solid ${C.border}` },
-      glass: { background: "rgba(0, 0, 0, 0.65)", border: `1px solid ${C.border}`, color: C.text, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }
+      primary: { background: C.text, color: C.bg, border: "none", fontWeight: 600, boxShadow: C.shadowBtn },
+      secondary: { background: C.bgRaised, border: `1px solid ${C.border}`, boxShadow: "none" },
+      success: { background: C.profit, color: C.bg, border: "none", fontWeight: 600 },
+      danger: { background: C.loss, color: C.white, border: "none", fontWeight: 600 },
+      ghost: { background: "transparent", border: `1px solid ${C.border}`, color: C.textSecondary },
+      glass: { background: C.bgCard, border: `1px solid ${C.border}`, color: C.text }
     };
     return {
       display: "inline-flex",
@@ -219,7 +223,7 @@ const S = {
       fontWeight: 600,
       fontFamily: "Inter, sans-serif",
       color: C.white,
-      transition: "all 0.2s ease",
+      transition: "all 0.15s ease",
       ...sizes[size],
       ...variants[variant]
     };
@@ -1668,71 +1672,64 @@ function SessionSummaryModal({ sessionData, onClose }) {
 }
 
 // ─── TOP BAR ────────────────────────────────────────────────────────────────
-function TopBar({ session, showToast }) {
+function TopBar({ session, page, setPage, showToast }) {
+  const [navOpen, setNavOpen] = useState(false);
+
+  // Close nav on Escape
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") setNavOpen(false); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   return (
     <div style={{
-      height: 60, background: "rgba(0, 0, 0, 0.7)",
+      height: 56, background: C.bg,
       borderBottom: `1px solid ${C.border}`,
-      boxShadow: "0 1px 0 rgba(59, 130, 246, 0.06)",
       display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "0 24px", position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
-      backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)"
+      padding: "0 16px", position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
     }}>
-      {/* Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: C.radiusBtn,
-          background: `linear-gradient(135deg, ${C.accent}, ${C.accentDark})`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontWeight: 900, fontSize: 16, color: C.white,
-          boxShadow: C.shadowGlow
-        }}>87</div>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>EightSeven HQ</div>
-          <div style={{ fontSize: 9, color: C.accentLight, fontWeight: 600, letterSpacing: "0.1em" }}>TRADING OS V4.5</div>
+      {/* Left: Hamburger + Logo */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <HamburgerNav 
+          page={page} 
+          setPage={setPage} 
+          session={session} 
+          open={navOpen} 
+          onToggle={() => setNavOpen(!navOpen)}
+        />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <img 
+            src="/logo-87capital.svg" 
+            alt="87" 
+            style={{ width: 28, height: 28 }}
+          />
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, lineHeight: 1.2 }}>87Capital</div>
+            <div style={{ fontSize: 9, color: C.textDim, fontWeight: 600, letterSpacing: "0.08em" }}>TRADING OS</div>
+          </div>
         </div>
       </div>
 
-      {/* Session Status */}
-      {session.active && (
+      {/* Center: Session status */}
+      {session?.active && (
         <div style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", borderRadius: 20,
-          background: `${C.emerald}15`, border: `1px solid ${C.emeraldBorder}`,
-          boxShadow: `0 0 20px ${C.emeraldGlow}`
+          display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: C.radiusPill,
+          background: C.profitBg, border: `1px solid ${C.profitBorder}`,
         }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.emerald, animation: "livePulse 1.5s infinite" }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.emerald }}>LIVE</span>
-          <span style={{ fontSize: 11, color: C.textMuted }}>{session.trades}/2 trades</span>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.profit, animation: "livePulse 1.5s infinite" }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: C.profit }}>SESSION LIVE</span>
         </div>
       )}
 
-      {/* Right */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      {/* Right: User */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{
-          display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10,
-          background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}`
-        }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.emerald }} />
-          <span style={{ fontSize: 12, color: C.textMuted }}>Market Open</span>
-        </div>
-        <button style={S.btn("ghost", "sm")}>
-          <Bell size={18} color={C.textMuted} />
-        </button>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", borderRadius: 10,
-          background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}`
-        }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 11, fontWeight: 800, color: C.white
-          }}>KS</div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Karan</div>
-            <div style={{ fontSize: 9, color: C.accentLight }}>30 Trades To Freedom</div>
-          </div>
-        </div>
+          width: 32, height: 32, borderRadius: C.radiusSm,
+          background: C.bgCard, border: `1px solid ${C.border}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontWeight: 800, fontSize: 12, color: C.textSecondary
+        }}>KS</div>
       </div>
     </div>
   );
@@ -1749,7 +1746,103 @@ const GURBANI_VERSES = [
 
 const ARDAS_VERSE = "ਅਸਾ ਜੋਰੁ ਨਾਹੀ ਜੇ ਕਿਛੁ ਕਰਿ ਹਮ ਸਾਕਹ ਜਿਉ ਭਾਵੈ ਤਿਵੈ ਬਖਸਿ ॥੧॥ ਰਹਾਉ ॥";
 
-// ─── SIDEBAR ────────────────────────────────────────────────────────────────
+// ─── HAMBURGER NAVIGATION ──────────────────────────────────────────────────
+function HamburgerNav({ page, setPage, session, open, onToggle }) {
+  const navItems = [
+    { id: "dashboard", icon: LayoutDashboard, label: "Dashboard", group: "Main" },
+    { id: "presession", icon: Sun, label: "Pre-Session", group: "Session" },
+    { id: "trading-floor", icon: Zap, label: "Active Session", group: "Session" },
+    { id: "postsession", icon: Moon, label: "Post Session", group: "Session" },
+    { id: "journal", icon: BookOpen, label: "Journal", group: "Trading" },
+    { id: "analytics", icon: BarChart3, label: "Analytics", group: "Trading" },
+    { id: "prop-firms", icon: Briefcase, label: "Prop Firm HQ", group: "Trading" },
+    { id: "ai", icon: Brain, label: "AI Coach", group: "Analysis" },
+    { id: "psychology", icon: Brain, label: "Psychology", group: "Analysis" },
+    { id: "news", icon: Globe, label: "News & Calendar", group: "Analysis" },
+    { id: "milestones", icon: Trophy, label: "Milestones", group: "Tracking" },
+    { id: "weekly-review", icon: ClipboardCheck, label: "Weekly Review", group: "Tracking" },
+    { id: "settings", icon: Settings, label: "Settings", group: "System" },
+  ];
+
+  const groups = [...new Set(navItems.map(i => i.group))];
+
+  return (
+    <>
+      {/* Hamburger toggle button — always visible in topbar */}
+      <button 
+        onClick={onToggle}
+        style={{
+          width: 40, height: 40, borderRadius: C.radiusSm,
+          background: "transparent", border: `1px solid ${C.border}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", transition: "all 0.15s ease",
+          color: C.textSecondary
+        }}
+      >
+        {open ? <X size={20} /> : <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <line x1="3" y1="5" x2="17" y2="5" />
+          <line x1="3" y1="10" x2="17" y2="10" />
+          <line x1="3" y1="15" x2="17" y2="15" />
+        </svg>}
+      </button>
+
+      {/* Overlay */}
+      {open && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 999,
+          background: C.bgOverlay,
+          animation: "fadeIn 0.15s ease-out",
+          display: "flex", alignItems: "flex-start", justifyContent: "center",
+          paddingTop: 72
+        }} onClick={onToggle}>
+          <div style={{
+            width: "100%", maxWidth: 640, maxHeight: "calc(100vh - 100px)",
+            overflowY: "auto",
+            padding: "20px 24px",
+            animation: "fadeInUp 0.2s ease-out"
+          }} onClick={e => e.stopPropagation()}>
+            {groups.map(group => (
+              <div key={group} style={{ marginBottom: 20 }}>
+                <div style={{
+                  fontSize: 10, fontWeight: 700, color: C.textDim,
+                  textTransform: "uppercase", letterSpacing: "0.1em",
+                  marginBottom: 8, paddingLeft: 4
+                }}>{group}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  {navItems.filter(i => i.group === group).map(item => {
+                    const active = page === item.id;
+                    const isLive = item.id === "trading-floor" && session?.active;
+                    return (
+                      <button key={item.id} onClick={() => { setPage(item.id); onToggle(); }} style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "12px 14px", borderRadius: C.radiusSm,
+                        border: `1px solid ${active ? (isLive ? C.profitBorder : C.borderFocus) : C.border}`,
+                        background: active ? (isLive ? C.profitBg : "rgba(255,255,255,0.04)") : C.bgCard,
+                        cursor: "pointer", fontFamily: "Inter",
+                        color: isLive ? C.profit : active ? C.text : C.textSecondary,
+                        fontWeight: active ? 600 : 500, fontSize: 13,
+                        transition: "all 0.15s ease"
+                      }}>
+                        <item.icon size={16} color={isLive ? C.profit : active ? C.text : C.textDim} />
+                        <span style={{ flex: 1, textAlign: "left" }}>{item.label}</span>
+                        {isLive && <div style={{
+                          width: 6, height: 6, borderRadius: "50%", background: C.profit,
+                          animation: "livePulse 1.5s infinite"
+                        }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─── OLD SIDEBAR (KEPT FOR REFERENCE, NO LONGER USED) ───────────────────
 function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
   const navGroups = [
     {
@@ -7205,17 +7298,9 @@ export default function App() {
   return (
     <div style={{
       background: C.bg, color: C.text, fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif", minHeight: "100vh",
-      backgroundImage: `radial-gradient(circle at 0% 0%, ${C.accentGlow} 0%, transparent 65%), radial-gradient(circle at 100% 100%, ${C.purpleGlow} 0%, transparent 65%)`
     }}>
-      <TopBar session={session} />
-      <Sidebar 
-        page={page} 
-        setPage={setPage} 
-        session={session} 
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
-      <main style={{ marginLeft: sidebarCollapsed ? 60 : 240, marginTop: 60, minHeight: "calc(100vh - 60px)", transition: "margin-left 0.3s ease" }}>
+      <TopBar session={session} page={page} setPage={setPage} showToast={showToast} />
+      <main style={{ paddingTop: 56, minHeight: "calc(100vh - 56px)" }}>
         <ErrorBoundary>
           {renderPage()}
         </ErrorBoundary>

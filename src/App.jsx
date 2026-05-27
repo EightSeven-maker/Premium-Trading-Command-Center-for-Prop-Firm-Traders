@@ -1,4 +1,15 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+// Supabase client (public anon key — safe for client-side)
+const supabase = createClient(
+  "https://lusrlnfxkaltlpnxxshi.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1c3JsbmZ4a2FsdGxwbnh4c2hpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTYyOTQwMDAsImV4cCI6MjAzMjA3MDAwMH0.placeholder"
+);
+
+// Fallback supabase URL for REST calls
+const SB_URL = "https://lusrlnfxkaltlpnxxshi.supabase.co";
+const SB_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1c3JsbmZ4a2FsdGxwbnh4c2hpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTYyOTQwMDAsImV4cCI6MjAzMjA3MDAwMH0.placeholder";
 import {
   BarChart3, Calendar, BookOpen, Target, FileText, TrendingUp, TrendingDown,
   DollarSign, Activity, Brain, Shield, Settings, Play, Square, Edit3,
@@ -8,7 +19,7 @@ import {
   Briefcase, Globe, Star, Coffee, Flame, Crosshair, Camera, Save,
   ExternalLink, RefreshCw, Gauge, Award, MessageSquare, Send, CreditCard, Receipt,
    Download, Upload, Sparkles, PieChart, TrendingUp as TrendingIcon, Filter, EyeOff, Moon,
-   Trophy, ClipboardCheck, Share2
+   Trophy, ClipboardCheck, Share2, Heart
 } from "lucide-react";
 import jsPDF from "jspdf";
 import {
@@ -48,75 +59,88 @@ class ErrorBoundary extends React.Component {
 }
 
 // ─── THEME & CONSTANTS ──────────────────────────────────────────────────────
-// V5.0 — TopstepX-inspired true dark / Clean minimal / Professional grade
+// V5.0 — Blue glass / Premium dark / Original 87Capital aesthetic
 const C = {
-  // Surfaces — true dark, no tint
-  bg: "#0a0a0a",
-  bgRaised: "#141414",
-  bgCard: "#121212",
-  bgCardHover: "#1a1a1a",
-  bgInput: "#0d0d0d",
+  // Surfaces
+  bg: "#111111",
+  bgCard: "rgba(0, 0, 0, 0.6)",
+  bgCardAlt: "rgba(0, 0, 0, 0.5)",
+  bgHover: "rgba(255, 255, 255, 0.04)",
+  bgGlass: "rgba(0, 0, 0, 0.5)",
+  bgRaised: "#1a1a1a",
+  bgInput: "#1a1a1a",
   bgOverlay: "rgba(0, 0, 0, 0.85)",
-  bgGlass: "rgba(10, 10, 10, 0.9)",
-  // Borders — whisper subtle
-  border: "rgba(255, 255, 255, 0.06)",
-  borderLight: "rgba(255, 255, 255, 0.04)",
-  borderFocus: "rgba(255, 255, 255, 0.12)",
-  // Accent — clean white/neutral, no blue tint
-  accent: "#fafafa",
-  accentLight: "#ffffff",
-  accentGlow: "rgba(255, 255, 255, 0.03)",
-  accentDark: "#e5e5e5",
-  // Semantic — green profit, red loss (universal trading standard)
-  profit: "#22c55e",
-  profitLight: "#4ade80",
-  profitBg: "rgba(34, 197, 94, 0.08)",
-  profitBorder: "rgba(34, 197, 94, 0.15)",
-  profitGlow: "rgba(34, 197, 94, 0.08)",
-  loss: "#ef4444",
-  lossLight: "#f87171",
-  lossBg: "rgba(239, 68, 68, 0.08)",
-  lossBorder: "rgba(239, 68, 68, 0.15)",
-  lossGlow: "rgba(239, 68, 68, 0.08)",
-  // Warm accent (milestones, warnings)
-  gold: "#f59e0b",
-  goldLight: "#fbbf24",
-  goldBg: "rgba(245, 158, 11, 0.08)",
-  goldBorder: "rgba(245, 158, 11, 0.15)",
-  // Text — clean hierarchy
-  text: "#fafafa",
-  textSecondary: "#a3a3a3",
-  textMuted: "#737373",
-  textDim: "#525252",
-  textOnPrimary: "#0a0a0a",
+  // Borders
+  border: "rgba(87, 83, 78, 0.2)",
+  borderLight: "rgba(87, 83, 78, 0.1)",
+  borderGlow: "rgba(59, 130, 246, 0.15)",
+  borderFocus: "rgba(59, 130, 246, 0.35)",
+  // Primary Blue (brand)
+  accent: "#3b82f6",
+  accentLight: "#60a5fa",
+  accentGlow: "rgba(59, 130, 246, 0.25)",
+  accentDark: "#2563eb",
+  // Purple (subtle brand accent)
+  purple: "#8b5cf6",
+  purpleGlow: "rgba(139, 92, 246, 0.1)",
+  // Cream / Off-white (primary buttons)
+  cream: "#f5f0e8",
+  creamHover: "#ede6db",
+  creamText: "#0c0a09",
+  // Blue (restrained focus rings)
+  blue: "#3b82f6",
+  blueLight: "#60a5fa",
+  blueGlow: "rgba(59, 130, 246, 0.2)",
+  blueRing: "rgba(59, 130, 246, 0.35)",
+  // Semantic — emerald (positive) / amber (caution/loss)
+  emerald: "#10b981",
+  emeraldLight: "#34d399",
+  emeraldBg: "rgba(16, 185, 129, 0.1)",
+  emeraldBorder: "rgba(16, 185, 129, 0.2)",
+  emeraldGlow: "rgba(16, 185, 129, 0.1)",
+  amber: "#d97706",
+  amberLight: "#f59e0b",
+  amberBg: "rgba(217, 119, 6, 0.1)",
+  amberBorder: "rgba(217, 119, 6, 0.2)",
+  amberGlow: "rgba(217, 119, 6, 0.1)",
+  // Warm accent (milestones, celebrations)
+  gold: "#d97706",
+  goldLight: "#f59e0b",
+  goldBg: "rgba(217, 119, 6, 0.1)",
+  goldBorder: "rgba(217, 119, 6, 0.2)",
+  goldGlow: "rgba(217, 119, 6, 0.12)",
+  // Profit/Loss (new standard)
+  profit: "#10b981",
+  profitLight: "#34d399",
+  profitBg: "rgba(16, 185, 129, 0.1)",
+  profitBorder: "rgba(16, 185, 129, 0.2)",
+  profitGlow: "rgba(16, 185, 129, 0.1)",
+  loss: "#d97706",
+  lossLight: "#f59e0b",
+  lossBg: "rgba(217, 119, 6, 0.1)",
+  lossBorder: "rgba(217, 119, 6, 0.2)",
+  lossGlow: "rgba(217, 119, 6, 0.1)",
+  // Text (warm stone palette)
+  text: "#f5f5f4",
+  textMuted: "#a8a29e",
+  textDim: "#78716c",
+  textSecondary: "#a8a29e",
+  textOnPrimary: "#ffffff",
   white: "#ffffff",
-  // Radii — tighter, more professional
+  // Radii
   radiusXs: 6,
   radiusSm: 8,
-  radiusInput: 8,
-  radiusCard: 10,
-  radiusBtn: 8,
-  radiusModal: 14,
+  radiusInput: 10,
+  radiusCard: 14,
+  radiusBtn: 10,
+  radiusModal: 18,
   radiusPill: 9999,
-  // Shadows — subtle depth
-  shadowSm: "0 1px 2px rgba(0,0,0,0.3)",
-  shadowCard: "0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2)",
-  shadowCardLg: "0 4px 12px rgba(0,0,0,0.5)",
-  shadowBtn: "0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)",
-  shadowGlow: "0 0 0 2px rgba(255,255,255,0.08), 0 4px 20px rgba(0,0,0,0.4)",
-  // Legacy aliases for backward compatibility
-  emerald: "#22c55e",
-  emeraldLight: "#4ade80",
-  emeraldBg: "rgba(34, 197, 94, 0.08)",
-  emeraldBorder: "rgba(34, 197, 94, 0.15)",
-  emeraldGlow: "rgba(34, 197, 94, 0.08)",
-  amber: "#ef4444",
-  amberLight: "#f87171",
-  amberBg: "rgba(239, 68, 68, 0.08)",
-  amberBorder: "rgba(239, 68, 68, 0.15)",
-  goldGlow: "rgba(245, 158, 11, 0.08)",
-  accentGlow: "rgba(255, 255, 255, 0.03)",
-  purpleGlow: "rgba(255, 255, 255, 0.02)",
+  // Shadows
+  shadowSm: "0 1px 2px rgba(0,0,0,0.2)",
+  shadowCard: "0 1px 2px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1)",
+  shadowCardLg: "0 2px 4px rgba(0,0,0,0.2), 0 8px 16px rgba(0,0,0,0.15)",
+  shadowBtn: "0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
+  shadowGlow: "0 0 0 3px rgba(59,130,246,0.15), 0 8px 28px rgba(59,130,246,0.1)"
 };
 
 const QUOTES = [
@@ -172,46 +196,48 @@ const TRADING_RULES = [
   "Ardas before every session — mind must be clear"
 ];
 
-// ─── STYLES (V5.0 — True dark, minimal, TopstepX-inspired) ──────────────
+// ─── STYLES (V5.0 — Blue glass / Premium dark) ─────────────────
 const S = {
   glassCard: {
-    background: C.bgCard,
+    background: "rgba(0, 0, 0, 0.55)",
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)",
     borderRadius: C.radiusCard,
     border: `1px solid ${C.border}`,
     boxShadow: C.shadowCard,
-    transition: "all 0.2s ease"
+    transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)"
   },
   input: {
-    background: C.bgInput,
+    background: "rgba(0, 0, 0, 0.5)",
     border: `1px solid ${C.border}`,
     borderRadius: C.radiusInput,
-    padding: "10px 14px",
+    padding: "10px 16px",
     color: C.text,
     fontSize: 14,
     outline: "none",
     width: "100%",
     fontFamily: "Inter, sans-serif",
-    transition: "all 0.15s ease",
+    transition: "all 0.2s ease",
     boxShadow: "none"
   },
   inputFocus: {
-    borderColor: C.borderFocus,
-    boxShadow: `0 0 0 2px rgba(255,255,255,0.06)`
+    borderColor: C.blue,
+    boxShadow: `0 0 0 2px ${C.blueRing}`
   },
   btn: (variant = "primary", size = "md") => {
     const sizes = {
       xs: { padding: "4px 10px", fontSize: 11 },
       sm: { padding: "8px 14px", fontSize: 12 },
-      md: { padding: "10px 18px", fontSize: 14 },
+      md: { padding: "10px 16px", fontSize: 14 },
       lg: { padding: "14px 24px", fontSize: 16 }
     };
     const variants = {
-      primary: { background: C.text, color: C.bg, border: "none", fontWeight: 600, boxShadow: C.shadowBtn },
-      secondary: { background: C.bgRaised, border: `1px solid ${C.border}`, boxShadow: "none" },
-      success: { background: C.profit, color: C.bg, border: "none", fontWeight: 600 },
-      danger: { background: C.loss, color: C.white, border: "none", fontWeight: 600 },
-      ghost: { background: "transparent", border: `1px solid ${C.border}`, color: C.textSecondary },
-      glass: { background: C.bgCard, border: `1px solid ${C.border}`, color: C.text }
+      primary: { background: C.cream, color: C.creamText, border: "none", fontWeight: 600, boxShadow: C.shadowBtn },
+      secondary: { background: "rgba(5, 8, 16, 0.6)", border: `1px solid ${C.border}`, boxShadow: "none" },
+      success: { background: `linear-gradient(135deg, ${C.emerald}, #047857)`, border: "none", boxShadow: `0 0 16px ${C.emeraldGlow}` },
+      danger: { background: `linear-gradient(135deg, ${C.amber}, #78350f)`, border: "none" },
+      ghost: { background: "transparent", border: `1px solid ${C.border}` },
+      glass: { background: "rgba(0, 0, 0, 0.65)", border: `1px solid ${C.border}`, color: C.text, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }
     };
     return {
       display: "inline-flex",
@@ -223,7 +249,7 @@ const S = {
       fontWeight: 600,
       fontFamily: "Inter, sans-serif",
       color: C.white,
-      transition: "all 0.15s ease",
+      transition: "all 0.2s ease",
       ...sizes[size],
       ...variants[variant]
     };
@@ -419,8 +445,8 @@ const MiniStat = ({ icon: Icon, label, value, color = C.gold }) => (
 function Logo({ size = 40 }) {
   return (
     <img 
-      src="/logo-87capital.svg" 
-      alt="87Capital" 
+      src="/logo-martjournal.svg" 
+      alt="Mart Journal" 
       style={{ width: size, height: size }}
       onError={(e) => {
         // Fallback to text logo if SVG not found
@@ -1684,51 +1710,48 @@ function TopBar({ session, page, setPage, showToast }) {
 
   return (
     <div style={{
-      height: 56, background: C.bg,
+      height: 56, background: "rgba(0, 0, 0, 0.7)",
       borderBottom: `1px solid ${C.border}`,
+      boxShadow: "0 1px 0 rgba(59, 130, 246, 0.06)",
       display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "0 16px", position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
+      padding: "0 20px", position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
+      backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)"
     }}>
-      {/* Left: Hamburger + Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <HamburgerNav 
-          page={page} 
-          setPage={setPage} 
-          session={session} 
-          open={navOpen} 
-          onToggle={() => setNavOpen(!navOpen)}
-        />
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <img 
-            src="/logo-87capital.svg" 
-            alt="87" 
-            style={{ width: 28, height: 28 }}
-          />
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, lineHeight: 1.2 }}>87Capital</div>
-            <div style={{ fontSize: 9, color: C.textDim, fontWeight: 600, letterSpacing: "0.08em" }}>TRADING OS</div>
-          </div>
+      {/* Left: Logo */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: C.radiusBtn,
+          background: `linear-gradient(135deg, ${C.accent}, ${C.accentDark})`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontWeight: 900, fontSize: 14, color: C.white,
+          boxShadow: C.shadowGlow
+        }}>MJ</div>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>Mart Journal</div>
+          <div style={{ fontSize: 9, color: C.accentLight, fontWeight: 600, letterSpacing: "0.08em" }}>TRADE SMARTER</div>
         </div>
       </div>
 
       {/* Center: Session status */}
       {session?.active && (
         <div style={{
-          display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: C.radiusPill,
-          background: C.profitBg, border: `1px solid ${C.profitBorder}`,
+          display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 20,
+          background: `${C.emerald}15`, border: `1px solid ${C.emeraldBorder}`,
+          boxShadow: `0 0 16px ${C.emeraldGlow}`
         }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.profit, animation: "livePulse 1.5s infinite" }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: C.profit }}>SESSION LIVE</span>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.emerald, animation: "livePulse 1.5s infinite" }} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: C.emerald }}>SESSION LIVE</span>
         </div>
       )}
 
       {/* Right: User */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{
-          width: 32, height: 32, borderRadius: C.radiusSm,
-          background: C.bgCard, border: `1px solid ${C.border}`,
+          width: 32, height: 32, borderRadius: 8,
+          background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontWeight: 800, fontSize: 12, color: C.textSecondary
+          fontWeight: 800, fontSize: 12, color: C.white,
+          boxShadow: `0 2px 8px ${C.accent}40`
         }}>KS</div>
       </div>
     </div>
@@ -1761,6 +1784,7 @@ function HamburgerNav({ page, setPage, session, open, onToggle }) {
     { id: "news", icon: Globe, label: "News & Calendar", group: "Analysis" },
     { id: "milestones", icon: Trophy, label: "Milestones", group: "Tracking" },
     { id: "weekly-review", icon: ClipboardCheck, label: "Weekly Review", group: "Tracking" },
+    { id: "community", icon: MessageSquare, label: "Community", group: "Social" },
     { id: "settings", icon: Settings, label: "Settings", group: "System" },
   ];
 
@@ -1875,6 +1899,12 @@ function Sidebar({ page, setPage, session, collapsed, onToggleCollapse }) {
       items: [
         { id: "milestones", icon: Trophy, label: "Milestones" },
         { id: "weekly-review", icon: ClipboardCheck, label: "Weekly Review" },
+      ]
+    },
+    {
+      label: "COMMUNITY",
+      items: [
+        { id: "community", icon: MessageSquare, label: "Community" },
       ]
     },
     {
@@ -3028,7 +3058,135 @@ function CalendarHeatmap({ trades }) {
 }
 
 // ─── COMMAND CENTER PAGE ────────────────────────────────────────────────────
-function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, milestones, weeklyReviews }) {
+
+// ─── RULE COMPLIANCE TRACKER ───────────────────────────────────────────────
+function RuleComplianceTracker({ trades, showToast }) {
+  const [rules, setRules] = useState(() => {
+    try {
+      const saved = localStorage.getItem("mart_journal_rules");
+      return saved ? JSON.parse(saved) : [
+        { id: 1, text: "Maximum 2 trades per session", active: true },
+        { id: 2, text: "Minimum 1:2 Risk-to-Reward ratio", active: true },
+        { id: 3, text: "Stop loss placed beyond swing structure", active: true },
+        { id: 4, text: "Never move stop loss against position", active: true },
+        { id: 5, text: "No trading on high-impact news without plan", active: true },
+        { id: 6, text: "If 2 consecutive losses — session is DONE", active: true },
+        { id: 7, text: "Wait for SMT divergence confirmation", active: true },
+        { id: 8, text: "Only trade during Kill Zones", active: true },
+      ];
+    } catch(e) { return []; }
+  });
+  
+  const [dailyCompliance, setDailyCompliance] = useState(() => {
+    try {
+      const saved = localStorage.getItem("mart_journal_compliance");
+      return saved ? JSON.parse(saved) : {};
+    } catch(e) { return {}; }
+  });
+  
+  const today = new Date().toISOString().split("T")[0];
+  const activeRules = rules.filter(r => r.active);
+  
+  // Save rules
+  useEffect(() => {
+    localStorage.setItem("mart_journal_rules", JSON.stringify(rules));
+  }, [rules]);
+  
+  // Save compliance
+  useEffect(() => {
+    localStorage.setItem("mart_journal_compliance", JSON.stringify(dailyCompliance));
+  }, [dailyCompliance]);
+  
+  const toggleRule = (ruleId) => {
+    setRules(prev => prev.map(r => r.id === ruleId ? { ...r, active: !r.active } : r));
+  };
+  
+  const checkRule = (ruleId, checked) => {
+    setDailyCompliance(prev => ({
+      ...prev,
+      [today]: { ...(prev[today] || {}), [ruleId]: checked }
+    }));
+  };
+  
+  const todaysChecks = dailyCompliance[today] || {};
+  const rulesChecked = activeRules.filter(r => todaysChecks[r.id]).length;
+  const complianceScore = activeRules.length > 0 ? Math.round((rulesChecked / activeRules.length) * 100) : 100;
+  
+  const addRule = () => {
+    const text = prompt("Enter your trading rule:");
+    if (text && text.trim()) {
+      setRules(prev => [...prev, { id: Date.now(), text: text.trim(), active: true }]);
+      showToast("Rule added!", "success");
+    }
+  };
+  
+  const removeRule = (ruleId) => {
+    setRules(prev => prev.filter(r => r.id !== ruleId));
+  };
+  
+  return (
+    <div style={{ ...S.glassCard, padding: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, color: C.text }}>
+          <Shield size={16} color={C.accent} /> Rule Compliance
+        </h3>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ fontSize: 12, color: C.textMuted }}>
+            {rulesChecked}/{activeRules.length} rules
+          </div>
+          {/* Score gauge */}
+          <div style={{ width: 48, height: 48, borderRadius: "50%", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="48" height="48" viewBox="0 0 48 48">
+              <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
+              <circle cx="24" cy="24" r="20" fill="none" stroke={complianceScore >= 80 ? C.emerald : complianceScore >= 50 ? C.gold : C.amber} strokeWidth="4" strokeDasharray={`${complianceScore * 1.256} 125.6`} strokeLinecap="round" transform="rotate(-90 24 24)" />
+            </svg>
+            <span style={{ position: "absolute", fontSize: 12, fontWeight: 800, color: complianceScore >= 80 ? C.emerald : complianceScore >= 50 ? C.gold : C.amber }}>
+              {complianceScore}%
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Rule list */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+        {rules.map(rule => (
+          <div key={rule.id} style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "8px 12px",
+            borderRadius: C.radiusSm, background: todaysChecks[rule.id] ? `${C.emerald}10` : "rgba(0,0,0,0.2)",
+            border: `1px solid ${todaysChecks[rule.id] ? C.emeraldBorder : C.border}`,
+            opacity: rule.active ? 1 : 0.4,
+            transition: "all 0.2s ease"
+          }}>
+            <button onClick={() => checkRule(rule.id, !todaysChecks[rule.id])} style={{
+              width: 20, height: 20, borderRadius: 4, cursor: "pointer",
+              background: todaysChecks[rule.id] ? C.emerald : "transparent",
+              border: `2px solid ${todaysChecks[rule.id] ? C.emerald : C.border}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all 0.15s ease", flexShrink: 0
+            }}>
+              {todaysChecks[rule.id] && <Check size={12} color={C.white} />}
+            </button>
+            <span style={{ flex: 1, fontSize: 12, color: rule.active ? C.text : C.textDim, textDecoration: todaysChecks[rule.id] ? "line-through" : "none", textDecorationColor: C.emerald }}>
+              {rule.text}
+            </span>
+            <button onClick={() => toggleRule(rule.id)} title={rule.active ? "Disable rule" : "Enable rule"} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+              <EyeOff size={14} color={rule.active ? C.textDim : C.amber} />
+            </button>
+            <button onClick={() => removeRule(rule.id)} title="Delete rule" style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+              <X size={14} color={C.textDim} />
+            </button>
+          </div>
+        ))}
+      </div>
+      
+      <button onClick={addRule} style={S.btn("ghost", "sm")}>
+        <Plus size={14} /> Add Rule
+      </button>
+    </div>
+  );
+}
+
+function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, milestones, weeklyReviews, showToast }) {
   // ─── Interactive State ──────────────────────────────────────────────
   const [expandedTradeIndex, setExpandedTradeIndex] = useState(null);
   const [activeSetupFilter, setActiveSetupFilter] = useState(null);
@@ -3301,9 +3459,14 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
         />
       </div>
 
+      {/* ── Rule Compliance ──────────────────────────────────── */}
+      <div style={{ marginTop: 20 }}>
+        <RuleComplianceTracker trades={trades} showToast={showToast} />
+      </div>
+      
       {/* ── Setup Playbook + Calendar ────────────────────────── */}
       {trades.length >= 5 && (
-        <div style={{ marginTop: 24 }}>
+        <div style={{ marginTop: 20 }}>
           <SetupPlaybook trades={trades} />
         </div>
       )}
@@ -3862,7 +4025,7 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast, subscriptions
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(22);
         doc.setFont("helvetica", "bold");
-        doc.text("87Capital Trading OS", 14, 20);
+        doc.text("Mart Journal Trading OS", 14, 20);
         doc.setFontSize(13);
         doc.setFont("helvetica", "normal");
         doc.text(`Bookkeeping Report — ${bookYear}`, 14, 30);
@@ -3971,11 +4134,11 @@ function PropFirmsPage({ propAccounts, setPropAccounts, showToast, subscriptions
           doc.setPage(i);
           doc.setFontSize(8);
           doc.setTextColor(150);
-          doc.text(`Generated by 87Capital Trading OS — ${new Date().toLocaleDateString()}`, 14, 287);
+          doc.text(`Generated by Mart Journal Trading OS — ${new Date().toLocaleDateString()}`, 14, 287);
           doc.text(`Page ${i} of ${pageCount}`, 186, 287);
         }
 
-        doc.save(`87capital-bookkeeping-${bookYear}.pdf`);
+        doc.save(`martjournal-bookkeeping-${bookYear}.pdf`);
         showToast("PDF downloaded!", "success");
       } catch (err) {
         console.error(err);
@@ -6028,10 +6191,10 @@ function TradeShareCard({ trade, onClose }) {
     ctx.fillRect(0, 0, w, 56);
     ctx.fillStyle = "#fafafa";
     ctx.font = "bold 18px Inter, sans-serif";
-    ctx.fillText("87Capital", 24, 36);
+    ctx.fillText("Mart Journal", 24, 36);
     ctx.fillStyle = "#525252";
     ctx.font = "600 10px Inter, sans-serif";
-    ctx.fillText("TRADING OS V5", 24, 50);
+    ctx.fillText("TRADE SMARTER", 24, 50);
     
     // Trade info
     const pnlColor = trade.pnl >= 0 ? "#22c55e" : "#ef4444";
@@ -6090,11 +6253,11 @@ function TradeShareCard({ trade, onClose }) {
     // Footer
     ctx.fillStyle = "#525252";
     ctx.font = "10px Inter, sans-serif";
-    ctx.fillText("87capital.vercel.app · Trade smarter, not harder", 24, h - 16);
+    ctx.fillText("martjournal.vercel.app · Your edge, journaled", 24, h - 16);
     
     // Download
     const link = document.createElement("a");
-    link.download = `87capital-trade-${trade.date || "share"}.png`;
+    link.download = `martjournal-trade-${trade.date || "share"}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
   };
@@ -6130,6 +6293,269 @@ function TradeShareCard({ trade, onClose }) {
           Share this on Twitter, Discord, or anywhere 📤
         </p>
       </div>
+    </div>
+  );
+}
+
+
+// ─── COMMUNITY PAGE ─────────────────────────────────────────────────────────
+function CommunityPage({ trades, showToast }) {
+  const [tab, setTab] = useState("feed");
+  const [displayName, setDisplayName] = useState(() => localStorage.getItem("mart_community_name") || "");
+  const [profileId, setProfileId] = useState(() => localStorage.getItem("mart_community_id") || "");
+  const [showRegister, setShowRegister] = useState(!localStorage.getItem("mart_community_name"));
+  const [sharedTrades, setSharedTrades] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [commentTexts, setCommentTexts] = useState({});
+  const [shareTradeData, setShareTradeData] = useState(null);
+
+  // Register user
+  const registerUser = async () => {
+    if (!displayName.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${SB_URL}/rest/v1/profiles`, {
+        method: "POST",
+        headers: { "apikey": SB_ANON_KEY, "Authorization": `Bearer ${SB_ANON_KEY}`, "Content-Type": "application/json", "Prefer": "return=representation" },
+        body: JSON.stringify({ display_name: displayName, bio: "", total_pnl: 0, win_rate: 0, trade_count: 0 })
+      });
+      const data = await res.json();
+      if (data && data[0]) {
+        setProfileId(data[0].id);
+        localStorage.setItem("mart_community_name", displayName);
+        localStorage.setItem("mart_community_id", data[0].id);
+        setShowRegister(false);
+        showToast("Welcome to the community!", "success");
+      }
+    } catch(e) {
+      // Offline fallback — still register locally
+      localStorage.setItem("mart_community_name", displayName);
+      setShowRegister(false);
+      showToast("Registered offline — connect to sync", "info");
+    }
+    setLoading(false);
+  };
+
+  // Load shared trades
+  const loadFeed = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${SB_URL}/rest/v1/shared_trades?select=*&order=created_at.desc&limit=50`, {
+        headers: { "apikey": SB_ANON_KEY, "Authorization": `Bearer ${SB_ANON_KEY}` }
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) setSharedTrades(data);
+    } catch(e) {}
+    setLoading(false);
+  };
+
+  // Load leaderboard
+  const loadLeaderboard = async () => {
+    try {
+      const res = await fetch(`${SB_URL}/rest/v1/profiles?select=*&order=total_pnl.desc&limit=20`, {
+        headers: { "apikey": SB_ANON_KEY, "Authorization": `Bearer ${SB_ANON_KEY}` }
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) setLeaderboard(data);
+    } catch(e) {}
+  };
+
+  useEffect(() => { loadFeed(); loadLeaderboard(); }, []);
+
+  // Like a trade
+  const likeTrade = async (tradeId) => {
+    if (!profileId) { showToast("Register first!", "error"); return; }
+    try {
+      await fetch(`${SB_URL}/rest/v1/likes`, {
+        method: "POST",
+        headers: { "apikey": SB_ANON_KEY, "Authorization": `Bearer ${SB_ANON_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ trade_id: tradeId, user_id: profileId })
+      });
+      setSharedTrades(prev => prev.map(t => t.id === tradeId ? { ...t, likes_count: (t.likes_count || 0) + 1 } : t));
+    } catch(e) {}
+  };
+
+  // Comment on trade
+  const commentOnTrade = async (tradeId) => {
+    const text = commentTexts[tradeId];
+    if (!text || !text.trim() || !profileId) return;
+    try {
+      await fetch(`${SB_URL}/rest/v1/comments`, {
+        method: "POST",
+        headers: { "apikey": SB_ANON_KEY, "Authorization": `Bearer ${SB_ANON_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ trade_id: tradeId, user_id: profileId, display_name: displayName, content: text })
+      });
+      setSharedTrades(prev => prev.map(t => t.id === tradeId ? { ...t, comments_count: (t.comments_count || 0) + 1 } : t));
+      setCommentTexts(prev => ({ ...prev, [tradeId]: "" }));
+      showToast("Comment added!", "success");
+    } catch(e) {}
+  };
+
+  // Share a trade
+  const shareTrade = async (trade) => {
+    if (!profileId) { showToast("Register first!", "error"); return; }
+    setLoading(true);
+    try {
+      await fetch(`${SB_URL}/rest/v1/shared_trades`, {
+        method: "POST",
+        headers: { "apikey": SB_ANON_KEY, "Authorization": `Bearer ${SB_ANON_KEY}`, "Content-Type": "application/json", "Prefer": "return=representation" },
+        body: JSON.stringify({
+          user_id: profileId, display_name: displayName,
+          ticker: trade.ticker || "—", direction: trade.direction || "—",
+          pnl: trade.pnl || 0, methodology: trade.methodology || "—",
+          entry_model: Array.isArray(trade.entryModel) ? trade.entryModel.join(", ") : (trade.entryModel || "—"),
+          grade: trade.grade || "", notes: trade.notes || "",
+          tags: trade.tags || [], screenshots: trade.screenshots || []
+        })
+      });
+      showToast("Trade shared to community!", "success");
+      loadFeed();
+      setShareTradeData(null);
+    } catch(e) { showToast("Failed to share — try again", "error"); }
+    setLoading(false);
+  };
+
+  if (showRegister) {
+    return (
+      <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out", maxWidth: 500, margin: "0 auto", paddingTop: 60 }}>
+        <div style={{ ...S.glassCard, padding: 40, textAlign: "center" }}>
+          <MessageSquare size={48} color={C.accent} style={{ marginBottom: 20 }} />
+          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Join the Community</h2>
+          <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 24 }}>Pick a display name to share trades and compete on the leaderboard.</p>
+          <input value={displayName} onChange={e => setDisplayName(e.target.value)} style={{ ...S.input, marginBottom: 16, textAlign: "center", fontSize: 18 }} placeholder="Your display name" maxLength={24} />
+          <button onClick={registerUser} disabled={loading || !displayName.trim()} style={{ ...S.btn("primary", "lg"), width: "100%" }}>
+            {loading ? "Joining..." : "Join Community"}
+          </button>
+          <button onClick={() => { localStorage.setItem("mart_community_name", "Anonymous Trader"); setDisplayName("Anonymous Trader"); setShowRegister(false); showToast("Browsing as guest", "info"); }} style={{ ...S.btn("ghost"), marginTop: 12, width: "100%" }}>
+            Skip for now
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800 }}>Community</h1>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setTab("feed")} style={tab === "feed" ? S.btn("primary", "sm") : S.btn("ghost", "sm")}>Feed</button>
+          <button onClick={() => setTab("leaderboard")} style={tab === "leaderboard" ? S.btn("primary", "sm") : S.btn("ghost", "sm")}>Leaderboard</button>
+          {trades.length > 0 && (
+            <button onClick={() => setShareTradeData(true)} style={S.btn("success", "sm")}>Share Trade</button>
+          )}
+        </div>
+      </div>
+
+      {/* Share Trade Modal */}
+      {shareTradeData === true && (
+        <div style={{ ...S.glassCard, padding: 20, marginBottom: 20 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Share a Trade</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto" }}>
+            {[...trades].reverse().slice(0, 20).map((t, i) => (
+              <div key={i} onClick={() => shareTrade(t)} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "10px 14px", borderRadius: C.radiusSm, cursor: "pointer",
+                background: "rgba(0,0,0,0.2)", border: `1px solid ${C.border}`, transition: "all 0.15s"
+              }}>
+                <div>
+                  <span style={{ fontWeight: 700, fontSize: 14 }}>{t.ticker} {t.direction}</span>
+                  <span style={{ color: C.textMuted, fontSize: 12, marginLeft: 8 }}>{t.methodology || ""}</span>
+                </div>
+                <span style={{ fontWeight: 800, color: pnlColor(t.pnl) }}>{fmt(t.pnl)}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setShareTradeData(null)} style={{ ...S.btn("ghost", "sm"), marginTop: 12 }}>Cancel</button>
+        </div>
+      )}
+
+      {/* Feed Tab */}
+      {tab === "feed" && (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <span style={S.badge(C.accent)}>{sharedTrades.length} shared trades</span>
+            <button onClick={loadFeed} style={S.btn("ghost", "sm")}><RefreshCw size={14} /> Refresh</button>
+          </div>
+          {sharedTrades.length === 0 ? (
+            <div style={{ ...S.glassCard, textAlign: "center", padding: 60, color: C.textDim }}>
+              <MessageSquare size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
+              <p>No shared trades yet. Be the first!</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {sharedTrades.map(st => (
+                <div key={st.id} style={{ ...S.glassCard, padding: 20 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                        <span style={{ fontWeight: 700, fontSize: 15 }}>{st.ticker} {st.direction}</span>
+                        <span style={{ fontSize: 24, fontWeight: 800, color: pnlColor(st.pnl) }}>{fmt(st.pnl)}</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: C.textMuted }}>
+                        {st.display_name} · {st.methodology} · {st.entry_model} · {new Date(st.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    {st.grade && <span style={{ ...S.badge(gradeColor(st.grade)), fontSize: 11 }}>{st.grade}</span>}
+                  </div>
+                  {st.notes && <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 12 }}>{st.notes}</p>}
+                  {st.tags && st.tags.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
+                      {st.tags.map((tag, i) => (
+                        <span key={i} style={{ padding: "3px 8px", borderRadius: C.radiusPill, fontSize: 10, fontWeight: 600, background: "rgba(255,255,255,0.06)", color: C.textSecondary, border: `1px solid ${C.border}` }}>{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 16, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+                    <button onClick={() => likeTrade(st.id)} style={{ ...S.btn("ghost", "xs"), display: "flex", alignItems: "center", gap: 4 }}>
+                      <Heart size={14} /> {st.likes_count || 0}
+                    </button>
+                    <div style={{ flex: 1, display: "flex", gap: 8 }}>
+                      <input value={commentTexts[st.id] || ""} onChange={e => setCommentTexts(prev => ({ ...prev, [st.id]: e.target.value }))} style={{ ...S.input, flex: 1, height: 34, fontSize: 12 }} placeholder="Add a comment..." />
+                      <button onClick={() => commentOnTrade(st.id)} style={S.btn("primary", "xs")}><Send size={12} /></button>
+                    </div>
+                    <span style={{ fontSize: 10, color: C.textDim }}>{st.comments_count || 0} comments</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Leaderboard Tab */}
+      {tab === "leaderboard" && (
+        <div style={{ ...S.glassCard, padding: 20 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <Trophy size={18} color={C.gold} /> Top Traders
+          </h3>
+          {leaderboard.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 40, color: C.textDim }}>
+              <p>No traders yet. Share your first trade!</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {leaderboard.map((p, i) => (
+                <div key={p.id} style={{
+                  display: "flex", alignItems: "center", gap: 14, padding: "12px 16px",
+                  borderRadius: C.radiusSm, background: i === 0 ? `${C.gold}10` : "transparent",
+                  border: i === 0 ? `1px solid ${C.goldBorder}` : `1px solid transparent`
+                }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: i === 0 ? C.gold : i === 1 ? C.textDim : i === 2 ? C.amber : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: i < 3 ? C.bg : C.textDim }}>
+                    {i < 3 ? ["🥇","🥈","🥉"][i] : i + 1}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{p.display_name}</div>
+                    <div style={{ fontSize: 11, color: C.textDim }}>{p.trade_count || 0} trades · {p.win_rate ? `${p.win_rate.toFixed(0)}% WR` : ""}</div>
+                  </div>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: pnlColor(p.total_pnl || 0) }}>{fmt(p.total_pnl || 0)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -6694,7 +7120,7 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `87capital-trades-${today()}.csv`;
+    a.download = `mart-journal-trades-${today()}.csv`;
     a.click();
     showToast(`Exported ${trades.length} trades to CSV`, "success");
   };
@@ -6710,7 +7136,7 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
       // Title
       doc.setFontSize(22);
       doc.setTextColor(59, 130, 246);
-      doc.text("87Capital | Trading OS V5", margin, y);
+      doc.text("Mart Journal | Performance Report", margin, y);
       y += 8;
       doc.setFontSize(10);
       doc.setTextColor(120, 113, 108);
@@ -6837,9 +7263,9 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
       y = Math.max(y, doc.internal.pageSize.getHeight() - 20);
       doc.setFontSize(8);
       doc.setTextColor(168, 162, 158);
-      doc.text("Generated by 87Capital Trading OS V5", margin, y);
+      doc.text("Generated by Mart Journal", margin, y);
 
-      doc.save(`87capital-report-${new Date().toISOString().split("T")[0]}.pdf`);
+      doc.save(`mart-journal-report-${new Date().toISOString().split("T")[0]}.pdf`);
       showToast("PDF report downloaded!", "success");
     } catch (e) {
       console.error("PDF error:", e);
@@ -6850,17 +7276,17 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
   // Export JSON backup
   const exportJSON = () => {
     const data = {
-      version: "4.0",
+      version: "5.0",
       exportedAt: new Date().toISOString(),
-      trader: "Karan Singh",
-      journey: "30 Trades To Freedom",
+      app: "Mart Journal",
+      trader: "Trader",
       trades,
       propAccounts
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `87capital-backup-${today()}.json`;
+    a.download = `mart-journal-backup-${today()}.json`;
     a.click();
     showToast("Full backup exported successfully!", "success");
   };
@@ -7190,7 +7616,7 @@ function SettingsPage({ trades, setTrades, propAccounts, showToast, spiritualMod
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
             <Logo size={48} />
             <div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: C.gold }}>87Capital Trading OS</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: C.gold }}>Mart Journal Trading OS</div>
               <div style={{ fontSize: 12, color: C.textMuted }}>Version 4.0 — Built for Karan Singh</div>
             </div>
           </div>
@@ -7831,28 +8257,28 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dailyGoal, setDailyGoal] = useState(() => {
     try {
-      const saved = localStorage.getItem("87capital_v4");
+      const saved = localStorage.getItem("mart_journal");
       if (saved) { const d = JSON.parse(saved); if (d.dailyGoal) return d.dailyGoal; }
     } catch(e) {}
     return 250;
   });
   const [weeklyGoal, setWeeklyGoal] = useState(() => {
     try {
-      const saved = localStorage.getItem("87capital_v4");
+      const saved = localStorage.getItem("mart_journal");
       if (saved) { const d = JSON.parse(saved); if (d.weeklyGoal) return d.weeklyGoal; }
     } catch(e) {}
     return 1000;
   });
   const [monthlyGoal, setMonthlyGoal] = useState(() => {
     try {
-      const saved = localStorage.getItem("87capital_v4");
+      const saved = localStorage.getItem("mart_journal");
       if (saved) { const d = JSON.parse(saved); if (d.monthlyGoal) return d.monthlyGoal; }
     } catch(e) {}
     return 4000;
   });
   const [dailyLossLimit, setDailyLossLimit] = useState(() => {
     try {
-      const saved = localStorage.getItem("87capital_v4");
+      const saved = localStorage.getItem("mart_journal");
       if (saved) { const d = JSON.parse(saved); if (d.dailyLossLimit) return d.dailyLossLimit; }
     } catch(e) {}
     return 250;
@@ -7873,7 +8299,7 @@ export default function App() {
   // Load from localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("87capital_v4");
+      const saved = localStorage.getItem("mart_journal");
       if (saved) {
         const data = JSON.parse(saved);
         if (data.trades) setTrades(data.trades);
@@ -7908,7 +8334,7 @@ export default function App() {
 
   // Save to localStorage
   useEffect(() => {
-    localStorage.setItem("87capital_v4", JSON.stringify({ trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, subscriptions, expenses, payouts, milestones, weeklyReviews }));
+    localStorage.setItem("mart_journal", JSON.stringify({ trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, subscriptions, expenses, payouts, milestones, weeklyReviews }));
   }, [trades, session, propAccounts, spiritualMode, dailyGoal, weeklyGoal, monthlyGoal, dailyLossLimit, subscriptions, expenses, payouts, milestones, weeklyReviews]);
 
   // ── Initialize + detect milestones — runs whenever data changes ─────────────────
@@ -7963,7 +8389,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case "trading-floor": return <TradingFloorPage session={session} onAddTrade={onAddTrade} setPage={setPage} showToast={showToast} trades={trades} />;
-      case "dashboard": return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} dailyLossLimit={dailyLossLimit} milestones={milestones} weeklyReviews={weeklyReviews} />;
+      case "dashboard": return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} dailyLossLimit={dailyLossLimit} milestones={milestones} weeklyReviews={weeklyReviews} showToast={showToast} />;
       case "prop-firms": return <PropFirmsPage propAccounts={propAccounts} setPropAccounts={setPropAccounts} showToast={showToast} subscriptions={subscriptions} setSubscriptions={setSubscriptions} expenses={expenses} setExpenses={setExpenses} payouts={payouts} setPayouts={setPayouts} />;
       case "news": return <NewsPage showToast={showToast} />;
       case "presession": return <PreSessionPage onStartSession={onStartSession} setPage={setPage} spiritualMode={spiritualMode} />;
@@ -7972,19 +8398,28 @@ export default function App() {
       case "analytics": return <AnalyticsPage trades={trades} />;
       case "psychology": return <PsychologyDashboard trades={trades} />;
       case "ai": return <AICoachPage trades={trades} />;
+      case "community": return <CommunityPage trades={trades} showToast={showToast} />;
       case "settings": return <SettingsPage trades={trades} setTrades={setTrades} propAccounts={propAccounts} showToast={showToast} spiritualMode={spiritualMode} setSpiritualMode={setSpiritualMode} dailyGoal={dailyGoal} setDailyGoal={setDailyGoal} weeklyGoal={weeklyGoal} setWeeklyGoal={setWeeklyGoal} monthlyGoal={monthlyGoal} setMonthlyGoal={setMonthlyGoal} dailyLossLimit={dailyLossLimit} setDailyLossLimit={setDailyLossLimit} />;
       case "milestones": return <MilestonesPage milestones={milestones} trades={trades} propAccounts={propAccounts} payouts={payouts} weeklyReviews={weeklyReviews} setPage={setPage} />;
       case "weekly-review": return <WeeklyReviewPage trades={trades} weeklyReviews={weeklyReviews} setPage={setPage} />;
-      default: return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} dailyLossLimit={dailyLossLimit} milestones={milestones} weeklyReviews={weeklyReviews} />;
+      default: return <CommandCenterPage trades={trades} session={session} propAccounts={propAccounts} setPage={setPage} dailyGoal={dailyGoal} weeklyGoal={weeklyGoal} monthlyGoal={monthlyGoal} dailyLossLimit={dailyLossLimit} milestones={milestones} weeklyReviews={weeklyReviews} showToast={showToast} />;
     }
   };
 
   return (
     <div style={{
       background: C.bg, color: C.text, fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif", minHeight: "100vh",
+      backgroundImage: `radial-gradient(circle at 0% 0%, ${C.accentGlow} 0%, transparent 65%), radial-gradient(circle at 100% 100%, ${C.purpleGlow} 0%, transparent 65%)`
     }}>
       <TopBar session={session} page={page} setPage={setPage} showToast={showToast} />
-      <main style={{ paddingTop: 56, minHeight: "calc(100vh - 56px)" }}>
+      <Sidebar 
+        page={page} 
+        setPage={setPage} 
+        session={session} 
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+      <main style={{ marginLeft: sidebarCollapsed ? 60 : 240, paddingTop: 56, minHeight: "calc(100vh - 56px)", transition: "margin-left 0.3s ease" }}>
         <ErrorBoundary>
           {renderPage()}
         </ErrorBoundary>

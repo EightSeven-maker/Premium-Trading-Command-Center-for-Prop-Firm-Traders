@@ -51,14 +51,14 @@ class ErrorBoundary extends React.Component {
 // V4.5 — Near-pure black / Blue primary / Warm stone neutrals
 const C = {
   // Surfaces
-  bg: "#0a0a0a",
-  bgCard: "rgba(18, 18, 18, 0.85)",
-  bgCardAlt: "rgba(26, 26, 26, 0.7)",
+  bg: "#000000",
+  bgCard: "rgba(0, 0, 0, 0.6)",
+  bgCardAlt: "rgba(0, 0, 0, 0.5)",
   bgHover: "rgba(255, 255, 255, 0.04)",
   bgGlass: "rgba(0, 0, 0, 0.5)",
   // Borders
-  border: "rgba(255, 255, 255, 0.06)",
-  borderLight: "rgba(255, 255, 255, 0.03)",
+  border: "rgba(87, 83, 78, 0.2)",
+  borderLight: "rgba(87, 83, 78, 0.1)",
   borderGlow: "rgba(59, 130, 246, 0.15)",
   // Primary Blue (brand)
   accent: "#3b82f6",
@@ -107,8 +107,8 @@ const C = {
   radiusModal: 18,
   radiusPill: 9999,
   // Shadows
-  shadowCard: "0 2px 4px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2)",
-  shadowCardLg: "0 4px 8px rgba(0,0,0,0.3), 0 12px 24px rgba(0,0,0,0.2)",
+  shadowCard: "0 1px 2px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1)",
+  shadowCardLg: "0 2px 4px rgba(0,0,0,0.2), 0 8px 16px rgba(0,0,0,0.15)",
   shadowBtn: "0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
   shadowGlow: "0 0 0 3px rgba(59,130,246,0.15), 0 8px 28px rgba(59,130,246,0.1)"
 };
@@ -169,7 +169,7 @@ const TRADING_RULES = [
 // ─── STYLES (V4.5 — Near-black / Blue primary / Warm stone) ─────────────────
 const S = {
   glassCard: {
-    background: "rgba(18, 18, 18, 0.8)",
+    background: "rgba(0, 0, 0, 0.55)",
     backdropFilter: "blur(20px)",
     WebkitBackdropFilter: "blur(20px)",
     borderRadius: C.radiusCard,
@@ -2756,63 +2756,54 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
 function AnalyticsHub({ trades, page }) {
   const stats = useMemo(() => computeStats(trades), [trades]);
 
-  // ─── Day stats ──────────────────────────────────────────────────────
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const dayStats = useMemo(() => {
-    const map = {};
-    trades.forEach(t => {
-      const d = new Date(t.date).getDay();
-      if (!map[d]) map[d] = { pnl: 0, count: 0 };
-      map[d].pnl += t.pnl || 0;
-      map[d].count++;
-    });
-    const entries = Object.entries(map).map(([day, v]) => ({ day: parseInt(day), ...v }));
-    return {
-      mostActive: [...entries].sort((a, b) => b.count - a.count)[0],
-      mostProfitable: [...entries].sort((a, b) => b.pnl - a.pnl)[0],
-      leastProfitable: [...entries].sort((a, b) => a.pnl - b.pnl)[0],
-      activeDays: entries.length,
-    };
-  }, [trades]);
-
-  const bestTrade = useMemo(() => trades.length ? [...trades].sort((a, b) => (b.pnl || 0) - (a.pnl || 0))[0] : null, [trades]);
-  const worstTrade = useMemo(() => trades.length ? [...trades].sort((a, b) => (a.pnl || 0) - (b.pnl || 0))[0] : null, [trades]);
-
   const statCards = [
     { label: "Total P&L", value: stats.totalPnl, fmt: fmt, color: pnlColor(stats.totalPnl) },
     { label: "Win Rate", value: stats.winRate, fmt: v => `${v}%`, color: stats.winRate >= 50 ? C.emerald : stats.winRate >= 40 ? C.yellow : C.amber },
     { label: "Avg Winner", value: stats.avgWinner, fmt: fmt, color: C.emerald },
     { label: "Avg Loser", value: stats.avgLoser, fmt: v => `-${fmt(Math.abs(v))}`, color: C.amber },
-    { label: "Profit Factor", value: stats.profitFactor, fmt: v => v.toFixed(2), color: stats.profitFactor >= 1.5 ? C.emerald : stats.profitFactor >= 1 ? C.yellow : C.amber },
-    { label: "Best Day %", value: stats.totalPnl !== 0 ? `${((stats.bestDay / (stats.totalPnl || 1)) * 100).toFixed(1)}%` : "—", color: C.emerald },
+    { label: "Expectancy", value: stats.expectancy, fmt: v => (v >= 0 ? "+" : "") + v.toFixed(2), color: pnlColor(stats.expectancy) },
+    { label: "Profit Factor", value: stats.profitFactor, fmt: v => v.toFixed(2), color: stats.profitFactor >= 1.5 ? C.emerald : stats.profitFactor >= 1 ? C.yellow : C.amber }
   ];
 
-  if (trades.length === 0) {
-    return (
-      <div style={{ textAlign: "center", padding: 60, color: C.textDim }}>
-        <BarChart3 size={40} style={{ opacity: 0.3, marginBottom: 16 }} />
-        <p>Log your first trade to unlock analytics.</p>
-      </div>
-    );
-  }
+  const advancedCards = [
+    { label: "Sharpe", value: stats.sharpeRatio, fmt: v => v.toFixed(2), color: stats.sharpeRatio >= 1 ? C.emerald : stats.sharpeRatio > 0 ? C.yellow : C.amber },
+    { label: "Sortino", value: stats.sortinoRatio, fmt: v => v.toFixed(2), color: stats.sortinoRatio >= 1 ? C.emerald : stats.sortinoRatio > 0 ? C.yellow : C.amber },
+    { label: "Calmar", value: stats.calmarRatio, fmt: v => v.toFixed(2), color: stats.calmarRatio >= 1 ? C.emerald : stats.calmarRatio > 0 ? C.yellow : C.amber },
+    { label: "Avg R:R", value: stats.avgRR, fmt: v => `1:${v.toFixed(2)}`, color: stats.avgRR >= 2 ? C.emerald : stats.avgRR >= 1 ? C.yellow : C.amber },
+    { label: "Max DD", value: stats.maxDrawdown, fmt: fmtUsd, color: C.amber },
+    { label: "DD %", value: stats.maxDrawdownPercent, fmt: v => `${v.toFixed(1)}%`, color: stats.maxDrawdownPercent > 20 ? C.amber : stats.maxDrawdownPercent > 10 ? C.yellow : C.emerald },
+    { label: "Profit Days", value: stats.profitDayPercent, fmt: v => `${v.toFixed(0)}%`, color: stats.profitDayPercent >= 50 ? C.emerald : C.amber },
+    { label: "Best Day", value: stats.bestDay, fmt: fmt, color: C.emerald },
+  ];
 
   return (
     <>
-      {/* ── Metric Cards ────────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10, marginBottom: 16 }}>
+      {/* Hero Stat Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12, marginBottom: 8 }}>
         {statCards.map((card, i) => (
-          <AnimatedStatCard key={card.label} card={card} delay={i * 60} />
+          <AnimatedStatCard key={card.label} card={card} delay={i * 80} />
         ))}
       </div>
 
-      {/* ── Main Grid: Charts + Side Stats ──────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 16, marginBottom: 16 }}>
-        {/* Left: Equity Curve */}
+      {/* Advanced Stat Cards */}
+      {trades.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 10, marginBottom: 16 }}>
+          {advancedCards.map((card, i) => (
+            <AnimatedStatCard key={card.label} card={card} delay={(i + 6) * 60} />
+          ))}
+        </div>
+      )}
+
+      {/* Drawdown + Calendar */}
+      <div style={{ display: "grid", gridTemplateColumns: trades.length > 0 ? "1fr 1fr" : "1fr", gap: 16, marginBottom: 16 }}>
+        {trades.length > 0 && <DrawdownChart trades={trades} />}
+        {trades.length > 0 && <HourOfDayChart trades={trades} />}
+      </div>
+
+      {/* Equity Curve + Setup Performance */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div style={{ ...S.glassCard, padding: 20 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Equity Curve</h3>
-            <span style={{ fontSize: 10, color: C.textDim }}>{stats.equityCurve.length} days</span>
-          </div>
+          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: C.text }}>Equity Curve</h3>
           {stats.equityCurve.length === 0 ? (
             <div style={{ textAlign: "center", padding: 32, color: C.textDim, fontSize: 13 }}>No trade data yet</div>
           ) : (
@@ -2827,7 +2818,11 @@ function AnalyticsHub({ trades, page }) {
                 <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: C.textDim }} tickFormatter={d => d ? d.split("-")[2] : ""} />
                 <YAxis tick={{ fontSize: 10, fill: C.textDim }} tickFormatter={v => `$${v}`} width={55} />
-                <Tooltip contentStyle={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, fontSize: 12 }} labelStyle={{ color: C.text }} formatter={(val, name) => [name === "cumulative" ? fmt(val) : val, name === "cumulative" ? "Cumulative" : "Daily"]} />
+                <Tooltip
+                  contentStyle={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 12, fontSize: 12 }}
+                  labelStyle={{ color: C.text }}
+                  formatter={(val, name) => [name === "cumulative" ? fmt(val) : val, name === "cumulative" ? "Cumulative" : "Daily"]}
+                />
                 {stats.highWatermark > 0 && (
                   <ReferenceLine y={stats.highWatermark} stroke={C.amber} strokeDasharray="5 5" label={{ value: `HWM $${fmtUsd(stats.highWatermark)}`, position: "right", fontSize: 9, fill: C.amber }} />
                 )}
@@ -2837,117 +2832,30 @@ function AnalyticsHub({ trades, page }) {
           )}
         </div>
 
-        {/* Right: Win/Loss Donut + Avg Win/Loss + Key Stats */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Win/Loss Ring */}
-          <div style={{ ...S.glassCard, padding: 16, textAlign: "center" }}>
-            <h3 style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 8, textAlign: "left" }}>Win Rate</h3>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <ResponsiveContainer width={100} height={100}>
-                <RePieChart>
-                  <Pie data={[
-                    { name: "Wins", value: trades.filter(t => t.pnl > 0).length, color: C.emerald },
-                    { name: "Losses", value: trades.filter(t => t.pnl <= 0).length, color: C.amber }
-                  ]} cx="50%" cy="50%" innerRadius={28} outerRadius={48} dataKey="value" startAngle={90} endAngle={-270}>
-                    {[0, 1].map(i => (<Cell key={i} fill={i === 0 ? C.emerald : C.amber} />))}
-                  </Pie>
-                </RePieChart>
-              </ResponsiveContainer>
-              <div style={{ textAlign: "left" }}>
-                <div style={{ fontSize: 24, fontWeight: 800, color: stats.winRate >= 50 ? C.emerald : C.amber }}>{stats.winRate.toFixed(0)}%</div>
-                <div style={{ fontSize: 11, color: C.textMuted }}>{trades.filter(t => t.pnl > 0).length}W / {trades.filter(t => t.pnl <= 0).length}L</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Avg Win/Avg Loss */}
-          <div style={{ ...S.glassCard, padding: 14 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center" }}>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 9, color: C.textDim, textTransform: "uppercase" }}>Avg Win</div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: C.emerald }}>{fmtUsd(stats.avgWinner)}</div>
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 300, color: C.textDim }}>/</div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 9, color: C.textDim, textTransform: "uppercase" }}>Avg Loss</div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: C.amber }}>{fmtUsd(stats.avgLoser)}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div style={{ ...S.glassCard, padding: 14 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px" }}>
-              <div><div style={{ fontSize: 9, color: C.textDim, textTransform: "uppercase" }}>Trades</div><div style={{ fontSize: 14, fontWeight: 700 }}>{trades.length}</div></div>
-              <div><div style={{ fontSize: 9, color: C.textDim, textTransform: "uppercase" }}>Active Days</div><div style={{ fontSize: 14, fontWeight: 700 }}>{dayStats.activeDays}</div></div>
-              <div><div style={{ fontSize: 9, color: C.textDim, textTransform: "uppercase" }}>Best</div><div style={{ fontSize: 14, fontWeight: 700, color: C.emerald }}>{bestTrade ? fmt(bestTrade.pnl) : "—"}</div></div>
-              <div><div style={{ fontSize: 9, color: C.textDim, textTransform: "uppercase" }}>Worst</div><div style={{ fontSize: 14, fontWeight: 700, color: C.amber }}>{worstTrade ? fmt(worstTrade.pnl) : "—"}</div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Day Stats Row ──────────────────────────────────────────── */}
-      {dayStats.mostActive && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
-          <div style={{ ...S.glassCard, padding: 14, textAlign: "center" }}>
-            <div style={{ fontSize: 9, color: C.textDim, textTransform: "uppercase", marginBottom: 4 }}>Most Active Day</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.accent }}>{dayNames[dayStats.mostActive.day]}</div>
-            <div style={{ fontSize: 11, color: C.textMuted }}>{dayStats.mostActive.count} trades · {fmt(dayStats.mostActive.pnl)}</div>
-          </div>
-          <div style={{ ...S.glassCard, padding: 14, textAlign: "center" }}>
-            <div style={{ fontSize: 9, color: C.textDim, textTransform: "uppercase", marginBottom: 4 }}>Most Profitable Day</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.emerald }}>{dayNames[dayStats.mostProfitable.day]}</div>
-            <div style={{ fontSize: 11, color: C.textMuted }}>{fmt(dayStats.mostProfitable.pnl)}</div>
-          </div>
-          <div style={{ ...S.glassCard, padding: 14, textAlign: "center" }}>
-            <div style={{ fontSize: 9, color: C.textDim, textTransform: "uppercase", marginBottom: 4 }}>Least Profitable Day</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.amber }}>{dayNames[dayStats.leastProfitable.day]}</div>
-            <div style={{ fontSize: 11, color: C.textMuted }}>{fmt(dayStats.leastProfitable.pnl)}</div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Bottom Grid: Drawdown + Hour of Day + Setup Performance ──── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-        <DrawdownChart trades={trades} />
-        <HourOfDayChart trades={trades} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
         <div style={{ ...S.glassCard, padding: 20 }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text }}>Top Setups</h3>
           <SetupMiniTable trades={trades} />
         </div>
+      </div>
+
+      {/* Day of Week + More Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
         <div style={{ ...S.glassCard, padding: 20 }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text }}>Day Performance</h3>
           <DayOfWeekMiniHeatmap trades={trades} />
         </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
         <div style={{ ...S.glassCard, padding: 20 }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text }}>Session Breakdown</h3>
           <SessionMiniBreakdown trades={trades} />
         </div>
-        {/* Coach Tip */}
-        <div style={{ ...S.glassCard, padding: 16, display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${C.accent}20`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Sparkles size={16} color={C.accent} />
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.accentLight, marginBottom: 2 }}>Coach T® Tip</div>
-            <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.4 }}>
-              {stats.winRate >= 50
-                ? `Your win rate is ${stats.winRate.toFixed(0)}%. Aim to keep it above 50% for consistent profitability.`
-                : `Your win rate is ${stats.winRate.toFixed(0)}%. Focus on higher-probability setups.`}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Calendar Heatmap */}
-      <CalendarHeatmap trades={trades} />
+      {trades.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <CalendarHeatmap trades={trades} />
+        </div>
+      )}
     </>
   );
 }

@@ -3364,6 +3364,9 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
           <div style={{ flex: 1, overflow: "hidden" }}>
             <MarketSquawkTicker />
           </div>
+          <span style={{ fontSize: 8, padding: "1px 6px", borderRadius: 4, background: `${C.amber}20`, color: C.amber, fontWeight: 700, flexShrink: 0 }}>
+            SIMULATED
+          </span>
         </div>
       </div>
 
@@ -5522,6 +5525,7 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
   const [newRow, setNewRow] = useState(false);
   const [search, setSearch] = useState("");
   const [hiddenCols, setHiddenCols] = useState(new Set());
+  const [showColMenu, setShowColMenu] = useState(false);
 
   // Options for dropdown columns
   const colOptions = {
@@ -5564,6 +5568,9 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
     { key: "learnings", label: "Learnings", width: 120, type: "text" },
     { key: "notes", label: "Summary", width: 150, type: "text" },
   ];
+
+  // Filter visible columns
+  const visibleCols = columns.filter(c => !hiddenCols.has(c.key));
 
   // Get cell value (must be before sortedTrades for search)
   const getValue = (trade, col) => {
@@ -5661,9 +5668,9 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
               if (e.key === "Tab") {
                 e.preventDefault();
                 saveEdit();
-                const colIdx = columns.findIndex(c => c.key === col.key);
-                if (colIdx < columns.length - 1) {
-                  setTimeout(() => startEdit(rowIdx, columns[colIdx + 1].key), 50);
+                const colIdx = visibleCols.findIndex(c => c.key === col.key);
+                if (colIdx < visibleCols.length - 1) {
+                  setTimeout(() => startEdit(rowIdx, visibleCols[colIdx + 1].key), 50);
                 }
               }
             }}
@@ -5690,9 +5697,9 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
             if (e.key === "Tab") {
               e.preventDefault();
               saveEdit();
-              const colIdx = columns.findIndex(c => c.key === col.key);
-              if (colIdx < columns.length - 1) {
-                setTimeout(() => startEdit(rowIdx, columns[colIdx + 1].key), 50);
+              const colIdx = visibleCols.findIndex(c => c.key === col.key);
+              if (colIdx < visibleCols.length - 1) {
+                setTimeout(() => startEdit(rowIdx, visibleCols[colIdx + 1].key), 50);
               }
             }
           }}
@@ -5774,6 +5781,43 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
             />
           </div>
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setShowColMenu(!showColMenu)} style={{
+              padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 600,
+              background: C.bgInput, border: `1px solid ${C.border}`, color: C.textSecondary,
+              fontFamily: "Inter", display: "flex", alignItems: "center", gap: 4
+            }}>
+              <Eye size={12} /> Columns
+            </button>
+            {showColMenu && (
+              <div style={{
+                position: "absolute", top: "100%", right: 0, marginTop: 4, zIndex: 100,
+                background: C.bgRaised, border: `1px solid ${C.border}`, borderRadius: C.radiusSm,
+                padding: 8, minWidth: 180, maxHeight: 300, overflowY: "auto",
+                boxShadow: C.shadowCardLg
+              }} onClick={e => e.stopPropagation()}>
+                {columns.map(col => (
+                  <label key={col.key} style={{
+                    display: "flex", alignItems: "center", gap: 8, padding: "4px 8px",
+                    cursor: "pointer", fontSize: 11, color: C.text, borderRadius: 4,
+                    background: hiddenCols.has(col.key) ? "transparent" : `${C.accent}10`
+                  }}>
+                    <input type="checkbox" checked={!hiddenCols.has(col.key)} onChange={() => {
+                      setHiddenCols(prev => {
+                        const next = new Set(prev);
+                        next.has(col.key) ? next.delete(col.key) : next.add(col.key);
+                        return next;
+                      });
+                    }} style={{ cursor: "pointer" }} />
+                    {col.label}
+                    {col.pinned && <span style={{ fontSize: 9, color: C.accent, marginLeft: "auto" }}>📌</span>}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ display: "flex", gap: 6, fontSize: 11, color: C.textMuted }}>
             <span style={{ fontWeight: 700, color: C.text }}>{trades.length}</span> trades
@@ -5800,7 +5844,7 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
             <thead>
               <tr style={{ background: "rgba(0,0,0,0.3)", position: "sticky", top: 0, zIndex: 10 }}>
                 <th style={{ padding: 8, width: 30, textAlign: "center", color: C.textDim, fontSize: 10 }}>#</th>
-                {columns.map(col => (
+                {visibleCols.map(col => (
                   <th key={col.key} style={{
                     padding: "8px 6px", textAlign: "left", fontWeight: 700, fontSize: 10,
                     color: C.textDim, textTransform: "uppercase", letterSpacing: "0.05em",
@@ -5828,7 +5872,7 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
                   <td style={{ padding: "6px 8px", textAlign: "center", color: C.textDim, fontSize: 10 }}>
                     {rowIdx + 1}
                   </td>
-                  {columns.map(col => (
+                  {visibleCols.map(col => (
                     <td key={col.key} style={{
                       padding: "4px 6px",
                       position: col.pinned ? "sticky" : "static",
@@ -5854,7 +5898,7 @@ function NotionJournalPage({ trades, onAddTrade, onUpdateTrade, onDeleteTrade, s
                 <td style={{ padding: "8px 8px", fontWeight: 700, fontSize: 11, color: C.textDim }}>
                   COUNT {trades.length}
                 </td>
-                {columns.map(col => (
+                {visibleCols.map(col => (
                   <td key={col.key} style={{ padding: "6px 6px", fontWeight: 700, fontSize: 11 }}>
                     {col.key === "pnl" ? (
                       <span style={{ color: totalPnl >= 0 ? C.emerald : C.amber }}>

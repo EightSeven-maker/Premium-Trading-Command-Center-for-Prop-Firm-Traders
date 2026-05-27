@@ -2001,6 +2001,17 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
   const [direction, setDirection] = useState("Long");
   const [entryModel, setEntryModel] = useState([]);
   const [setupGrade, setSetupGrade] = useState("");
+  const [quickMode, setQuickMode] = useState(true);
+  const [entryPrice, setEntryPrice] = useState("");
+  const [exitPrice, setExitPrice] = useState("");
+
+  // Auto-calculate P&L from entry/exit prices
+  useEffect(() => {
+    if (entryPrice && exitPrice && contracts > 0) {
+      const pnlCalc = (parseFloat(exitPrice) - parseFloat(entryPrice)) * contracts;
+      setPnl(pnlCalc.toFixed(2));
+    }
+  }, [entryPrice, exitPrice, contracts]);
   
   // ─── TEMPLATE SYSTEM ──────────────────────────────────────────────────
   const [methodology, setMethodology] = useState("ICT");
@@ -2278,9 +2289,21 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
 
       {/* Main Form */}
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
+        {/* Quick / Advanced Mode Toggle */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+          <button onClick={() => setQuickMode(!quickMode)} style={{
+            padding: "6px 14px", borderRadius: 20, cursor: "pointer", fontSize: 11, fontWeight: 600,
+            background: quickMode ? C.profitBg : C.bgInput,
+            border: `1px solid ${quickMode ? C.profitBorder : C.border}`,
+            color: quickMode ? C.profit : C.textSecondary,
+            fontFamily: "Inter", transition: "all 0.15s"
+          }}>
+            {quickMode ? "⚡ Quick Entry" : "🔧 Advanced"}
+          </button>
+        </div>
         <div style={S.glassCard}>
           {/* Methodology Template Selector */}
-          <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${C.border}`, display: quickMode ? 'none' : 'block' }}>
             <label style={S.label}>Trading Methodology</label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 8 }}>
               {Object.entries(METHODOLOGIES).map(([key, m]) => {
@@ -2339,12 +2362,23 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
                 ...S.input, fontWeight: 700,
                 color: pnl && !isNaN(parseFloat(pnl)) ? (parseFloat(pnl) >= 0 ? C.profit : C.loss) : C.text
               }} placeholder="+/- amount" />
+              {quickMode && (
+                <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                  <input type="number" value={entryPrice} onChange={e => setEntryPrice(e.target.value)} 
+                    placeholder="Entry" style={{ ...S.input, fontSize: 11, padding: "4px 8px" }} />
+                  <input type="number" value={exitPrice} onChange={e => setExitPrice(e.target.value)}
+                    placeholder="Exit" style={{ ...S.input, fontSize: 11, padding: "4px 8px" }} />
+                </div>
+              )}
             </div>
             <div>
               <label style={S.label}>Contracts</label>
               <input type="number" value={contracts} onChange={e => setContracts(Number(e.target.value))} style={S.input} min="1" />
             </div>
           </div>
+
+          {/* Advanced fields — hidden in Quick Entry mode */}
+          <div style={{ display: quickMode ? 'none' : 'block' }}>
 
           {/* Row 2: Entry Model, Trade Setup */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
@@ -2560,6 +2594,9 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
               <label style={S.label}>Notes</label>
               <textarea value={notes} onChange={e => setNotes(e.target.value)} style={{ ...S.input, minHeight: 60, resize: "vertical" }} placeholder="Any additional observations?" />
             </div>
+          </div>
+
+          {/* Close advanced fields wrapper */}
           </div>
 
           <button onClick={submitTrade} style={{ ...S.btn("primary", "lg"), width: "100%", justifyContent: "center" }}>

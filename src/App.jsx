@@ -2084,7 +2084,8 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
       tapeReading, momentumType, timeframe, scalpTarget,
       // Meta
       newsDay, poi, learnings, tradeTook, notes,
-      screenshots, tags: tags.split(",").map(s => s.trim()).filter(Boolean),
+      screenshots,
+      tags: tags ? tags.split(",").map(t => t.trim()).filter(Boolean) : [],
       // Post-session
       postArdas, emotions, mentalState, energyLevel,
       sessionQuality, distractions, postTradeActions,
@@ -2125,13 +2126,13 @@ function TradingFloorPage({ session, onAddTrade, setPage, showToast, trades }) {
     setMomentumType([]);
     setTimeframe("");
     setScalpTarget("");
+    setScreenshots([]);
+    setTags("");
     setNewsDay([]);
     setPoi("");
     setLearnings("");
     setTradeTook([]);
     setNotes("");
-    setScreenshots([]);
-    setTags("");
     // Reset post session
     setPostArdas([]);
     setEmotions([]);

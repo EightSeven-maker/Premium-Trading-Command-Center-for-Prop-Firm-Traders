@@ -1753,7 +1753,7 @@ function TopBar({ session, page, setPage, showToast }) {
           display: "flex", alignItems: "center", justifyContent: "center",
           fontWeight: 800, fontSize: 12, color: C.white,
           boxShadow: `0 2px 8px ${C.accent}40`
-        }}>KS</div>
+        }}>MJ</div>
       </div>
     </div>
   );
@@ -3273,6 +3273,14 @@ function CommandCenterPage({ trades, session, propAccounts, setPage, dailyGoal, 
   return (
     <div style={{ ...S.page, animation: "fadeIn 0.4s ease-out" }}>
       {/* NQ, ES, YM Live Prices */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 9, fontWeight: 600, color: C.textDim, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+          Market Watch
+        </span>
+        <span style={{ fontSize: 8, padding: "1px 6px", borderRadius: 4, background: `${C.amber}20`, color: C.amber, fontWeight: 700 }}>
+          SIMULATED
+        </span>
+      </div>
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
         {["NQ", "ES", "YM"].map(ticker => {
           const data = livePrices[ticker];
